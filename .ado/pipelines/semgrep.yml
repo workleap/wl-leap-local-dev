@@ -1,0 +1,31 @@
+trigger: none
+
+pool: 'Azure Pipelines'
+
+schedules:
+  - cron: 32 10 * * 6"
+    displayName: "Weekly run"
+    branches:
+      include:
+        - main
+    always: true
+
+resources:
+  repositories:
+  - repository: templates
+    type: git
+    name: Shared-Assets/IDP-ADO-Templates
+
+jobs:
+  - job: Semgrep
+    displayName: Semgrep scan
+    timeoutInMinutes: 10
+    workspace:
+      clean: all
+
+    steps:
+      - checkout: self
+        clean: true
+        fetchDepth: 1
+
+      - template: Security/semgrep.yml@templates

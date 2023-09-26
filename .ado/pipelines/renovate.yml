@@ -1,0 +1,24 @@
+schedules:
+  - cron: '0 12 * * 1-5'
+    displayName: 'Daily run (except weekend)'
+    branches:
+      include:
+        - main
+    # This property ensures that the pipeline is still executed, regardless whether the code has changed or not since the last occurrence.
+    always: true
+
+trigger: none
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - bash: npx renovate --token $(System.AccessToken)
+    env:
+      RENOVATE_CONFIG_FILE: $(Build.SourcesDirectory)/renovate.json
+      LOG_LEVEL: debug
+
+      # Authenticate against our Azure DevOps private feeds
+      RENOVATE_DETECT_HOST_RULES_FROM_ENV: true
+      NUGET_PKGS_DEV_AZURE_COM_USERNAME: optional
+      NUGET_PKGS_DEV_AZURE_COM_PASSWORD: $(System.AccessToken)

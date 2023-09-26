@@ -1,0 +1,42 @@
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - /src/*
+
+name: 1.0.$(Rev:r)
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - checkout: self
+    clean: true
+    fetchDepth: 1
+
+  - task: UseDotNet@2
+    displayName: "Use .NET 6 SDK"
+    inputs:
+      packageType: sdk
+      version: 6.x
+
+  - task: PowerShell@2
+    displayName: "Restore, build, test and pack"
+    inputs:
+      targetType: "filePath"
+      filePath: "Build.ps1"
+      pwsh: true
+
+  - task: NuGetAuthenticate@1
+    displayName: "NuGet authenticate"
+
+  - task: NuGetCommand@2
+    displayName: "NuGet Push"
+    inputs:
+      command: push
+      publishVstsFeed: "gsoft"
+      packagesToPush: ".output/*.nupkg"
+      allowPackageConflicts: false
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))

@@ -1,0 +1,62 @@
+trigger: none
+
+name: 1.0.$(Rev:r)
+
+variables:
+  - name: branchName
+    value: $[coalesce(variables['System.PullRequest.SourceBranch'], variables['Build.SourceBranch'])]
+  - group: jira-pipeline
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: Shared-Assets/IDP-ADO-Templates
+
+jobs:
+  - job: jiraAndSemgrep
+    pool:
+      vmImage: ubuntu-latest
+
+    steps:
+      - checkout: self
+        clean: true
+        fetchDepth: 0
+
+      - template: Jira/jira-issue.yml@templates
+        parameters:
+          user: $(JiraUsername)
+          password: $(JiraApiToken)
+          branchName: $(branchName)
+
+      - template: Security/semgrep.yml@templates
+
+  - job: build
+    strategy:
+      matrix:
+        linux:
+          imageName: "ubuntu-latest"
+        mac:
+          imageName: "macOS-latest"
+        windows:
+          imageName: "windows-latest"
+    pool:
+      vmImage: $(imageName)
+
+    steps:
+      - checkout: self
+        clean: true
+        fetchDepth: 1
+
+      - task: UseDotNet@2
+        displayName: "Use .NET 6 SDK"
+        inputs:
+          packageType: sdk
+          version: 6.0.x
+
+      - task: PowerShell@2
+        displayName: "Restore, build, test and pack"
+        inputs:
+          targetType: "filePath"
+          filePath: "Build.ps1"
+          pwsh: true
