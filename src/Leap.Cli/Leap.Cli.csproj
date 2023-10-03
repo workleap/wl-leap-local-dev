@@ -2,9 +2,9 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
-    <AssemblyName>leap</AssemblyName>
+    <AssemblyName>Workleap.Leap</AssemblyName>
     <PackAsTool>true</PackAsTool>
-    <PackageId>leap</PackageId>
+    <PackageId>Workleap.Leap</PackageId>
     <PackageType>DotnetTool</PackageType>
     <NoDefaultExcludes>true</NoDefaultExcludes>
     <IncludeContentInPack>true</IncludeContentInPack>

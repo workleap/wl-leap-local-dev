@@ -25,9 +25,9 @@ Process {
         Exec { & dotnet pack  -c Release -o "$outputDir" }
 
         # Cross-platform system tests
-        Exec { & dotnet tool update leap --global --add-source "$outputDir" --verbosity minimal --no-cache --interactive }
+        Exec { & dotnet tool update Workleap.Leap --global --add-source "$outputDir" --verbosity minimal --no-cache --interactive }
         Exec { & leap run }
-        Exec { & dotnet tool uninstall leap --global }
+        Exec { & dotnet tool uninstall Workleap.Leap --global }
     }
     finally {
         Pop-Location
