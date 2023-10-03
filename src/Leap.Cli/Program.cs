@@ -8,10 +8,12 @@ using Leap.Cli.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console;
 
-var rootCommand = new RootCommand("leap")
+var rootCommand = new RootCommand("Workleap's Local Environment Application Proxy")
 {
     new RunCommand(),
 };
+
+rootCommand.Name = "leap";
 
 var builder = new CommandLineBuilder(rootCommand);
 var console = new RecordingConsole();
