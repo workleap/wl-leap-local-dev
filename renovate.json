@@ -7,7 +7,12 @@
     ":rebaseStalePrs"
   ],
   "enabledManagers": [
+    "azure-pipelines",
     "nuget"
+  ],
+  "endpoint": "https://dev.azure.com/gsoft",
+  "repositories": [
+    "Shared-Assets/Leap"
   ],
   "stabilityDays": 3,
   "prHourlyLimit": 0,
@@ -34,6 +39,10 @@
       "groupName": "Dotnet SDK",
       "description": "Only update patch and minor for the dotnet SDK version within the global.json",
       "extends": [":disableMajorUpdates"]
+    },
+    {
+      "matchManagers": ["azure-pipelines"],
+      "groupName": "Pipeline dependencies"
     }
   ],
   "vulnerabilityAlerts": {
