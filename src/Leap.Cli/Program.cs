@@ -1,4 +1,4 @@
-﻿using System.CommandLine;
+using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
 using System.IO.Abstractions;
@@ -10,7 +10,10 @@ using Spectre.Console;
 
 var rootCommand = new RootCommand("Workleap's Local Environment Application Proxy")
 {
+    new AboutCommand(),
     new RunCommand(),
+    new GenerateCommand(),
+    new ReadCommand(),
 };
 
 rootCommand.Name = "leap";

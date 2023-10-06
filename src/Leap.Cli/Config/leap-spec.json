@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2019-09/schema#",
+  "$id": "leap-spec.json",
+  "type": "object",
+  "title": "leap.yml definition",
+  "description": "This is the schema for leap.yml file definition",
+
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$",
+      "description": "define the Compose project name, until user defines one explicitly."
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/dependency"
+      }
+    }
+  },
+  "definitions": {
+    "dependency": {
+      "type": "object",
+      "additionalProperties": "false",
+      "properties": {
+        "type": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

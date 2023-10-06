@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Leap.Cli": {
+      "commandName": "Project",
+      "commandLineArgs": "run"
+    }
+  }
+}
