@@ -21,7 +21,8 @@ internal sealed class RunCommand : Command<RunCommand.Options, RunCommand.Option
     {
         private const int MongoPort = 27217; 
         private const string MongoVolume = "mongodb1_data"; 
-        private const string Network = "leap-network"; 
+        private const string Network = "leap-network";
+        private static readonly string LeapPath = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".leap");
 
         private readonly IAnsiConsole _console;
 
@@ -82,12 +83,13 @@ internal sealed class RunCommand : Command<RunCommand.Options, RunCommand.Option
             };
 
             var serializer = new DockerComposeSerializer();
-            await using (var output = File.Create(@".\docker-compose.yml"))
+            await using (var output = File.Create(Path.Join(LeapPath, "docker-compose.yml")))
             {
                 serializer.Serialize(output, yaml);
             }
                 
             var result = await CliWrap.Cli.Wrap("docker")
+                .WithWorkingDirectory(LeapPath)
                 .WithArguments(new[]
                 {
                 "compose",
@@ -110,6 +112,7 @@ internal sealed class RunCommand : Command<RunCommand.Options, RunCommand.Option
                 try
                 {
                     result = await CliWrap.Cli.Wrap("docker")
+                        .WithWorkingDirectory(LeapPath)
                         .WithArguments(new[]
                         {
                             "compose",
