@@ -1,7 +1,5 @@
 using Leap.Cli.Platform;
 using Spectre.Console;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 
 namespace Leap.Cli.Commands;
 

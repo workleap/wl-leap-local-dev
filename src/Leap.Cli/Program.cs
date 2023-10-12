@@ -12,8 +12,6 @@ var rootCommand = new RootCommand("Workleap's Local Environment Application Prox
 {
     new AboutCommand(),
     new RunCommand(),
-    new GenerateCommand(),
-    new ReadCommand(),
 };
 
 rootCommand.Name = "leap";

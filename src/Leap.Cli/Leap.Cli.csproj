@@ -17,7 +17,6 @@
   <ItemGroup>
     <PackageReference Include="CliWrap" Version="3.6.3" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
-    <PackageReference Include="NJsonSchema.CodeGeneration.CSharp" Version="10.9.0" />
     <PackageReference Include="Spectre.Console" Version="0.47.0" />
     <PackageReference Include="Spectre.Console.Analyzer" Version="0.47.0">
       <PrivateAssets>all</PrivateAssets>
@@ -36,11 +35,5 @@
 
   <ItemGroup>
     <None Include="..\..\README.md" Link="README.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Config\leap-spec.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 </Project>
