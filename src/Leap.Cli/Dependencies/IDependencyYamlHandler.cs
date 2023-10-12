@@ -1,4 +1,4 @@
-﻿using Leap.Cli.Yaml;
+﻿using Leap.Cli.Configuration.Yaml;
 
 namespace Leap.Cli.Dependencies;
 

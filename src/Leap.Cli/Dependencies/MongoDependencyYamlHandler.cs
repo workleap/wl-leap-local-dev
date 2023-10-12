@@ -1,5 +1,5 @@
+using Leap.Cli.Configuration.Yaml;
 using Leap.Cli.Model;
-using Leap.Cli.Yaml;
 
 namespace Leap.Cli.Dependencies;
 

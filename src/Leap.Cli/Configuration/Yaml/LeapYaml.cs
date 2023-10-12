@@ -1,6 +1,6 @@
 ﻿using YamlDotNet.Serialization;
 
-namespace Leap.Cli.Yaml;
+namespace Leap.Cli.Configuration.Yaml;
 
 internal sealed class LeapYaml
 {

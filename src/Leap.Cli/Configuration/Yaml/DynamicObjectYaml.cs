@@ -1,4 +1,4 @@
-﻿namespace Leap.Cli.Yaml;
+﻿namespace Leap.Cli.Configuration.Yaml;
 
 internal class DynamicObjectYaml : Dictionary<string, object?>
 {
