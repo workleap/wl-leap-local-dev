@@ -5,6 +5,8 @@ internal static class ConfigurationConstants
     private const string LeapRootConfigDirectoryName = ".leap";
     private const string LeapGeneratedDirectoryName = "generated";
 
+    public const string LeapYamlFileName = "leap.yaml";
+
     private static readonly string UserProfileDirectoryPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
     /// <summary>

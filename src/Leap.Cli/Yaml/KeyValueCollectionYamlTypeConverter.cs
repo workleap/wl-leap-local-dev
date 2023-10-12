@@ -3,13 +3,13 @@ using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
 
-namespace Leap.Cli.DockerCompose.Yaml;
+namespace Leap.Cli.Yaml;
 
 internal sealed class KeyValueCollectionYamlTypeConverter : IYamlTypeConverter
 {
     public static readonly KeyValueCollectionYamlTypeConverter Instance = new();
 
-    private static readonly Regex EnvironmentVariableRegex = new Regex("^(?<name>[^=]+)=(?<value>.*)$", RegexOptions.Compiled);
+    private static readonly Regex KeyValueRegex = new Regex("^(?<name>[^=]+)=(?<value>.*)$", RegexOptions.Compiled);
     private static readonly char[] KeyCharactersThatRequireQuotes = { ' ', '/', '\\', '~', ':', '$', '{', '}' };
 
     private KeyValueCollectionYamlTypeConverter()
@@ -34,32 +34,32 @@ internal sealed class KeyValueCollectionYamlTypeConverter : IYamlTypeConverter
 
     private static KeyValueCollectionYaml ParseMapping(IParser parser)
     {
-        var envvars = new KeyValueCollectionYaml();
+        var keyValueCollection = new KeyValueCollectionYaml();
 
         while (!parser.Accept<MappingEnd>())
         {
             var name = parser.Consume<Scalar>();
             var value = parser.Consume<Scalar>();
-            envvars[name.Value] = value.Value;
+            keyValueCollection[name.Value] = value.Value;
         }
 
         parser.MoveNext();
-        return envvars;
+        return keyValueCollection;
     }
 
     private static KeyValueCollectionYaml ParseSequence(IParser parser)
     {
-        var envvars = new KeyValueCollectionYaml();
+        var keyValueCollection = new KeyValueCollectionYaml();
 
         while (!parser.Accept<SequenceEnd>())
         {
             var scalar = parser.Consume<Scalar>();
 
-            if (EnvironmentVariableRegex.Match(scalar.Value) is { Success: true } match)
+            if (KeyValueRegex.Match(scalar.Value) is { Success: true } match)
             {
                 var name = match.Groups["name"].Value;
                 var value = match.Groups["value"].Value;
-                envvars[name] = value;
+                keyValueCollection[name] = value;
             }
             else
             {
@@ -68,7 +68,7 @@ internal sealed class KeyValueCollectionYamlTypeConverter : IYamlTypeConverter
         }
 
         parser.MoveNext();
-        return envvars;
+        return keyValueCollection;
     }
 
     public void WriteYaml(IEmitter emitter, object? value, Type type)
