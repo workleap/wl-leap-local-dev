@@ -4,7 +4,6 @@ using System.CommandLine.Parsing;
 using System.IO.Abstractions;
 using Leap.Cli.Commands;
 using Leap.Cli.Platform;
-using Leap.Cli.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console;
 
@@ -17,18 +16,13 @@ var rootCommand = new RootCommand("Workleap's Local Environment Application Prox
 rootCommand.Name = "leap";
 
 var builder = new CommandLineBuilder(rootCommand);
-var console = new RecordingConsole();
 
 builder.UseDefaults();
-
 builder.UseDependencyInjection(services =>
 {
-    services.AddSingleton<IRecordingConsole>(console);
-    services.AddSingleton<IConsole>(console);
-    services.AddSingleton<IAnsiConsole>(console);
-
+    services.AddSingleton(AnsiConsole.Console);
     services.AddSingleton<IFileSystem, FileSystem>();
 });
 
 var parser = builder.Build();
-return parser.Invoke(args, console);
+return parser.Invoke(args, new Utf8SystemConsole());

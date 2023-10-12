@@ -2,7 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
-namespace Leap.Cli.Telemetry;
+namespace Leap.Cli.Platform;
 
 [ExcludeFromCodeCoverage]
 internal sealed class Utf8SystemConsole : SystemConsole
