@@ -5,6 +5,27 @@ namespace Leap.Cli.DockerCompose.Yaml;
 
 internal sealed class DockerComposeServiceYaml
 {
+    public DockerComposeServiceYaml()
+    {
+        // This is a Semgrep recommendation to use this setting
+        this.SecurityOption = new List<string>
+        {
+            "no-new-privileges:true",
+        };
+
+        // By default, all Docker containers should be attached to the Leap network
+        this.Networks = new List<string>
+        {
+            DockerComposeConstants.LeapNetworkName,
+        };
+
+        // Helps containers to communicate with the host machine
+        this.ExtraHosts = new List<string>
+        {
+            "host.docker.internal:host-gateway",
+        };
+    }
+
     [YamlMember(Alias = "image")]
     public string Image { get; set; } = string.Empty;
 
@@ -15,16 +36,16 @@ internal sealed class DockerComposeServiceYaml
     public List<string> DependsOn { get; set; } = new();
 
     [YamlMember(Alias = "security_opt", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
-    public List<string> SecurityOption { get; set; } = new();
+    public List<string> SecurityOption { get; set; }
 
     [YamlMember(Alias = "restart")]
     public string Restart { get; set; } = DockerComposeConstants.Restart.UnlessStopped;
 
     [YamlMember(Alias = "networks", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
-    public List<string> Networks { get; set; } = new();
+    public List<string> Networks { get; set; }
 
     [YamlMember(Alias = "extra_hosts", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
-    public List<string> ExtraHosts { get; set; } = new();
+    public List<string> ExtraHosts { get; set; }
 
     [YamlMember(Alias = "environment", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
     public KeyValueCollectionYaml Environment { get; set; } = new();

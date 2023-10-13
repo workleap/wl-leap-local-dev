@@ -3,6 +3,9 @@ using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
 using System.IO.Abstractions;
 using Leap.Cli.Commands;
+using Leap.Cli.Configuration;
+using Leap.Cli.Dependencies;
+using Leap.Cli.DockerCompose;
 using Leap.Cli.Pipeline;
 using Leap.Cli.Platform;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,10 +28,20 @@ builder.UseDependencyInjection(services =>
     services.AddSingleton(AnsiConsole.Console);
     services.AddSingleton<IFileSystem, FileSystem>();
 
+    services.AddSingleton<ILeapYamlAccessor, LeapYamlAccessor>();
+    services.AddSingleton<IDependencyHandler, MongoDependencyHandler>();
+
+    services.AddSingleton<DockerComposeManager>();
+    services.AddSingleton<IConfigureDockerCompose>(x => x.GetRequiredService<DockerComposeManager>());
+    services.AddSingleton<IDockerComposeManager>(x => x.GetRequiredService<DockerComposeManager>());
+
     services.TryAddEnumerable(new[]
     {
         ServiceDescriptor.Singleton<IPipelineStep, EnsureLeapDirectoryCreatedPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, PopulateDependenciesPipelineStep>(),
+        ServiceDescriptor.Singleton<IPipelineStep, BeforeStartingDependenciesPipelineStep>(),
+        ServiceDescriptor.Singleton<IPipelineStep, StartDockerComposePipelineStep>(),
+        ServiceDescriptor.Singleton<IPipelineStep, AfterStartingDependenciesPipelineStep>(),
     });
 });
 

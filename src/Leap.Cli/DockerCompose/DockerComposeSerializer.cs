@@ -23,17 +23,27 @@ internal static class DockerComposeSerializer
         .DisableAliases() // don't use anchors and aliases (references to identical objects)
         .Build();
 
-    public static DockerComposeYaml Deserialize(Stream stream)
+    public static async Task<DockerComposeYaml> DeserializeAsync(Stream stream, CancellationToken cancellationToken)
     {
         // It's the responsibility of the caller to dispose the stream
-        using var reader = new StreamReader(stream, leaveOpen: true);
-        return Deserializer.Deserialize<DockerComposeYaml>(reader);
+        string dockerComposeYamlContents;
+        using (var reader = new StreamReader(stream, leaveOpen: true))
+        {
+            // Cancellation support is only available starting .NET 7.0
+            dockerComposeYamlContents = await reader.ReadToEndAsync();
+        }
+
+        // YamlDotNet doesn't support asynchroneous serialization, and we rather access the file system asynchronously
+        return Deserializer.Deserialize<DockerComposeYaml>(dockerComposeYamlContents);
     }
 
-    public static void Serialize(Stream stream, DockerComposeYaml dockerComposeYaml)
+    public static async Task SerializeAsync(Stream stream, DockerComposeYaml dockerComposeYaml, CancellationToken cancellationToken)
     {
+        // YamlDotNet doesn't support asynchroneous serialization, and we rather access the file system asynchronously
+        var dockerComposeYamlContents = Serializer.Serialize(dockerComposeYaml);
+
         // It's the responsibility of the caller to dispose the stream
-        using var writer = new StreamWriter(stream, leaveOpen: true);
-        Serializer.Serialize(writer, dockerComposeYaml);
+        await using var writer = new StreamWriter(stream, leaveOpen: true);
+        await writer.WriteAsync(dockerComposeYamlContents.AsMemory(), cancellationToken);
     }
 }

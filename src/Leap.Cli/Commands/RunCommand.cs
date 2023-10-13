@@ -23,7 +23,6 @@ internal sealed class RunCommand : Command<RunCommand.Options, RunCommand.Option
     {
         private const int MongoPort = 27217;
         private const string MongoVolume = "mongodb1_data";
-        private const string Network = "leap-network";
         private static readonly string LeapPath = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".leap");
 
         private readonly IAnsiConsole _console;
@@ -52,19 +51,10 @@ internal sealed class RunCommand : Command<RunCommand.Options, RunCommand.Option
                             Image = "mongo:6.0",
                             Command = $"--replSet rs0 --bind_ip_all --port {MongoPort}",
                             Restart = DockerComposeConstants.Restart.UnlessStopped,
-                            SecurityOption =
-                            {
-                                "no-new-privileges:true",
-                            },
                             Ports = { new(MongoPort, MongoPort) },
                             Volumes =
                             {
                                 new(MongoVolume, "/data/db", "rw"),
-                            },
-                            Networks = { Network },
-                            ExtraHosts = new List<string>
-                            {
-                                "host.docker.internal:host-gateway",
                             },
                             Deploy = new()
                             {
@@ -83,18 +73,11 @@ internal sealed class RunCommand : Command<RunCommand.Options, RunCommand.Option
                     {
                         [MongoVolume] = null,
                     },
-                    Networks =
-                    {
-                        [Network] = new DockerComposeNetworkYaml()
-                        {
-                            Driver = "bridge",
-                        },
-                    },
                 };
 
                 await using (var output = File.Create(Path.Join(LeapPath, "docker-compose.yml")))
                 {
-                    DockerComposeSerializer.Serialize(output, yaml);
+                    await DockerComposeSerializer.SerializeAsync(output, yaml, cancellationToken);
                 }
 
                 var result = await CliWrap.Cli.Wrap("docker")

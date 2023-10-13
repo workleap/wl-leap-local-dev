@@ -7,6 +7,8 @@ internal sealed class PopulateDependenciesPipelineStep : IPipelineStep
     public Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
         // TODO read dependencies from the YAML files and populate the ApplicationState
+        state.Dependencies.Add(new MongoDependency());
+
         return Task.CompletedTask;
     }
 
