@@ -12,11 +12,18 @@ internal sealed class LeapYamlAccessor : ILeapYamlAccessor
         this._fileSystem = fileSystem;
     }
 
-    public Task<IEnumerable<LeapYaml>> GetAllAsync(CancellationToken cancellationToken)
+    public async Task<IEnumerable<LeapYaml>> GetAllAsync(CancellationToken cancellationToken)
     {
-        using var stream = this._fileSystem.File.OpenRead(ConfigurationConstants.LeapYamlFileName);
-        var leapYaml = LeapYamlSerializer.Deserialize(stream);
+        var leapConfigs = new List<LeapYaml>();
 
-        return Task.FromResult(new[] { leapYaml }.AsEnumerable());
+        await using var stream = this._fileSystem.File.OpenRead(ConfigurationConstants.LeapYamlFileName);
+        var leapYaml = await LeapYamlSerializer.DeserializeAsync(stream, cancellationToken);
+
+        if (leapYaml != null)
+        {
+            leapConfigs.Add(leapYaml);
+        }
+
+        return leapConfigs.AsEnumerable();
     }
 }

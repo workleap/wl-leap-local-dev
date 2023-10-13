@@ -30,6 +30,7 @@ builder.UseDependencyInjection(services =>
 
     services.AddSingleton<ILeapYamlAccessor, LeapYamlAccessor>();
     services.AddSingleton<IDependencyHandler, MongoDependencyHandler>();
+    services.AddSingleton<IDependencyYamlHandler, MongoDependencyYamlHandler>();
 
     services.AddSingleton<DockerComposeManager>();
     services.AddSingleton<IConfigureDockerCompose>(x => x.GetRequiredService<DockerComposeManager>());

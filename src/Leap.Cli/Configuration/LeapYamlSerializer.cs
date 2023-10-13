@@ -19,17 +19,24 @@ internal static class LeapYamlSerializer
         .DisableAliases() // don't use anchors and aliases (references to identical objects)
         .Build();
 
-    public static LeapYaml Deserialize(Stream stream)
+    public static async Task<LeapYaml?> DeserializeAsync(Stream stream, CancellationToken cancellationToken)
     {
         // It's the responsibility of the caller to dispose the stream
-        using var reader = new StreamReader(stream, leaveOpen: true);
-        return Deserializer.Deserialize<LeapYaml>(reader);
+        string leapYamlContents;
+        using (var reader = new StreamReader(stream, leaveOpen: true))
+        {
+            leapYamlContents = await reader.ReadToEndAsync();
+        }
+
+        return Deserializer.Deserialize<LeapYaml>(leapYamlContents);
     }
 
-    public static void Serialize(Stream stream, LeapYaml leapYaml)
+    public static async Task SerializeAsync(Stream stream, LeapYaml leapYaml, CancellationToken cancellationToken)
     {
+        var leapYamlContents = Serializer.Serialize(leapYaml);
+
         // It's the responsibility of the caller to dispose the stream
         using var writer = new StreamWriter(stream, leaveOpen: true);
-        Serializer.Serialize(writer, leapYaml);
+        await writer.WriteAsync(leapYamlContents.AsMemory(), cancellationToken);
     }
 }
