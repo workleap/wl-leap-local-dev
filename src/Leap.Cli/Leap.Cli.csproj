@@ -16,7 +16,7 @@
 
   <ItemGroup>
     <PackageReference Include="CliWrap" Version="3.6.3" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.1" />
     <PackageReference Include="Spectre.Console" Version="0.47.0" />
     <PackageReference Include="Spectre.Console.Analyzer" Version="0.47.0">
       <PrivateAssets>all</PrivateAssets>
