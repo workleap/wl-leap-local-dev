@@ -1,4 +1,5 @@
 using Leap.Cli.Yaml;
+using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 
 namespace Leap.Cli.DockerCompose.Yaml;
@@ -29,8 +30,8 @@ internal sealed class DockerComposeServiceYaml
     [YamlMember(Alias = "image")]
     public string Image { get; set; } = string.Empty;
 
-    [YamlMember(Alias = "command")]
-    public string Command { get; set; } = string.Empty;
+    [YamlMember(Alias = "command", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
+    public DockerComposeCommandYaml Command { get; set; } = new();
 
     [YamlMember(Alias = "depends_on", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
     public List<string> DependsOn { get; set; } = new();

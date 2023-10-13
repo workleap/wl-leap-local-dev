@@ -1,3 +1,4 @@
+using System.Globalization;
 using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
@@ -30,7 +31,7 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
         var service = new DockerComposeServiceYaml
         {
             Image = "mongo:7.0",
-            Command = $"--replSet {ReplicaSetName} --bind_ip_all --port {MongoPort}",
+            Command = new DockerComposeCommandYaml { "--replSet", ReplicaSetName, "--bind_ip_all", "--port", MongoPort.ToString(CultureInfo.InvariantCulture) },
             Restart = DockerComposeConstants.Restart.UnlessStopped,
             Ports = { new DockerComposePortMappingYaml(MongoPort, MongoPort) },
             Volumes =

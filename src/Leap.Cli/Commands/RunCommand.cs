@@ -1,3 +1,4 @@
+using System.Globalization;
 using Leap.Cli.Platform;
 using CliWrap;
 using Spectre.Console;
@@ -49,7 +50,7 @@ internal sealed class RunCommand : Command<RunCommand.Options, RunCommand.Option
                         ["mongodb1"] = new()
                         {
                             Image = "mongo:6.0",
-                            Command = $"--replSet rs0 --bind_ip_all --port {MongoPort}",
+                            Command = new DockerComposeCommandYaml { "--replSet", "rs0", "--bind_ip_all", "--port", MongoPort.ToString(CultureInfo.InvariantCulture) },
                             Restart = DockerComposeConstants.Restart.UnlessStopped,
                             Ports = { new(MongoPort, MongoPort) },
                             Volumes =
