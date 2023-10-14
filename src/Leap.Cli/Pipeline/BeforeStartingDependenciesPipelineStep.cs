@@ -12,14 +12,18 @@ internal sealed class BeforeStartingDependenciesPipelineStep : IPipelineStep
         this._handlers = handlers.ToArray();
     }
 
-    public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
+    public async Task<PipelineStepResult> StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
-        var tasks =
-            from handler in this._handlers
-            from dependency in state.Dependencies
-            select handler.BeforeStartAsync(dependency, cancellationToken);
+        foreach (var handler in this._handlers)
+        {
+            foreach (var dependency in state.Dependencies)
+            {
+                // Tasks are sequential because we can't afford to mix up the console output of each dependency handler
+                await handler.BeforeStartAsync(dependency, cancellationToken);
+            }
+        }
 
-        await Task.WhenAll(tasks);
+        return PipelineStepResult.Continue;
     }
 
     public Task StopAsync(ApplicationState state, CancellationToken cancellationToken)

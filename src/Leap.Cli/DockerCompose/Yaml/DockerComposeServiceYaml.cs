@@ -1,5 +1,4 @@
 using Leap.Cli.Yaml;
-using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 
 namespace Leap.Cli.DockerCompose.Yaml;

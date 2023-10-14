@@ -36,7 +36,7 @@ internal static class LeapYamlSerializer
         var leapYamlContents = Serializer.Serialize(leapYaml);
 
         // It's the responsibility of the caller to dispose the stream
-        using var writer = new StreamWriter(stream, leaveOpen: true);
+        await using var writer = new StreamWriter(stream, leaveOpen: true);
         await writer.WriteAsync(leapYamlContents.AsMemory(), cancellationToken);
     }
 }

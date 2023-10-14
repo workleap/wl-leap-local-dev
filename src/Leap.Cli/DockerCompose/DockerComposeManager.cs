@@ -31,7 +31,7 @@ internal sealed class DockerComposeManager : IConfigureDockerCompose, IDockerCom
 
         var dockerComposeFilePath = Path.Combine(ConfigurationConstants.GeneratedDirectoryPath, "docker-compose.yml");
 
-        await using var stream = this._fileSystem.File.OpenWrite(dockerComposeFilePath);
+        await using var stream = this._fileSystem.File.Create(dockerComposeFilePath);
         await DockerComposeSerializer.SerializeAsync(stream, dockerComposeYaml, cancellationToken);
     }
 }

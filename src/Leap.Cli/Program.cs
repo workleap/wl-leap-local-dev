@@ -27,6 +27,7 @@ builder.UseDependencyInjection(services =>
 {
     services.AddSingleton(AnsiConsole.Console);
     services.AddSingleton<IFileSystem, FileSystem>();
+    services.AddSingleton<ICliWrapCommandExecutor, CliWrapCommandExecutor>();
 
     services.AddSingleton<ILeapYamlAccessor, LeapYamlAccessor>();
     services.AddSingleton<IDependencyHandler, MongoDependencyHandler>();

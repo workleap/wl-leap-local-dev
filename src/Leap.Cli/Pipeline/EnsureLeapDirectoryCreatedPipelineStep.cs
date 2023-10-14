@@ -13,12 +13,12 @@ internal sealed class EnsureLeapDirectoryCreatedPipelineStep : IPipelineStep
         this._fileSystem = fileSystem;
     }
 
-    public Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
+    public Task<PipelineStepResult> StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
         this._fileSystem.Directory.CreateDirectory(ConfigurationConstants.RootDirectoryPath);
         this._fileSystem.Directory.CreateDirectory(ConfigurationConstants.GeneratedDirectoryPath);
 
-        return Task.CompletedTask;
+        return Task.FromResult(PipelineStepResult.Continue);
     }
 
     public Task StopAsync(ApplicationState state, CancellationToken cancellationToken)

@@ -4,5 +4,5 @@ namespace Leap.Cli.Configuration;
 
 internal interface ILeapYamlAccessor
 {
-    Task<IEnumerable<LeapYaml>> GetAllAsync(CancellationToken cancellationToken);
+    Task<LeapYaml[]> GetAllAsync(CancellationToken cancellationToken);
 }
