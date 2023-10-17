@@ -13,12 +13,6 @@ internal sealed class DockerComposeServiceYaml
             "no-new-privileges:true",
         };
 
-        // By default, all Docker containers should be attached to the Leap network
-        this.Networks = new List<string>
-        {
-            DockerComposeConstants.LeapNetworkName,
-        };
-
         // Helps containers to communicate with the host machine
         this.ExtraHosts = new List<string>
         {
@@ -42,7 +36,7 @@ internal sealed class DockerComposeServiceYaml
     public string Restart { get; set; } = DockerComposeConstants.Restart.UnlessStopped;
 
     [YamlMember(Alias = "networks", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
-    public List<string> Networks { get; set; }
+    public List<string> Networks { get; set; } = new();
 
     [YamlMember(Alias = "extra_hosts", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
     public List<string> ExtraHosts { get; set; }

@@ -6,7 +6,7 @@ internal static class DockerComposeConstants
     public const string Version38 = "3.8";
     public const string LeapProjectName = "leap";
 
-    public const string LeapNetworkName = "leap";
+    public const string DefaultNetworkName = "default";
 
     public static class Volume
     {

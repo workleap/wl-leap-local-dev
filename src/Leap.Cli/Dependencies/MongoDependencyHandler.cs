@@ -11,7 +11,8 @@ namespace Leap.Cli.Dependencies;
 internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency>
 {
     private const string ServiceName = "mongo";
-    private const string VolumeName = "mongo_data";
+    private const string DataVolumeName = "mongo_data";
+    private const string ConfigVolumeName = "mongo_config";
     private const string ReplicaSetName = "rs0";
 
     private const int MongoPort = 27217;
@@ -41,7 +42,8 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
             Ports = { new DockerComposePortMappingYaml(MongoPort, MongoPort) },
             Volumes =
             {
-                new DockerComposeVolumeMappingYaml(VolumeName, "/data/db", DockerComposeConstants.Volume.ReadWrite),
+                new DockerComposeVolumeMappingYaml(DataVolumeName, "/data/db", DockerComposeConstants.Volume.ReadWrite),
+                new DockerComposeVolumeMappingYaml(ConfigVolumeName, "/data/configdb", DockerComposeConstants.Volume.ReadWrite),
             },
             Deploy = new DockerComposeDeploymentYaml
             {
@@ -57,7 +59,8 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
         };
 
         dockerComposeYaml.Services[ServiceName] = service;
-        dockerComposeYaml.Volumes[VolumeName] = null;
+        dockerComposeYaml.Volumes[DataVolumeName] = null;
+        dockerComposeYaml.Volumes[ConfigVolumeName] = null;
     }
 
     protected override async Task AfterStartAsync(MongoDependency dependency, CancellationToken cancellationToken)

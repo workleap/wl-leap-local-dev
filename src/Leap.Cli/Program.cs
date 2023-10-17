@@ -14,7 +14,6 @@ using Spectre.Console;
 
 var rootCommand = new RootCommand("Workleap's Local Environment Application Proxy")
 {
-    new AboutCommand(),
     new RunCommand(),
 };
 
