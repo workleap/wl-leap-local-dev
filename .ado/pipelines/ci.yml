@@ -81,3 +81,11 @@ jobs:
       - template: templates/docker-container-check.yml
         parameters:
           containerName: "leap-mongo-1"
+          
+      - task: NuGetCommand@2
+        condition: eq(variables.imageName, 'ubuntu-latest')
+        inputs:
+          command: push
+          publishVstsFeed: "gsoftdev"
+          packagesToPush: ".output/*.nupkg"
+          allowPackageConflicts: false
