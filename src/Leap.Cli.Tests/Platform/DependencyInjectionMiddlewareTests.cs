@@ -14,7 +14,7 @@ public class DependencyInjectionMiddlewareTests
         var expectedDependency1 = new ExampleDependency();
         var expectedDependency2 = new ExampleDependency();
 
-        void ConfigureServices(ServiceCollection services)
+        void ConfigureServices(ServiceCollection services, InvocationContext context)
         {
             services.AddSingleton(expectedDependency1);
             services.AddSingleton(expectedDependency2);

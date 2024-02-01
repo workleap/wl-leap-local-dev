@@ -10,7 +10,7 @@ internal static class DockerComposeSerializer
 
     private static readonly IDeserializer Deserializer = new DeserializerBuilder()
         .WithTypeConverter(DockerComposePortMappingYamlTypeConverter.Instance)
-        .WithTypeConverter(KeyValueCollectionYamlTypeConverter.Instance)
+        .WithTypeConverter(KeyValueCollectionYamlTypeConverter.MapWriter)
         .WithTypeConverter(DockerComposeVolumeMappingYamlTypeConverter.Instance)
         .WithTypeConverter(DockerComposeCommandYamlTypeConverter.Instance)
         .IgnoreUnmatchedProperties() // don't throw an exception if there are unknown properties
@@ -18,7 +18,7 @@ internal static class DockerComposeSerializer
 
     private static readonly ISerializer Serializer = new SerializerBuilder()
         .WithTypeConverter(DockerComposePortMappingYamlTypeConverter.Instance)
-        .WithTypeConverter(KeyValueCollectionYamlTypeConverter.Instance)
+        .WithTypeConverter(KeyValueCollectionYamlTypeConverter.MapWriter)
         .WithTypeConverter(DockerComposeVolumeMappingYamlTypeConverter.Instance)
         .WithTypeConverter(DockerComposeCommandYamlTypeConverter.Instance)
         .WithNewLine(UnixLineEnding) // keep compatibility with Linux and macOS
@@ -31,8 +31,7 @@ internal static class DockerComposeSerializer
         string dockerComposeYamlContents;
         using (var reader = new StreamReader(stream, leaveOpen: true))
         {
-            // Cancellation support is only available starting .NET 7.0
-            dockerComposeYamlContents = await reader.ReadToEndAsync();
+            dockerComposeYamlContents = await reader.ReadToEndAsync(cancellationToken);
         }
 
         // YamlDotNet doesn't support asynchroneous serialization, and we rather access the file system asynchronously

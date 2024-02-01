@@ -1,0 +1,51 @@
+﻿namespace Leap.Cli;
+
+internal static class Constants
+{
+    private const string LeapRootConfigDirectoryName = ".leap";
+    private const string LeapGeneratedDirectoryName = "generated";
+    private const string LeapDockerComposeDirectoryName = "docker-compose";
+    private const string LeapProcessComposeDirectoryName = "process-compose";
+    private const string LeapPrismDirectoryName = "prism";
+    private const string LeapCertificatesDirectoryName = "certificates";
+
+    private const string LeapSettingsFileName = "usersettings.json";
+
+    public const string LeapYamlFileName = "leap.yaml";
+    public const string SecondaryLeapYamlFileName = "leap.yml";
+
+    private const string LeapCertificateCrtFileName = "workleap-dev-certificate.crt";
+    private const string LeapCertificateKeyFileName = "workleap-dev-certificate.key";
+
+    // "1347" means "leap" in leetspeak (https://en.wikipedia.org/wiki/Leet)
+    public const int LeapReverseProxyPort = 1347;
+
+    private static readonly string UserProfileDirectoryPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+    /// <summary>The root directory path for Leap configuration</summary>
+    public static readonly string RootDirectoryPath = Path.Combine(UserProfileDirectoryPath, LeapRootConfigDirectoryName);
+
+    /// <summary>User-managed configuration file path</summary>
+    public static readonly string LeapUserSettingsFilePath = Path.Combine(RootDirectoryPath, LeapSettingsFileName);
+
+    /// <summary>The directory that contains auto-generated Leap files</summary>
+    public static readonly string GeneratedDirectoryPath = Path.Combine(RootDirectoryPath, LeapGeneratedDirectoryName);
+
+    /// <summary>The directory that contains the generated Docker Compose files</summary>
+    public static readonly string DockerComposeDirectoryPath = Path.Combine(GeneratedDirectoryPath, LeapDockerComposeDirectoryName);
+
+    /// <summary>The directory that contains the generated Process Compose files</summary>
+    public static readonly string ProcessComposeDirectoryPath = Path.Combine(GeneratedDirectoryPath, LeapProcessComposeDirectoryName);
+
+    /// <summary>The directory that contains the generated Process Compose files</summary>
+    public static readonly string PrismDirectoryPath = Path.Combine(GeneratedDirectoryPath, LeapPrismDirectoryName);
+
+    /// <summary>The directory that contains the generated local development certificate files</summary>
+    public static readonly string CertificatesDirectoryPath = Path.Combine(GeneratedDirectoryPath, LeapCertificatesDirectoryName);
+
+    /// <summary>The path of the generated local development public certificate path</summary>
+    public static readonly string LocalCertificateCrtFilePath = Path.Combine(CertificatesDirectoryPath, LeapCertificateCrtFileName);
+
+    /// <summary>The path of the generated local development certificate private key path</summary>
+    public static readonly string LocalCertificateKeyFilePath = Path.Combine(CertificatesDirectoryPath, LeapCertificateKeyFileName);
+}

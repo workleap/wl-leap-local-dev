@@ -17,10 +17,10 @@ steps:
     fetchDepth: 1
 
   - task: UseDotNet@2
-    displayName: "Use .NET 6 SDK"
+    displayName: "Use .NET SDK"
     inputs:
       packageType: sdk
-      version: 6.x
+      useGlobalJson: true
 
   - task: PowerShell@2
     displayName: "Restore, build, test and pack"

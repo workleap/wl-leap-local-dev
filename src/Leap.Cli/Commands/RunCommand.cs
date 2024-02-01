@@ -1,32 +1,21 @@
 using Leap.Cli.Platform;
 using Leap.Cli.Pipeline;
+using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Commands;
 
-internal sealed class RunCommand : Command<RunCommand.Options, RunCommand.OptionsHandler>
+internal sealed class RunCommand() : Command<RunCommandOptions, RunCommandHandler>("run", "Run Leap");
+
+internal sealed class RunCommandOptions : ICommandOptions;
+
+internal sealed class RunCommandHandler(IEnumerable<IPipelineStep> pipelineSteps, ILoggerFactory loggerFactory)
+    : ICommandOptionsHandler<RunCommandOptions>
 {
-    public RunCommand()
-        : base("run", "Run Leap")
+    private readonly LeapPipeline _pipeline = new(pipelineSteps, loggerFactory);
+
+    public async Task<int> HandleAsync(RunCommandOptions runCommandOptions, CancellationToken cancellationToken)
     {
-    }
-
-    internal sealed class Options : ICommandOptions
-    {
-    }
-
-    internal sealed class OptionsHandler : ICommandOptionsHandler<Options>
-    {
-        private readonly LeapPipeline _pipeline;
-
-        public OptionsHandler(IEnumerable<IPipelineStep> pipelineSteps)
-        {
-            this._pipeline = new LeapPipeline(pipelineSteps);
-        }
-
-        public async Task<int> HandleAsync(Options options, CancellationToken cancellationToken)
-        {
-            await this._pipeline.RunAsync(cancellationToken);
-            return 0;
-        }
+        await this._pipeline.RunAsync(cancellationToken);
+        return 0;
     }
 }

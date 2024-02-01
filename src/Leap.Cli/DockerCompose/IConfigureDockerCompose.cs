@@ -4,5 +4,5 @@ namespace Leap.Cli.DockerCompose;
 
 internal interface IConfigureDockerCompose
 {
-    void Configure(Action<DockerComposeYaml> configure);
+    DockerComposeYaml Configuration { get; }
 }

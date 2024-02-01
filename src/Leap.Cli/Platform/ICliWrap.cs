@@ -3,7 +3,7 @@ using CliWrap.Buffered;
 
 namespace Leap.Cli.Platform;
 
-internal interface ICliWrapCommandExecutor
+internal interface ICliWrap
 {
     Task<CommandResult> ExecuteAsync(Command command, CancellationToken forcefulCancellationToken, CancellationToken gracefulCancellationToken = default);
 

@@ -1,15 +1,18 @@
 ﻿using System.Runtime.ExceptionServices;
 using Leap.Cli.Model;
+using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Pipeline;
 
 internal sealed class LeapPipeline
 {
     private readonly IPipelineStep[] _steps;
+    private readonly ILogger _logger;
 
-    public LeapPipeline(IEnumerable<IPipelineStep> steps)
+    public LeapPipeline(IEnumerable<IPipelineStep> steps, ILoggerFactory loggerFactory)
     {
         this._steps = steps.ToArray();
+        this._logger = loggerFactory.CreateLogger<LeapPipeline>();
     }
 
     public async Task RunAsync(CancellationToken cancellationToken)
@@ -22,8 +25,9 @@ internal sealed class LeapPipeline
         }
         finally
         {
-            // TODO this cancellation token is invalid if the user already pressed CTRL+C, we need another one with a graceful shutdown timeout
-            await this.StopAsync(state, cancellationToken);
+            var gracefulShutdownDelay = TimeSpan.FromSeconds(30);
+            using var cts = new CancellationTokenSource(gracefulShutdownDelay);
+            await this.StopAsync(state, cts.Token);
         }
     }
 
@@ -31,10 +35,22 @@ internal sealed class LeapPipeline
     {
         foreach (var step in this._steps)
         {
-            var result = await step.StartAsync(state, cancellationToken);
-
-            if (result == PipelineStepResult.Stop)
+            try
             {
+                await step.StartAsync(state, cancellationToken);
+            }
+            catch (LeapException ex)
+            {
+                this._logger.LogError("{Error}", ex.Message);
+                return;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogError(ex, "An unhandled exception occurred during the pipeline step '{Step}'", step.GetType().Name);
                 return;
             }
         }

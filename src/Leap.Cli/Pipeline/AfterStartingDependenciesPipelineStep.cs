@@ -12,7 +12,7 @@ internal sealed class AfterStartingDependenciesPipelineStep : IPipelineStep
         this._handlers = handlers.ToArray();
     }
 
-    public async Task<PipelineStepResult> StartAsync(ApplicationState state, CancellationToken cancellationToken)
+    public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
         foreach (var handler in this._handlers)
         {
@@ -22,8 +22,6 @@ internal sealed class AfterStartingDependenciesPipelineStep : IPipelineStep
                 await handler.AfterStartAsync(dependency, cancellationToken);
             }
         }
-
-        return PipelineStepResult.Continue;
     }
 
     public Task StopAsync(ApplicationState state, CancellationToken cancellationToken)

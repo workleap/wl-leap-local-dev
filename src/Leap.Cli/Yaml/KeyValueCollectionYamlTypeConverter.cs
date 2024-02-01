@@ -7,13 +7,23 @@ namespace Leap.Cli.Yaml;
 
 internal sealed class KeyValueCollectionYamlTypeConverter : IYamlTypeConverter
 {
-    public static readonly KeyValueCollectionYamlTypeConverter Instance = new();
+    public static readonly KeyValueCollectionYamlTypeConverter MapWriter = new(WriteFormat.Map);
+    public static readonly KeyValueCollectionYamlTypeConverter SequenceWriter = new(WriteFormat.Sequence);
 
     private static readonly Regex KeyValueRegex = new Regex("^(?<name>[^=]+)=(?<value>.*)$", RegexOptions.Compiled);
     private static readonly char[] KeyCharactersThatRequireQuotes = { ' ', '/', '\\', '~', ':', '$', '{', '}' };
 
-    private KeyValueCollectionYamlTypeConverter()
+    private readonly WriteFormat _writeFormat;
+
+    private KeyValueCollectionYamlTypeConverter(WriteFormat writeFormat)
     {
+        this._writeFormat = writeFormat;
+    }
+
+    private enum WriteFormat
+    {
+        Sequence,
+        Map,
     }
 
     public bool Accepts(Type type)
@@ -36,7 +46,7 @@ internal sealed class KeyValueCollectionYamlTypeConverter : IYamlTypeConverter
     {
         var keyValueCollection = new KeyValueCollectionYaml();
 
-        while (!parser.Accept<MappingEnd>())
+        while (!parser.Accept<MappingEnd>(out _))
         {
             var name = parser.Consume<Scalar>();
             var value = parser.Consume<Scalar>();
@@ -51,7 +61,7 @@ internal sealed class KeyValueCollectionYamlTypeConverter : IYamlTypeConverter
     {
         var keyValueCollection = new KeyValueCollectionYaml();
 
-        while (!parser.Accept<SequenceEnd>())
+        while (!parser.Accept<SequenceEnd>(out _))
         {
             var scalar = parser.Consume<Scalar>();
 
@@ -75,6 +85,18 @@ internal sealed class KeyValueCollectionYamlTypeConverter : IYamlTypeConverter
     {
         var entries = (KeyValueCollectionYaml)value!;
 
+        if (this._writeFormat == WriteFormat.Map)
+        {
+            WriteAsMap(emitter, entries);
+        }
+        else if (this._writeFormat == WriteFormat.Sequence)
+        {
+            WriteAsSequence(emitter, entries);
+        }
+    }
+
+    private static void WriteAsMap(IEmitter emitter, KeyValueCollectionYaml entries)
+    {
         emitter.Emit(new MappingStart(AnchorName.Empty, TagName.Empty, isImplicit: true, MappingStyle.Block));
 
         foreach (var entry in entries)
@@ -88,5 +110,17 @@ internal sealed class KeyValueCollectionYamlTypeConverter : IYamlTypeConverter
         }
 
         emitter.Emit(new MappingEnd());
+    }
+
+    private static void WriteAsSequence(IEmitter emitter, KeyValueCollectionYaml entries)
+    {
+        emitter.Emit(new SequenceStart(AnchorName.Empty, TagName.Empty, isImplicit: true, SequenceStyle.Block));
+
+        foreach (var (key, value) in entries)
+        {
+            emitter.Emit(new Scalar(AnchorName.Empty, TagName.Empty, $"{key}={value}", ScalarStyle.DoubleQuoted, isPlainImplicit: false, isQuotedImplicit: true));
+        }
+
+        emitter.Emit(new SequenceEnd());
     }
 }

@@ -1,43 +1,65 @@
-using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using CliWrap;
 using Leap.Cli.Configuration;
 using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
-using Spectre.Console;
+using Leap.Cli.Platform;
+using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Dependencies;
 
 internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency>
 {
+    public const int MongoPort = 27217;
+
     private const string ServiceName = "mongo";
-    private const string DataVolumeName = "mongo_data";
-    private const string ConfigVolumeName = "mongo_config";
+    private const string ContainerName = "leap-mongo";
+    private const string DataVolumeName = "leap_mongo_data";
+    private const string ConfigVolumeName = "leapmongo_config";
     private const string ReplicaSetName = "rs0";
 
-    private const int MongoPort = 27217;
+    private static readonly string HostConnectionString = $"mongodb://127.0.0.1:{MongoPort}/?replicaSet={ReplicaSetName}";
+    private static readonly string ContainerConnectionString = $"mongodb://host.docker.internal:{MongoPort}/?replicaSet={ReplicaSetName}";
 
     private readonly IConfigureDockerCompose _dockerCompose;
-    private readonly IAnsiConsole _console;
+    private readonly IConfigureEnvironmentVariables _environmentVariables;
+    private readonly IConfigureAppSettingsJson _appSettingsJson;
+    private readonly ICliWrap _cliWrap;
+    private readonly ILogger _logger;
 
-    public MongoDependencyHandler(IConfigureDockerCompose dockerCompose, IAnsiConsole console)
+    public MongoDependencyHandler(
+        IConfigureDockerCompose dockerCompose,
+        IConfigureEnvironmentVariables environmentVariables,
+        IConfigureAppSettingsJson appSettingsJson,
+        ICliWrap cliWrap,
+        ILogger<MongoDependencyHandler> logger)
     {
         this._dockerCompose = dockerCompose;
-        this._console = console;
+        this._environmentVariables = environmentVariables;
+        this._appSettingsJson = appSettingsJson;
+        this._cliWrap = cliWrap;
+        this._logger = logger;
     }
 
     protected override Task BeforeStartAsync(MongoDependency dependency, CancellationToken cancellationToken)
     {
-        this._dockerCompose.Configure(ConfigureMongo);
+        ConfigureDockerCompose(this._dockerCompose.Configuration);
+        this._environmentVariables.Configure(ConfigureEnvironmentVariables);
+        ConfigureAppSettingsJson(this._appSettingsJson.Configuration);
+
         return Task.CompletedTask;
     }
 
-    private static void ConfigureMongo(DockerComposeYaml dockerComposeYaml)
+    private static void ConfigureDockerCompose(DockerComposeYaml dockerComposeYaml)
     {
         var service = new DockerComposeServiceYaml
         {
             Image = "mongo:7.0",
-            Command = new DockerComposeCommandYaml { "--replSet", ReplicaSetName, "--bind_ip_all", "--port", MongoPort.ToString(CultureInfo.InvariantCulture) },
+            ContainerName = ContainerName,
+            Command = new DockerComposeCommandYaml { "--replSet", ReplicaSetName, "--bind_ip_all", "--port", MongoPort.ToString() },
             Restart = DockerComposeConstants.Restart.UnlessStopped,
             Ports = { new DockerComposePortMappingYaml(MongoPort, MongoPort) },
             Volumes =
@@ -59,49 +81,132 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
         };
 
         dockerComposeYaml.Services[ServiceName] = service;
+
         dockerComposeYaml.Volumes[DataVolumeName] = null;
         dockerComposeYaml.Volumes[ConfigVolumeName] = null;
     }
 
+    private static void ConfigureEnvironmentVariables(List<EnvironmentVariable> environmentVariables)
+    {
+        // Do we want to add the environment variables after we verified that the instance is ready?
+        environmentVariables.AddRange(new[]
+        {
+            new EnvironmentVariable("CONNECTIONSTRINGS__MONGO", HostConnectionString, EnvironmentVariableScope.Host),
+            new EnvironmentVariable("CONNECTIONSTRINGS__MONGO", ContainerConnectionString, EnvironmentVariableScope.Container),
+        });
+    }
+
+    private static void ConfigureAppSettingsJson(JsonObject appsettings)
+    {
+        appsettings["ConnectionStrings:Mongo"] = HostConnectionString;
+    }
+
     protected override async Task AfterStartAsync(MongoDependency dependency, CancellationToken cancellationToken)
     {
-        await this._console.Status().StartAsync("Starting MongoDB replica set...", async _ =>
+        // TODO even if the replica set is already initialized, this can be a little slow (like, 2-5 seconds)
+        // TODO we could have a cache layer in leap for arbitrary data, and store the container ID of the mongo container
+        // TODO then we could check if the container ID is the same as the one in the cache, and if so, we can skip this step
+        this._logger.LogInformation("Starting MongoDB replica set '{ReplicaSet}'...", ReplicaSetName);
+
+        await this.EnsureReplicaSetReadyAsync(cancellationToken);
+
+        // TODO that might not be true, improve the error handling
+        this._logger.LogInformation("MongoDB replica set is ready");
+    }
+
+    private async Task EnsureReplicaSetReadyAsync(CancellationToken cancellationToken)
+    {
+        using var cts1 = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        using var cts2 = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts1.Token);
+
+        while (!cts2.IsCancellationRequested)
         {
-            var exitCode = 0;
-            var nbRetry = 5;
+            var status = await this.GetReplicaSetStatusAsync(cts2.Token);
 
-            do
+            if (status?.Ok == 1)
             {
-                try
+                if (status.IsReady())
                 {
-                    var replicateScript = "\"do { try { rs.status().ok; break; } catch (err) { rs.initiate({_id:'" + ReplicaSetName + "',members:[{_id:0,host:'host.docker.internal:" + MongoPort + "'}]}).ok } } while (true)\"";
-                    var mongoPort = MongoPort.ToString(CultureInfo.InvariantCulture);
-
-                    // TODO consider parsing mongosh results from JSON using the "--json relaxed" argument
-                    var result = await new Command("docker")
-                        .WithValidation(CommandResultValidation.None)
-                        .WithWorkingDirectory(ConfigurationConstants.GeneratedDirectoryPath)
-                        .WithArguments(new[] { "compose", "exec", "mongo", "mongosh", "--port", mongoPort, "--quiet", "--eval", replicateScript })
-                        .WithStandardOutputPipe(PipeTarget.ToDelegate(this._console.WriteLine))
-                        .WithStandardErrorPipe(PipeTarget.ToDelegate(this._console.WriteLine))
-                        .ExecuteAsync(cancellationToken);
-
-                    exitCode = result.ExitCode;
+                    return;
                 }
-                catch (Exception ex)
-                {
-                    this._console.WriteException(ex);
-                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
-                    exitCode = 1;
-                }
+
+                await Task.Delay(TimeSpan.FromMilliseconds(500), cts2.Token);
             }
-            while (exitCode != 0 && --nbRetry > 0);
 
-            if (exitCode == 0)
+            if (status?.IsNotYetInitialized() == true)
             {
-                var connectionString = $"mongodb://127.0.0.1:{MongoPort}/?replicaSet={ReplicaSetName}";
-                this._console.MarkupLineInterpolated($"MongoDB replica ready, the connection string is [green]{connectionString}[/]");
+                await this.InitiateReplicaSetAsync(cts2.Token);
             }
-        });
+        }
+
+        // TODO throw an exception or display an error, we couldn't start the replica set
+    }
+
+    // https://www.mongodb.com/docs/manual/reference/command/replSetGetStatus/#std-label-rs-status-output
+    private async Task<ReplicaSetStatus?> GetReplicaSetStatusAsync(CancellationToken cancellationToken)
+    {
+        var statusOutput = await this.ExecuteMongoCommandAsync("rs.status()", cancellationToken);
+        try
+        {
+            var status = JsonSerializer.Deserialize<ReplicaSetStatus>(statusOutput);
+
+            if (status is null)
+            {
+                // TODO better error handling, we might want to retry. Maybe use Polly?
+                throw new Exception($"Unable to retrieve replica set status. Output: {statusOutput}");
+            }
+
+            return status;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private async Task InitiateReplicaSetAsync(CancellationToken cancellationToken)
+    {
+        var initCommand = "rs.initiate({_id:'" + ReplicaSetName + "',members:[{_id:0,host:'host.docker.internal:" + MongoPort + "'}]})";
+        var initOutput = await this.ExecuteMongoCommandAsync(initCommand, cancellationToken);
+        var initStatus = JsonSerializer.Deserialize<ReplicaSetStatus>(initOutput);
+        if (initStatus?.Ok != 1)
+        {
+            throw new Exception($"Failed to initiate replica set. Output: {initOutput}");
+        }
+    }
+
+    private async Task<string> ExecuteMongoCommandAsync(string mongoshCommand, CancellationToken cancellationToken)
+    {
+        var command = new Command("docker")
+            .WithValidation(CommandResultValidation.None)
+            .WithWorkingDirectory(Constants.DockerComposeDirectoryPath)
+            .WithArguments(["compose", "exec", ServiceName, "mongosh", "--port", MongoPort.ToString(), "--quiet", "--eval", mongoshCommand, "--json", "relaxed"]);
+
+        // TODO handle errors and unexpected behavior
+        var result = await this._cliWrap.ExecuteBufferedAsync(command, cancellationToken);
+
+        return result.StandardOutput;
+    }
+
+    private sealed class ReplicaSetStatus
+    {
+        [JsonPropertyName("ok")]
+        public int? Ok { get; init; }
+
+        [JsonPropertyName("codeName")]
+        public string? CodeName { get; init; }
+
+        [JsonPropertyName("myState")]
+        public int? MyState { get; init; }
+
+        public bool IsNotYetInitialized() => this.CodeName == "NotYetInitialized";
+
+        public bool IsReady() => this.MyState == ReplicaSetState.Primary;
+    }
+
+    // https://www.mongodb.com/docs/manual/reference/replica-states/#replica-set-member-states
+    private static class ReplicaSetState
+    {
+        public const int Primary = 1;
     }
 }

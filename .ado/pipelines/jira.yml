@@ -1,0 +1,32 @@
+trigger: none
+
+pool: "Azure Pipelines"
+
+variables:
+  - name: branchName
+    value: $[coalesce(variables['System.PullRequest.SourceBranch'], variables['Build.SourceBranch'])]
+  - group: jira-pipeline
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: Shared-Assets/Pipeline-Library
+
+jobs:
+  - job: Jira
+    displayName: Jira Validation
+    timeoutInMinutes: 10
+    workspace:
+      clean: all
+
+    steps:
+      - checkout: self
+        clean: true
+        fetchDepth: 1
+
+      - template: steps/jira-validation/jira-validation-template.yml@templates
+        parameters:
+          user: $(JiraUsername)
+          token: $(JiraApiToken)
+          branchName: $(branchName)

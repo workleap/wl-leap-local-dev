@@ -7,10 +7,10 @@ steps:
       # Check if the Docker container is running
       $containerRunning = [bool](docker ps -q -f name='${{ parameters.containerName }}')
       if ($containerRunning) {
-          Write-Host "Docker container is running."
+          Write-Host "Docker container ${{ parameters.containerName }} is running."
       }
       else {
-          Write-Host "Docker container is not running."
+          Write-Host "Docker container ${{ parameters.containerName }} is not running."
           exit 1
       }
     condition: eq(variables.imageName, 'ubuntu-latest') # TODO: This is temporary and should be removed

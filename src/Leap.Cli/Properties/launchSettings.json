@@ -1,8 +1,16 @@
 {
   "profiles": {
-    "Leap.Cli": {
+    "run": {
       "commandName": "Project",
       "commandLineArgs": "run"
+    },
+    "config add": {
+      "commandName": "Project",
+      "commandLineArgs": "config add C:\\src\\leap.yaml"
+    },
+    "config remove": {
+      "commandName": "Project",
+      "commandLineArgs": "config remove C:\\src\\leap.yaml"
     }
   }
 }

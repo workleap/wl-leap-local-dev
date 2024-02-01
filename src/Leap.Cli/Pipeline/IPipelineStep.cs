@@ -4,7 +4,7 @@ namespace Leap.Cli.Pipeline;
 
 internal interface IPipelineStep
 {
-    Task<PipelineStepResult> StartAsync(ApplicationState state, CancellationToken cancellationToken);
+    Task StartAsync(ApplicationState state, CancellationToken cancellationToken);
 
     Task StopAsync(ApplicationState state, CancellationToken cancellationToken);
 }

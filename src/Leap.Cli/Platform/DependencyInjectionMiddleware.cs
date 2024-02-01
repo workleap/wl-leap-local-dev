@@ -6,18 +6,18 @@ namespace Leap.Cli.Platform;
 
 internal static class DependencyInjectionMiddleware
 {
-    public static CommandLineBuilder UseDependencyInjection(this CommandLineBuilder builder, Action<ServiceCollection> configureServices)
+    public static CommandLineBuilder UseDependencyInjection(this CommandLineBuilder builder, Action<ServiceCollection, InvocationContext> configureServices)
     {
         return builder.AddMiddleware(CreateDependencyInjectionMiddleware(configureServices), MiddlewareOrder.Configuration);
     }
 
-    internal static InvocationMiddleware CreateDependencyInjectionMiddleware(Action<ServiceCollection> configureServices)
+    internal static InvocationMiddleware CreateDependencyInjectionMiddleware(Action<ServiceCollection, InvocationContext> configureServices)
     {
         async Task RegisterServiceProvider(InvocationContext context, Func<InvocationContext, Task> next)
         {
             // Register our services in the modern Microsoft dependency injection container
             var services = new ServiceCollection();
-            configureServices(services);
+            configureServices(services, context);
             var uniqueServiceTypes = new HashSet<Type>(services.Select(x => x.ServiceType));
 
             await using var serviceProvider = services.BuildServiceProvider();

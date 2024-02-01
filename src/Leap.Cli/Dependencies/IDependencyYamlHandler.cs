@@ -1,4 +1,5 @@
 ﻿using Leap.Cli.Configuration.Yaml;
+using Leap.Cli.Model;
 
 namespace Leap.Cli.Dependencies;
 
@@ -8,5 +9,5 @@ internal interface IDependencyYamlHandler
 
     DependencyYaml Merge(DependencyYaml leftYaml, DependencyYaml rightYaml);
 
-    Model.Dependency ToDependencyModel(DependencyYaml yaml);
+    Dependency ToDependencyModel(DependencyYaml yaml);
 }

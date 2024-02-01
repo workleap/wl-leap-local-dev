@@ -22,7 +22,7 @@ internal sealed class DockerComposeCommandYamlTypeConverter : IYamlTypeConverter
         _ = parser.Consume<SequenceStart>();
         var command = new DockerComposeCommandYaml();
 
-        while (!parser.Accept<SequenceEnd>())
+        while (!parser.Accept<SequenceEnd>(out _))
         {
             var scalar = parser.Consume<Scalar>();
             command.Add(scalar.Value);
