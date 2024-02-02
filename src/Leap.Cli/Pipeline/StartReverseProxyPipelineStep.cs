@@ -90,7 +90,7 @@ internal sealed class StartReverseProxyPipelineStep : IPipelineStep
                 {
                     [clusterId + "/destination"] = new DestinationConfig
                     {
-                        Address = "http://127.0.0.1:" + service.Ingress.InternalPort,
+                        Address = service.ActiveBinding?.Protocol + "://127.0.0.1:" + service.Ingress.InternalPort,
                     },
                 },
             };
@@ -110,7 +110,13 @@ internal sealed class StartReverseProxyPipelineStep : IPipelineStep
             routes.Add(route);
         }
 
-        builder.Services.AddReverseProxy().LoadFromMemory(routes, clusters);
+        builder.Services.AddReverseProxy().LoadFromMemory(routes, clusters)
+#pragma warning disable CA5359
+            // This might seems like a security issue, but it's not.
+            // We trust the subscribers' certificates as this emulator is intended to be used in a local environment,
+            // where certificates are mostly self-signed and not trusted by the Docker container.
+            .ConfigureHttpClient((_, handler) => handler.SslOptions.RemoteCertificateValidationCallback = (_, _, _, _) => true);
+#pragma warning restore CA5359
 
         this._app = builder.Build();
 

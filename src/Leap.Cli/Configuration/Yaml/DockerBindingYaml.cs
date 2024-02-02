@@ -14,4 +14,7 @@ internal sealed class DockerBindingYaml : BindingYaml
 
     [YamlMember(Alias = "hostPort", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
     public int? HostPort { get; set; }
+
+    [YamlMember(Alias = "protocol", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
+    public string? Protocol { get; set; }
 }

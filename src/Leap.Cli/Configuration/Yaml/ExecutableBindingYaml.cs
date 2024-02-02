@@ -18,4 +18,7 @@ internal sealed class ExecutableBindingYaml : BindingYaml
 
     [YamlMember(Alias = "port", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
     public int? Port { get; set; }
+
+    [YamlMember(Alias = "protocol", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
+    public string? Protocol { get; set; }
 }

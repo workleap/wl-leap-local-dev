@@ -8,6 +8,7 @@ namespace Leap.Cli.Pipeline;
 
 internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
 {
+    private static readonly HashSet<string> SupportedBackendProtocols = ["http", "https"];
     private readonly ILeapYamlAccessor _leapYamlAccessor;
     private readonly IPortManager _portManager;
     private readonly ILogger _logger;
@@ -119,12 +120,23 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                         continue;
                     }
 
+                    if (string.IsNullOrWhiteSpace(exeBindingYaml.Protocol))
+                    {
+                        exeBindingYaml.Protocol = "http";
+                    }
+                    else if (!SupportedBackendProtocols.Contains(exeBindingYaml.Protocol, StringComparer.OrdinalIgnoreCase))
+                    {
+                        this._logger.LogWarning("An executable binding has an invalid protocol '{Protocol}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", exeBindingYaml.Protocol, leapConfig.Path, service.Name);
+                        continue;
+                    }
+
                     service.Bindings.Add(new ExecutableBinding
                     {
                         Command = exeBindingYaml.Command,
                         Arguments = arguments.ToArray(),
                         WorkingDirectory = workingDirectory,
                         Port = exeBindingYaml.Port,
+                        Protocol = exeBindingYaml.Protocol,
                     });
                 }
                 else if (bindingYaml is DockerBindingYaml dockerBindingYaml)
@@ -156,11 +168,22 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                         continue;
                     }
 
+                    if (string.IsNullOrWhiteSpace(dockerBindingYaml.Protocol))
+                    {
+                        dockerBindingYaml.Protocol = "http";
+                    }
+                    else if (!SupportedBackendProtocols.Contains(dockerBindingYaml.Protocol, StringComparer.OrdinalIgnoreCase))
+                    {
+                        this._logger.LogWarning("A Docker image has an invalid protocol '{Protocol}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", dockerBindingYaml.Protocol, leapConfig.Path, service.Name);
+                        continue;
+                    }
+
                     service.Bindings.Add(new DockerBinding
                     {
                         Image = dockerImage,
                         ContainerPort = containerPort.Value,
                         HostPort = dockerBindingYaml.HostPort,
+                        Protocol = dockerBindingYaml.Protocol,
                     });
                 }
                 else if (bindingYaml is CsprojBindingYaml csprojBindingYaml)
@@ -181,10 +204,21 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                         continue;
                     }
 
+                    if (string.IsNullOrWhiteSpace(csprojBindingYaml.Protocol))
+                    {
+                        csprojBindingYaml.Protocol = "http";
+                    }
+                    else if (!SupportedBackendProtocols.Contains(csprojBindingYaml.Protocol, StringComparer.OrdinalIgnoreCase))
+                    {
+                        this._logger.LogWarning("A .NET project binding has an invalid protocol '{Protocol}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", csprojBindingYaml.Protocol, leapConfig.Path, service.Name);
+                        continue;
+                    }
+
                     service.Bindings.Add(new CsprojBinding
                     {
                         Path = csprojPath,
                         Port = csprojBindingYaml.Port,
+                        Protocol = csprojBindingYaml.Protocol,
                     });
                 }
                 else if (bindingYaml is OpenApiBindingYaml openApiBindingYaml)

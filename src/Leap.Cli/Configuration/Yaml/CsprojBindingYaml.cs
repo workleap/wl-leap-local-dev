@@ -12,4 +12,7 @@ internal sealed class CsprojBindingYaml : BindingYaml
 
     [YamlMember(Alias = "port", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
     public int? Port { get; set; }
+
+    [YamlMember(Alias = "protocol", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
+    public string? Protocol { get; set; }
 }

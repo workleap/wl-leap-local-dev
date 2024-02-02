@@ -53,7 +53,7 @@ internal sealed class PrepareBindingsPipelineStep : IPipelineStep
 
         // .NET specific environment variables. Not harmful for non-.NET services.
         service.EnvironmentVariables.TryAdd("ASPNETCORE_URLS", $"http://+:{advertisedPort}");
-        service.EnvironmentVariables.TryAdd("DOTNET_ENVIRONMENT", "Development"); // TODO Local?
+        service.EnvironmentVariables.TryAdd("DOTNET_ENVIRONMENT", "Development");
 
         // OpenTelemetry
         service.EnvironmentVariables.TryAdd("OTEL_SERVICE_NAME", service.Name);
