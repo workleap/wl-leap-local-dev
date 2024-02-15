@@ -11,7 +11,7 @@ internal sealed class WireServicesAndDependenciesPipelineStep : IPipelineStep
         SqlServerDependency.DependencyType,
         PostgresDependency.DependencyType,
         RedisDependency.DependencyType,
-        AzuriteDependency.DependencyType,
+        MongoDependency.DependencyType,
         AzuriteDependency.DependencyType,
     };
 
