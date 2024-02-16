@@ -8,11 +8,12 @@ internal sealed class WireServicesAndDependenciesPipelineStep : IPipelineStep
 {
     private static readonly HashSet<string> ExcludedDockerServices = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
-        SqlServerDependency.DependencyType,
+        AzuriteDependency.DependencyType,
+        EventGridDependency.DependencyType,
+        MongoDependency.DependencyType,
         PostgresDependency.DependencyType,
         RedisDependency.DependencyType,
-        MongoDependency.DependencyType,
-        AzuriteDependency.DependencyType,
+        SqlServerDependency.DependencyType,
     };
 
     private readonly IEnvironmentVariableManager _environmentVariables;

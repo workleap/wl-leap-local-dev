@@ -59,6 +59,7 @@ jobs:
               - type: redis
               - type: postgres
               - type: sqlserver
+              - type: eventgrid
               - type: azurite
                 containers:
                   - mycontainer
@@ -94,6 +95,10 @@ jobs:
       - template: templates/docker-container-check.yml
         parameters:
           containerName: "leap-azurite"
+
+      - template: templates/docker-container-check.yml
+        parameters:
+          containerName: "leap-eventgrid"
 
       - task: NuGetCommand@2
         condition: eq(variables.imageName, 'ubuntu-latest')

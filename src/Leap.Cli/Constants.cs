@@ -11,6 +11,8 @@ internal static class Constants
 
     private const string LeapSettingsFileName = "usersettings.json";
 
+    private const string EventGridSettingsFileName = "eventgridsettings.json";
+
     public const string LeapYamlFileName = "leap.yaml";
     public const string SecondaryLeapYamlFileName = "leap.yml";
 
@@ -27,6 +29,9 @@ internal static class Constants
 
     /// <summary>User-managed configuration file path</summary>
     public static readonly string LeapUserSettingsFilePath = Path.Combine(RootDirectoryPath, LeapSettingsFileName);
+
+    /// <summary>User-managed event grid configuration file path</summary>
+    public static readonly string LeapEventGridSettingsFilePath = Path.Combine(RootDirectoryPath, EventGridSettingsFileName);
 
     /// <summary>The directory that contains auto-generated Leap files</summary>
     public static readonly string GeneratedDirectoryPath = Path.Combine(RootDirectoryPath, LeapGeneratedDirectoryName);
