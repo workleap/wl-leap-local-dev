@@ -25,6 +25,14 @@ var quietOption = new Option<bool>(["--quiet"])
     IsHidden = true,
 };
 
+var featureFlagsOption = new Option<string[]>(["--feature-flags"])
+{
+    AllowMultipleArgumentsPerToken = true,
+    Description = "Enable feature flags.",
+    Arity = ArgumentArity.ZeroOrMore,
+    IsHidden = true,
+};
+
 var rootCommand = new RootCommand("Workleap's Local Environment Application Proxy")
 {
     new RunCommand(),
@@ -37,6 +45,7 @@ var rootCommand = new RootCommand("Workleap's Local Environment Application Prox
 };
 
 rootCommand.AddGlobalOption(quietOption);
+rootCommand.AddGlobalOption(featureFlagsOption);
 rootCommand.Name = "leap";
 
 var builder = new CommandLineBuilder(rootCommand);
@@ -52,6 +61,9 @@ builder.UseDependencyInjection((services, context) =>
         loggingBuilder.AddFilter("System.Net.Http", LogLevel.Warning);
         loggingBuilder.AddProvider(new SimpleColoredConsoleLoggerProvider());
     });
+
+    var experimentsCommandLine = context.ParseResult.GetValueForOption(featureFlagsOption) ?? [];
+    services.AddSingleton<IFeatureManager>(new FeatureManager(experimentsCommandLine));
 
     services.AddSingleton<IFileSystem, FileSystem>();
     services.AddSingleton<ICliWrap, CliWrapExecutor>();

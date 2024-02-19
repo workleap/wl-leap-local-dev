@@ -1,5 +1,6 @@
 ﻿using Leap.Cli.Configuration;
 using Leap.Cli.Configuration.Yaml;
+using Leap.Cli.Extensions;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
 using Microsoft.Extensions.Logging;
@@ -9,15 +10,18 @@ namespace Leap.Cli.Pipeline;
 internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
 {
     private static readonly HashSet<string> SupportedBackendProtocols = ["http", "https"];
+    private readonly IFeatureManager _featureManager;
     private readonly ILeapYamlAccessor _leapYamlAccessor;
     private readonly IPortManager _portManager;
     private readonly ILogger _logger;
 
     public PopulateServicesFromYamlPipelineStep(
+        IFeatureManager featureManager,
         ILeapYamlAccessor leapYamlAccessor,
         IPortManager portManager,
         ILogger<PopulateServicesFromYamlPipelineStep> logger)
     {
+        this._featureManager = featureManager;
         this._leapYamlAccessor = leapYamlAccessor;
         this._portManager = portManager;
         this._logger = logger;
@@ -25,6 +29,12 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
 
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
+        if (!this._featureManager.IsEnabled(FeatureIdentifiers.LeapPhase2))
+        {
+            this._logger.LogPipelineStepSkipped(nameof(PopulateServicesFromYamlPipelineStep), FeatureIdentifiers.LeapPhase2);
+            return;
+        }
+
         var leapConfigs = await this._leapYamlAccessor.GetAllAsync(cancellationToken);
 
         foreach (var leapConfig in leapConfigs)

@@ -2,7 +2,9 @@
 using System.Text.Json.Nodes;
 using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
+using Leap.Cli.Extensions;
 using Leap.Cli.Model;
+using Leap.Cli.Platform;
 using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Pipeline;
@@ -55,6 +57,7 @@ service:
       exporters: [debug]
 ".Trim();
 
+    private readonly IFeatureManager _featureManager;
     private readonly IConfigureDockerCompose _dockerCompose;
     private readonly IConfigureEnvironmentVariables _environmentVariables;
     private readonly IConfigureAppSettingsJson _appSettingsJson;
@@ -62,12 +65,14 @@ service:
     private readonly ILogger _logger;
 
     public ConfigureOpenTelemetryPipelineStep(
+        IFeatureManager featureManager,
         IConfigureDockerCompose dockerCompose,
         IConfigureEnvironmentVariables environmentVariables,
         IConfigureAppSettingsJson appSettingsJson,
         IFileSystem fileSystem,
         ILogger<ConfigureOpenTelemetryPipelineStep> logger)
     {
+        this._featureManager = featureManager;
         this._dockerCompose = dockerCompose;
         this._environmentVariables = environmentVariables;
         this._appSettingsJson = appSettingsJson;
@@ -77,6 +82,12 @@ service:
 
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
+        if (!this._featureManager.IsEnabled(FeatureIdentifiers.LeapPhase2))
+        {
+            this._logger.LogPipelineStepSkipped(nameof(ConfigureOpenTelemetryPipelineStep), FeatureIdentifiers.LeapPhase2);
+            return;
+        }
+
         if (state.Services.Count == 0)
         {
             return;

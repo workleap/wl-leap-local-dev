@@ -1,6 +1,9 @@
 ﻿using Leap.Cli.DockerCompose;
+using Leap.Cli.Extensions;
 using Leap.Cli.Model;
+using Leap.Cli.Platform;
 using Leap.Cli.ProcessCompose;
+using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Pipeline;
 
@@ -16,15 +19,21 @@ internal sealed class WireServicesAndDependenciesPipelineStep : IPipelineStep
         SqlServerDependency.DependencyType,
     };
 
+    private readonly IFeatureManager _featureManager;
+    private readonly ILogger<WireServicesAndDependenciesPipelineStep> _logger;
     private readonly IEnvironmentVariableManager _environmentVariables;
     private readonly IConfigureDockerCompose _dockerCompose;
     private readonly IConfigureProcessCompose _processCompose;
 
     public WireServicesAndDependenciesPipelineStep(
+        IFeatureManager featureManager,
+        ILogger<WireServicesAndDependenciesPipelineStep> logger,
         IEnvironmentVariableManager environmentVariables,
         IConfigureDockerCompose dockerCompose,
         IConfigureProcessCompose processCompose)
     {
+        this._featureManager = featureManager;
+        this._logger = logger;
         this._environmentVariables = environmentVariables;
         this._dockerCompose = dockerCompose;
         this._processCompose = processCompose;
@@ -32,6 +41,12 @@ internal sealed class WireServicesAndDependenciesPipelineStep : IPipelineStep
 
     public Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
+        if (!this._featureManager.IsEnabled(FeatureIdentifiers.LeapPhase2))
+        {
+            this._logger.LogPipelineStepSkipped(nameof(WireServicesAndDependenciesPipelineStep), FeatureIdentifiers.LeapPhase2);
+            return Task.CompletedTask;
+        }
+
         var orderedEnvironmentVariables = this._environmentVariables.EnvironmentVariables.OrderBy(x => x.Name, StringComparer.Ordinal);
 
         foreach (var (envvarName, envvarValue, scope) in orderedEnvironmentVariables)

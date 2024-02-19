@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CliWrap;
+using Leap.Cli.Extensions;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
 using Microsoft.AspNetCore.Builder;
@@ -15,6 +16,7 @@ namespace Leap.Cli.Pipeline;
 
 internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
 {
+    private readonly IFeatureManager _featureManager;
     private readonly ICliWrap _cliWrap;
     private readonly IPortManager _portManager;
     private readonly IConfigureEnvironmentVariables _environmentVariables;
@@ -23,11 +25,13 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
     private WebApplication? _app;
 
     public StartAzureCliDockerProxyPipelineStep(
+        IFeatureManager featureManager,
         ICliWrap cliWrap,
         IPortManager portManager,
         IConfigureEnvironmentVariables environmentVariables,
         ILogger<StartAzureCliDockerProxyPipelineStep> logger)
     {
+        this._featureManager = featureManager;
         this._cliWrap = cliWrap;
         this._portManager = portManager;
         this._environmentVariables = environmentVariables;
@@ -36,6 +40,12 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
 
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
+        if (!this._featureManager.IsEnabled(FeatureIdentifiers.LeapPhase2))
+        {
+            this._logger.LogPipelineStepSkipped(nameof(StartAzureCliDockerProxyPipelineStep), FeatureIdentifiers.LeapPhase2);
+            return;
+        }
+
         var isAzureCliInstalled = await this.IsAzureCliInstalledAsync(cancellationToken);
         if (!isAzureCliInstalled)
         {

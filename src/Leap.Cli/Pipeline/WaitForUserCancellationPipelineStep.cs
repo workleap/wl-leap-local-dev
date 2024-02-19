@@ -1,19 +1,31 @@
-﻿using Leap.Cli.Model;
+﻿using Leap.Cli.Extensions;
+using Leap.Cli.Model;
+using Leap.Cli.Platform;
 using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Pipeline;
 
 internal sealed class WaitForUserCancellationPipelineStep : IPipelineStep
 {
+    private readonly IFeatureManager _featureManager;
     private readonly ILogger _logger;
 
-    public WaitForUserCancellationPipelineStep(ILogger<WaitForUserCancellationPipelineStep> logger)
+    public WaitForUserCancellationPipelineStep(
+        IFeatureManager featureManager,
+        ILogger<WaitForUserCancellationPipelineStep> logger)
     {
+        this._featureManager = featureManager;
         this._logger = logger;
     }
 
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
+        if (!this._featureManager.IsEnabled(FeatureIdentifiers.LeapPhase2))
+        {
+            this._logger.LogPipelineStepSkipped(nameof(WireServicesAndDependenciesPipelineStep), FeatureIdentifiers.LeapPhase2);
+            return;
+        }
+
         // There's no need to wait for user cancellation if there's no service to run
         if (state.Services.Count == 0)
         {

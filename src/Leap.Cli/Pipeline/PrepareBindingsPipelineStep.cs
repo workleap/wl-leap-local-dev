@@ -1,14 +1,18 @@
 ﻿using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
+using Leap.Cli.Extensions;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
 using Leap.Cli.ProcessCompose;
 using Leap.Cli.ProcessCompose.Yaml;
+using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Pipeline;
 
 internal sealed class PrepareBindingsPipelineStep : IPipelineStep
 {
+    private readonly IFeatureManager _featureManager;
+    private readonly ILogger<PrepareBindingsPipelineStep> _logger;
     private readonly IConfigureProcessCompose _processCompose;
     private readonly IConfigureDockerCompose _dockerCompose;
     private readonly IConfigureEnvironmentVariables _environmentVariables;
@@ -16,12 +20,16 @@ internal sealed class PrepareBindingsPipelineStep : IPipelineStep
     private readonly IPortManager _portManager;
 
     public PrepareBindingsPipelineStep(
+        IFeatureManager featureManager,
+        ILogger<PrepareBindingsPipelineStep> logger,
         IConfigureProcessCompose processCompose,
         IConfigureDockerCompose dockerCompose,
         IConfigureEnvironmentVariables environmentVariables,
         IPrismManager prismManager,
         IPortManager portManager)
     {
+        this._featureManager = featureManager;
+        this._logger = logger;
         this._processCompose = processCompose;
         this._dockerCompose = dockerCompose;
         this._environmentVariables = environmentVariables;
@@ -41,6 +49,12 @@ internal sealed class PrepareBindingsPipelineStep : IPipelineStep
 
     private void PrepareService(Service service, CancellationToken cancellationToken)
     {
+        if (!this._featureManager.IsEnabled(FeatureIdentifiers.LeapPhase2))
+        {
+            this._logger.LogPipelineStepSkipped(nameof(PrepareBindingsPipelineStep), FeatureIdentifiers.LeapPhase2);
+            return;
+        }
+
         // TODO very dirty way of populating networking information, to refactor
         service.Ingress.Host ??= "127.0.0.1";
         service.Ingress.ExternalPort ??= Constants.LeapReverseProxyPort;
