@@ -134,7 +134,7 @@ internal sealed class PrepareBindingsPipelineStep : IPipelineStep
 
         commandParts.AddRange(exeBinding.Arguments.Select(ProcessArgument.Escape));
 
-        // TODO shall we sanitize the name of the service?
+        // TODO shall we sanitize the name of the service? Get inspiration from Dapr
         var process = new ProcessComposeProcessYaml
         {
             Command = string.Join(' ', commandParts),

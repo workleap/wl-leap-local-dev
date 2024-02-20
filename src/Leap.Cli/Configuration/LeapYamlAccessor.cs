@@ -99,8 +99,8 @@ internal sealed class LeapYamlAccessor : ILeapYamlAccessor, IDisposable
             }
         }
 
+        // Nice to have
         // TODO Consider using File.Exists instead of catching FileNotFoundException? Still use streams though
-        // TODO Consider scanning parent directories for leap.yaml files? Kind of like .gitignore and global.json files
         FileSystemStream? stream = null;
         try
         {

@@ -46,7 +46,6 @@ internal sealed class PortManager : IPortManager
         }
     }
 
-    // TODO don't register ports provided by users. It can be legit to reuse it multiple times on different hosts and paths
     public bool TryRegisterPort(int port, [NotNullWhen(false)] out InvalidPortReason? reason)
     {
         if (!this.IsPortInValidRange(port))

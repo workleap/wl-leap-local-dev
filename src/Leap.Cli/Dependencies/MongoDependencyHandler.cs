@@ -103,6 +103,7 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
 
     protected override async Task AfterStartAsync(MongoDependency dependency, CancellationToken cancellationToken)
     {
+        // Nice to have optimization
         // TODO even if the replica set is already initialized, this can be a little slow (like, 2-5 seconds)
         // TODO we could have a cache layer in leap for arbitrary data, and store the container ID of the mongo container
         // TODO then we could check if the container ID is the same as the one in the cache, and if so, we can skip this step

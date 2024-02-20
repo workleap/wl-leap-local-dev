@@ -89,7 +89,6 @@ internal sealed class ProcessComposeManager : IProcessComposeManager
         var downloadFileName = $"process-compose_{platforms[this._platformHelper.CurrentOS]}_{architectures[this._platformHelper.ProcessArchitecture]}.{extension}";
         var downloadUrl = string.Format(DownloadUrlFormat, Version, downloadFileName);
 
-        // TODO use named client to download process compose and the new microsoft resiliency package
         var httpClient = this._httpClientFactory.CreateClient();
 
         try

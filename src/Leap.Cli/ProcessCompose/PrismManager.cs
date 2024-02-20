@@ -58,7 +58,6 @@ internal sealed class PrismManager : IPrismManager
     {
         var downloadUrl = string.Format(DownloadUrlFormat, Version, ExecutableNames[this._platformHelper.CurrentOS]);
 
-        // TODO use named client to download prism and the new microsoft resiliency package
         var httpClient = this._httpClientFactory.CreateClient();
 
         try

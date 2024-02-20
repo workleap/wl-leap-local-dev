@@ -65,7 +65,7 @@ internal sealed class StartReverseProxyPipelineStep : IPipelineStep
             ["Logging:LogLevel:Yarp.ReverseProxy"] = "Warning",
         });
 
-        // TODO change configuration, logging, et
+        // TODO change configuration, logging
         builder.Logging.ClearProviders();
         builder.Logging.AddProvider(new SimpleColoredConsoleLoggerProvider());
 
