@@ -9,16 +9,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AnalysisLevel>latest-all</AnalysisLevel>
     <Description>Local Environment Application Proxy</Description>
-    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 
     <!-- https://devblogs.microsoft.com/visualstudio/vs-toolbox-accelerate-your-builds-of-sdk-style-net-projects/ -->
     <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
   </PropertyGroup>
 
   <PropertyGroup>
-    <!-- Same versioning than using DotNetCoreCLI@2's Pack with versioningScheme "byBuildNumber", but works with our Build.ps1 -->
-    <!-- https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/nuget-command-v2?view=azure-pipelines#versioning-schemes -->
-    <Version Condition=" '$(BUILD_BUILDNUMBER)' != '' ">$(BUILD_BUILDNUMBER)</Version>
     <TreatWarningsAsErrors Condition=" '$(Configuration)' == 'Release' ">true</TreatWarningsAsErrors>
   </PropertyGroup>
 

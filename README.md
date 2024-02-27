@@ -1,15 +1,15 @@
-# LEAP
+# Leap
 
-[![nuget](https://feeds.dev.azure.com/gsoft/_apis/public/Packaging/Feeds/gsoft/Packages/TODO/Badge)](https://dev.azure.com/gsoft/Shared-Assets/_artifacts/feed/gsoft/NuGet/Workleap.Leap)
+[![nuget](https://feeds.dev.azure.com/gsoft/_apis/public/Packaging/Feeds/gsoft/Packages/7e26c0cd-3179-49c3-a3a7-e92df061eee5/Badge)](https://dev.azure.com/gsoft/Shared-Assets/_artifacts/feed/gsoft/NuGet/Workleap.Leap)
 [![build](https://dev.azure.com/gsoft/Shared-Assets/_apis/build/status%2FLeap%2FLeap%20Publish?branchName=main)](https://dev.azure.com/gsoft/Shared-Assets/_build/latest?definitionId=219&branchName=main)
 
 ## Introduction
 
-LEAP, which stands for _Local Environment Application Proxy_, is a custom made command-line which streamline our local development process by introducing service discovery, better dependency management, efficient resource allocation and a standardized configuration. 
+Leap, which stands for _Local Environment Application Proxy_, is a custom made command-line which streamline our local development process by introducing service discovery, better dependency management, efficient resource allocation and a standardized configuration.
 
 ## Getting Started
 
-You first need to install the LEAP CLI. This can be done by running the following command in a terminal:
+You first need to install the Leap CLI. This can be done by running the following command in a terminal:
 
 ```powershell
 dotnet tool update Workleap.Leap --global --interactive --add-source "https://pkgs.dev.azure.com/gsoft/_packaging/gsoft/nuget/v3/index.json" --verbosity minimal --no-cache
@@ -17,8 +17,10 @@ dotnet tool update Workleap.Leap --global --interactive --add-source "https://pk
 
 # Build and Test
 
-The project can be built by running Build.ps1.
+The project can be built by running `Build.ps1`, which will produce a NuGet package in the `.output` folder.
 
-A new patch version NuGet package is automatically published on any new commit on the main branch. This means that by completing a pull request, you automatically get a new NuGet package.
+We use [GitVersion](https://gitversion.net/) to determine the version number of the NuGet package. This means that the version number is automatically determined based on the commit history and tags.
 
-To release a new minor or major version, you need to manually edit the version number in the publish.yml pipeline. Then once the pull request containing the version change is merged, a new NuGet package will be published.
+Preview packages are published on the main branch as well as on pull requests. Stable builds can be published by creating a tag with the format `x.y.z` (e.g. `1.0.0`).
+
+Run `Install.ps1` to install the package locally from your current working directory.

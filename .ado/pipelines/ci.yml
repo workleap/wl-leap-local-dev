@@ -1,7 +1,5 @@
 trigger: none
 
-name: 1.0.$(Rev:r)
-
 jobs:
   - job: build
     strategy:
@@ -18,7 +16,7 @@ jobs:
     steps:
       - checkout: self
         clean: true
-        fetchDepth: 1
+        fetchDepth: 0
 
       - task: UseDotNet@2
         displayName: "Use .NET SDK"
@@ -27,14 +25,11 @@ jobs:
           useGlobalJson: true
 
       - task: PowerShell@2
-        displayName: "Restore, build, test and pack"
+        displayName: "Pack and install"
         inputs:
           targetType: "filePath"
-          filePath: "Build.ps1"
+          filePath: "Install.ps1"
           pwsh: true
-
-      - task: NuGetAuthenticate@1
-        displayName: "NuGet authenticate"
 
       - bash: |
           set -x
@@ -69,9 +64,8 @@ jobs:
                   - myqueue
             "@ | Set-Content -Path leap.yaml -Force && `
             `
-            dotnet tool update workleap.leap --global --add-source ".output" --verbosity minimal --no-cache && `
             leap run && `
-            dotnet tool uninstall workleap.leap --global
+            dotnet tool uninstall Workleap.Leap --global
 
         # TODO It does't seem easy to rely on Docker for testing on Windows & macOS, try again another time
         condition: eq(variables.imageName, 'ubuntu-latest')
@@ -99,6 +93,10 @@ jobs:
       - template: templates/docker-container-check.yml
         parameters:
           containerName: "leap-eventgrid"
+
+      - task: NuGetAuthenticate@1
+        condition: eq(variables.imageName, 'ubuntu-latest')
+        displayName: "NuGet authenticate"
 
       - task: NuGetCommand@2
         condition: eq(variables.imageName, 'ubuntu-latest')

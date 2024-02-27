@@ -6,15 +6,13 @@ trigger:
     include:
       - /src/*
 
-name: 1.0.$(Rev:r)
-
 pool:
   vmImage: ubuntu-latest
 
 steps:
   - checkout: self
     clean: true
-    fetchDepth: 1
+    fetchDepth: 0
 
   - task: UseDotNet@2
     displayName: "Use .NET SDK"
