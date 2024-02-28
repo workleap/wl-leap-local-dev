@@ -1,0 +1,5 @@
+[*.cs]
+insert_final_newline = false
+
+# TODO: remove once it's part of the standard: https://gsoftdev.atlassian.net/browse/IDP-976
+csharp_style_unused_value_expression_statement_preference = discard_variable

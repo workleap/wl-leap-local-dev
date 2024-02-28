@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
-using Leap.Cli.Configuration;
 using Leap.Cli.Dependencies;
 using Leap.Cli.Dependencies.Azurite;
 

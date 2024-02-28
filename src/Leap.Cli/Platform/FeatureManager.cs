@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-
-namespace Leap.Cli.Platform;
+﻿namespace Leap.Cli.Platform;
 
 internal sealed class FeatureManager : IFeatureManager
 {

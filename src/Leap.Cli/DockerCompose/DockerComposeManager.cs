@@ -1,7 +1,6 @@
 ﻿using System.IO.Abstractions;
 using CliWrap;
 using CliWrap.Buffered;
-using Leap.Cli.Configuration;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Pipeline;
 using Leap.Cli.Platform;
