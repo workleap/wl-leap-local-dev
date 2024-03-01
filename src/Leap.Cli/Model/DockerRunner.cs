@@ -1,6 +1,6 @@
 ﻿namespace Leap.Cli.Model;
 
-internal sealed class DockerBinding : Binding
+internal sealed class DockerRunner : Runner
 {
     public string Image { get; set; } = string.Empty;
 

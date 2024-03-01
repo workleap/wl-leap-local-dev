@@ -13,13 +13,13 @@ internal static class LeapYamlSerializer
         .IgnoreUnmatchedProperties() // don't throw an exception if there are unknown properties
         .WithTypeDiscriminatingNodeDeserializer(options =>
         {
-            options.AddKeyValueTypeDiscriminator<BindingYaml>("type", new Dictionary<string, Type>
+            options.AddKeyValueTypeDiscriminator<RunnerYaml>("type", new Dictionary<string, Type>
             {
-                [ExecutableBindingYaml.YamlDiscriminator] = typeof(ExecutableBindingYaml),
-                [DockerBindingYaml.YamlDiscriminator] = typeof(DockerBindingYaml),
-                [CsprojBindingYaml.YamlDiscriminator] = typeof(CsprojBindingYaml),
-                [OpenApiBindingYaml.YamlDiscriminator] = typeof(OpenApiBindingYaml),
-                [RemoteBindingYaml.YamlDiscriminator] = typeof(RemoteBindingYaml),
+                [ExecutableRunnerYaml.YamlDiscriminator] = typeof(ExecutableRunnerYaml),
+                [DockerRunnerYaml.YamlDiscriminator] = typeof(DockerRunnerYaml),
+                [DotnetRunnerYaml.YamlDiscriminator] = typeof(DotnetRunnerYaml),
+                [OpenApiRunnerYaml.YamlDiscriminator] = typeof(OpenApiRunnerYaml),
+                [RemoteRunnerYaml.YamlDiscriminator] = typeof(RemoteRunnerYaml),
             });
         })
         .Build();

@@ -3,12 +3,12 @@ using YamlDotNet.Serialization;
 
 namespace Leap.Cli.Configuration.Yaml;
 
-internal sealed class CsprojBindingYaml : BindingYaml
+internal sealed class DotnetRunnerYaml : RunnerYaml
 {
-    public const string YamlDiscriminator = "csproj";
+    public const string YamlDiscriminator = "dotnet";
 
-    [YamlMember(Alias = "path", ScalarStyle = ScalarStyle.DoubleQuoted)]
-    public string? Path { get; set; }
+    [YamlMember(Alias = "project", ScalarStyle = ScalarStyle.DoubleQuoted)]
+    public string? ProjectPath { get; set; }
 
     [YamlMember(Alias = "port", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
     public int? Port { get; set; }

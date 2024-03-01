@@ -119,7 +119,7 @@ builder.UseDependencyInjection((services, context) =>
         ServiceDescriptor.Singleton<IPipelineStep, PopulateServicesFromYamlPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, UpdateHostsFilePipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, BeforeStartingDependenciesPipelineStep>(),
-        ServiceDescriptor.Singleton<IPipelineStep, PrepareBindingsPipelineStep>(),
+        ServiceDescriptor.Singleton<IPipelineStep, PrepareServiceRunnersPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, StartAzureCliDockerProxyPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, PreparePrismExecutablesPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, WireServicesAndDependenciesPipelineStep>(),

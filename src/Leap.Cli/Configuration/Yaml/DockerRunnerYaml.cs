@@ -2,7 +2,7 @@
 
 namespace Leap.Cli.Configuration.Yaml;
 
-internal sealed class DockerBindingYaml : BindingYaml
+internal sealed class DockerRunnerYaml : RunnerYaml
 {
     public const string YamlDiscriminator = "docker";
 

@@ -1,6 +1,6 @@
 ﻿namespace Leap.Cli.Model;
 
-internal sealed class RemoteBinding : Binding
+internal sealed class RemoteRunner : Runner
 {
     public string Url { get; set; } = string.Empty;
 

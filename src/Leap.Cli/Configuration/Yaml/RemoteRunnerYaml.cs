@@ -3,7 +3,7 @@ using YamlDotNet.Serialization;
 
 namespace Leap.Cli.Configuration.Yaml;
 
-internal sealed class RemoteBindingYaml : BindingYaml
+internal sealed class RemoteRunnerYaml : RunnerYaml
 {
     public const string YamlDiscriminator = "remote";
 

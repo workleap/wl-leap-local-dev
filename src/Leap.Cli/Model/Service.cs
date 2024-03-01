@@ -4,9 +4,9 @@ internal sealed class Service
 {
     public string Name { get; set; } = string.Empty;
 
-    public List<Binding> Bindings { get; } = new();
+    public List<Runner> Runners { get; } = new();
 
-    public Binding? ActiveBinding { get; set; }
+    public Runner? ActiveRunner { get; set; }
 
     public Dictionary<string, string> EnvironmentVariables { get; } = new();
 

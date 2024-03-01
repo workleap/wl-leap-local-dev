@@ -2,7 +2,7 @@
 
 namespace Leap.Cli.Configuration.Yaml;
 
-internal sealed class OpenApiBindingYaml : BindingYaml
+internal sealed class OpenApiRunnerYaml : RunnerYaml
 {
     public const string YamlDiscriminator = "openapi";
 

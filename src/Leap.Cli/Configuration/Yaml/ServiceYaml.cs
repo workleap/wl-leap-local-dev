@@ -7,6 +7,6 @@ internal sealed class ServiceYaml
     [YamlMember(Alias = "ingress", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
     public IngressYaml? Ingress { get; set; }
 
-    [YamlMember(Alias = "bindings", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
-    public BindingYaml?[]? Bindings { get; set; }
+    [YamlMember(Alias = "runners", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
+    public RunnerYaml?[]? Runners { get; set; }
 }

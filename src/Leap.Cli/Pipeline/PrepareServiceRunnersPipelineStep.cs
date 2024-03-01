@@ -6,17 +6,17 @@ using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Pipeline;
 
-internal sealed class PrepareBindingsPipelineStep : IPipelineStep
+internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
 {
     private readonly IFeatureManager _featureManager;
-    private readonly ILogger<PrepareBindingsPipelineStep> _logger;
+    private readonly ILogger<PrepareServiceRunnersPipelineStep> _logger;
     private readonly IAspireManager _aspire;
     private readonly IConfigureEnvironmentVariables _environmentVariables;
     private readonly IPortManager _portManager;
 
-    public PrepareBindingsPipelineStep(
+    public PrepareServiceRunnersPipelineStep(
         IFeatureManager featureManager,
-        ILogger<PrepareBindingsPipelineStep> logger,
+        ILogger<PrepareServiceRunnersPipelineStep> logger,
         IAspireManager aspire,
         IConfigureEnvironmentVariables environmentVariables,
         IPortManager portManager)
@@ -42,14 +42,14 @@ internal sealed class PrepareBindingsPipelineStep : IPipelineStep
     {
         if (!this._featureManager.IsEnabled(FeatureIdentifiers.LeapPhase2))
         {
-            this._logger.LogPipelineStepSkipped(nameof(PrepareBindingsPipelineStep), FeatureIdentifiers.LeapPhase2);
+            this._logger.LogPipelineStepSkipped(nameof(PrepareServiceRunnersPipelineStep), FeatureIdentifiers.LeapPhase2);
             return;
         }
 
         // TODO very dirty way of populating networking information, to refactor
         service.Ingress.Host ??= "127.0.0.1";
         service.Ingress.ExternalPort ??= Constants.LeapReverseProxyPort;
-        service.Ingress.InternalPort ??= service.ActiveBinding?.Port ?? this._portManager.GetRandomAvailablePort(cancellationToken);
+        service.Ingress.InternalPort ??= service.ActiveRunner?.Port ?? this._portManager.GetRandomAvailablePort(cancellationToken);
         service.Ingress.Path ??= "/";
 
         // .NET specific environment variables. Not harmful for non-.NET services.
@@ -70,19 +70,19 @@ internal sealed class PrepareBindingsPipelineStep : IPipelineStep
         service.EnvironmentVariables["LOGGING__CONSOLE__FORMATTERNAME"] = "simple";
         service.EnvironmentVariables["LOGGING__CONSOLE__FORMATTEROPTIONS__TIMESTAMPFORMAT"] = "yyyy-MM-ddTHH:mm:ss.fffffff ";
 
-        switch (service.ActiveBinding)
+        switch (service.ActiveRunner)
         {
-            case ExecutableBinding exeBinding:
-                this.HandleExecutableBinding(service, exeBinding);
+            case ExecutableRunner exeRunner:
+                this.HandleExecutableRunner(service, exeRunner);
                 break;
-            case DockerBinding dockerBinding:
-                this.HandleDockerBinding(service, dockerBinding);
+            case DockerRunner dockerRunner:
+                this.HandleDockerRunner(service, dockerRunner);
                 break;
-            case CsprojBinding csprojBinding:
-                this.HandleCsprojBinding(service, csprojBinding);
+            case DotnetRunner dotnetRunner:
+                this.HandleDotnetRunner(service, dotnetRunner);
                 break;
-            case OpenApiBinding openApiBinding:
-                this.HandleOpenApiBinding(service, openApiBinding);
+            case OpenApiRunner openApiRunner:
+                this.HandleOpenApiRunner(service, openApiRunner);
                 break;
         }
 
@@ -94,9 +94,9 @@ internal sealed class PrepareBindingsPipelineStep : IPipelineStep
             string hostServiceUrl;
             string containerServiceUrl;
 
-            if (service.ActiveBinding is RemoteBinding remoteBinding)
+            if (service.ActiveRunner is RemoteRunner remoteRunner)
             {
-                hostServiceUrl = containerServiceUrl = remoteBinding.Url;
+                hostServiceUrl = containerServiceUrl = remoteRunner.Url;
             }
             else
             {
@@ -112,33 +112,33 @@ internal sealed class PrepareBindingsPipelineStep : IPipelineStep
         });
     }
 
-    private void HandleExecutableBinding(Service service, ExecutableBinding exeBinding)
+    private void HandleExecutableRunner(Service service, ExecutableRunner exeRunner)
     {
         // TODO shall we sanitize the name of the service? Get inspiration from Dapr
         this._aspire.Builder
-            .AddExecutable(service.Name, exeBinding.Command, exeBinding.WorkingDirectory, exeBinding.Arguments)
+            .AddExecutable(service.Name, exeRunner.Command, exeRunner.WorkingDirectory, exeRunner.Arguments)
             .WithEndpoint(scheme: "http", hostPort: service.Ingress.InternalPort)
             .WithEnvironment(service.EnvironmentVariables)
             .WithOtlpExporter();
     }
 
-    private void HandleDockerBinding(Service service, DockerBinding dockerBinding)
+    private void HandleDockerRunner(Service service, DockerRunner dockerRunner)
     {
         // TODO shall we sanitize the name of the service?
         // Tag is set to null to prevent Aspire from adding latest (tag is already included in our image property)
-        this._aspire.Builder.AddContainer(service.Name, dockerBinding.Image, tag: string.Empty)
+        this._aspire.Builder.AddContainer(service.Name, dockerRunner.Image, tag: string.Empty)
 
             // TODO tester docker containers avec aspire (networking)
-            .WithEndpoint(scheme: "http", hostPort: service.Ingress.InternalPort, containerPort: dockerBinding.ContainerPort)
+            .WithEndpoint(scheme: "http", hostPort: service.Ingress.InternalPort, containerPort: dockerRunner.ContainerPort)
             .WithEnvironment(service.EnvironmentVariables)
             .WithOtlpExporter();
     }
 
-    private void HandleCsprojBinding(Service service, CsprojBinding csprojBinding)
+    private void HandleDotnetRunner(Service service, DotnetRunner dotnetRunner)
     {
-        var workingDirectoryPath = Path.GetDirectoryName(csprojBinding.Path);
+        var workingDirectoryPath = Path.GetDirectoryName(dotnetRunner.ProjectPath);
 
-        string[] dotnetRunArgs = ["run", "--project", csprojBinding.Path, "--no-launch-profile"];
+        string[] dotnetRunArgs = ["run", "--project", dotnetRunner.ProjectPath, "--no-launch-profile"];
 
         // TODO shall we sanitize the name of the service? Get inspiration from Dapr
         this._aspire.Builder
@@ -148,7 +148,7 @@ internal sealed class PrepareBindingsPipelineStep : IPipelineStep
             .WithOtlpExporter();
     }
 
-    private void HandleOpenApiBinding(Service service, OpenApiBinding openApiBinding)
+    private void HandleOpenApiRunner(Service service, OpenApiRunner openApiRunner)
     {
         // See:
         // https://github.com/stoplightio/prism/blob/v5.5.4/docs/getting-started/01-installation.md#docker
@@ -162,7 +162,7 @@ internal sealed class PrepareBindingsPipelineStep : IPipelineStep
 
             // Tag is set to null to prevent Aspire from adding latest (tag is already included in our image property)
             .WithAnnotation(new ContainerImageAnnotation { Image = "stoplight/prism:5", Tag = string.Empty })
-            .WithVolumeMount(openApiBinding.Specification, "/tmp/swagger.yml")
+            .WithVolumeMount(openApiRunner.Specification, "/tmp/swagger.yml")
 
             // TODO tester docker containers avec aspire (networking)
             .WithEndpoint(scheme: "http", hostPort: service.Ingress.InternalPort, containerPort: prismContainerPort);

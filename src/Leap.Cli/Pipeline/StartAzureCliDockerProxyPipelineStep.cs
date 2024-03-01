@@ -61,8 +61,8 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
             throw new LeapException("Azure CLI is installed but not logged in. Please run `az login` to login.");
         }
 
-        var hasAtLeastOneDockerBinding = state.Services.Values.Any(x => x.ActiveBinding is DockerBinding);
-        if (!hasAtLeastOneDockerBinding)
+        var hasAtLeastOneDockerRunner = state.Services.Values.Any(x => x.ActiveRunner is DockerRunner);
+        if (!hasAtLeastOneDockerRunner)
         {
             return;
         }

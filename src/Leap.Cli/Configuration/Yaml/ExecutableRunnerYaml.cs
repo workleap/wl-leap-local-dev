@@ -3,7 +3,7 @@ using YamlDotNet.Serialization;
 
 namespace Leap.Cli.Configuration.Yaml;
 
-internal sealed class ExecutableBindingYaml : BindingYaml
+internal sealed class ExecutableRunnerYaml : RunnerYaml
 {
     public const string YamlDiscriminator = "executable";
 

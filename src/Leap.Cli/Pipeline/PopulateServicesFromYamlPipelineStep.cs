@@ -87,27 +87,27 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                     }
                 }
 
-                // TODO for now we only support one binding per service
-                var bindingYaml = serviceYaml.Bindings?.FirstOrDefault();
-                if (bindingYaml == null)
+                // TODO for now we only support one runner per service
+                var runnerYaml = serviceYaml.Runners?.FirstOrDefault();
+                if (runnerYaml == null)
                 {
-                    this._logger.LogWarning("A service '{Service}' is missing a binding in the configuration file '{Path}' and will be ignored.", service.Name, leapConfig.Path);
+                    this._logger.LogWarning("A service '{Service}' is missing a runner in the configuration file '{Path}' and will be ignored.", service.Name, leapConfig.Path);
                     continue;
                 }
 
-                if (bindingYaml is ExecutableBindingYaml exeBindingYaml)
+                if (runnerYaml is ExecutableRunnerYaml exeRunnerYaml)
                 {
-                    if (string.IsNullOrEmpty(exeBindingYaml.Command))
+                    if (string.IsNullOrEmpty(exeRunnerYaml.Command))
                     {
-                        this._logger.LogWarning("An executable binding is missing a command in the configuration file '{Path}'. The service '{Service}' will be ignored.", leapConfig.Path, service.Name);
+                        this._logger.LogWarning("An executable runner is missing a command in the configuration file '{Path}'. The service '{Service}' will be ignored.", leapConfig.Path, service.Name);
                         continue;
                     }
 
                     var arguments = new List<string>();
 
-                    if (exeBindingYaml.Arguments != null)
+                    if (exeRunnerYaml.Arguments != null)
                     {
-                        foreach (var argument in exeBindingYaml.Arguments)
+                        foreach (var argument in exeRunnerYaml.Arguments)
                         {
                             if (string.IsNullOrEmpty(argument))
                             {
@@ -118,43 +118,43 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                         }
                     }
 
-                    var workingDirectory = exeBindingYaml.WorkingDirectory;
+                    var workingDirectory = exeRunnerYaml.WorkingDirectory;
                     if (workingDirectory == null)
                     {
-                        this._logger.LogWarning("An executable binding is missing a working directory in the configuration file '{Path}'. The service '{Service}' will be ignored.", leapConfig.Path, service.Name);
+                        this._logger.LogWarning("An executable runner is missing a working directory in the configuration file '{Path}'. The service '{Service}' will be ignored.", leapConfig.Path, service.Name);
                         continue;
                     }
 
                     workingDirectory = EnsureAbsolutePath(workingDirectory, leapConfig);
 
-                    if (exeBindingYaml.Port.HasValue && !this._portManager.IsPortInValidRange(exeBindingYaml.Port.Value))
+                    if (exeRunnerYaml.Port.HasValue && !this._portManager.IsPortInValidRange(exeRunnerYaml.Port.Value))
                     {
-                        this._logger.LogWarning("An executable binding has an invalid port '{Port}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", exeBindingYaml.Port.Value, leapConfig.Path, service.Name);
+                        this._logger.LogWarning("An executable runner has an invalid port '{Port}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", exeRunnerYaml.Port.Value, leapConfig.Path, service.Name);
                         continue;
                     }
 
-                    if (string.IsNullOrWhiteSpace(exeBindingYaml.Protocol))
+                    if (string.IsNullOrWhiteSpace(exeRunnerYaml.Protocol))
                     {
-                        exeBindingYaml.Protocol = "http";
+                        exeRunnerYaml.Protocol = "http";
                     }
-                    else if (!SupportedBackendProtocols.Contains(exeBindingYaml.Protocol))
+                    else if (!SupportedBackendProtocols.Contains(exeRunnerYaml.Protocol))
                     {
-                        this._logger.LogWarning("An executable binding has an invalid protocol '{Protocol}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", exeBindingYaml.Protocol, leapConfig.Path, service.Name);
+                        this._logger.LogWarning("An executable runner has an invalid protocol '{Protocol}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", exeRunnerYaml.Protocol, leapConfig.Path, service.Name);
                         continue;
                     }
 
-                    service.Bindings.Add(new ExecutableBinding
+                    service.Runners.Add(new ExecutableRunner
                     {
-                        Command = exeBindingYaml.Command,
+                        Command = exeRunnerYaml.Command,
                         Arguments = arguments.ToArray(),
                         WorkingDirectory = workingDirectory,
-                        Port = exeBindingYaml.Port,
-                        Protocol = exeBindingYaml.Protocol,
+                        Port = exeRunnerYaml.Port,
+                        Protocol = exeRunnerYaml.Protocol,
                     });
                 }
-                else if (bindingYaml is DockerBindingYaml dockerBindingYaml)
+                else if (runnerYaml is DockerRunnerYaml dockerRunnerYaml)
                 {
-                    var dockerImage = dockerBindingYaml.Image;
+                    var dockerImage = dockerRunnerYaml.Image;
 
                     if (string.IsNullOrWhiteSpace(dockerImage))
                     {
@@ -162,7 +162,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                         continue;
                     }
 
-                    var containerPort = dockerBindingYaml.ContainerPort;
+                    var containerPort = dockerRunnerYaml.ContainerPort;
                     if (!containerPort.HasValue)
                     {
                         this._logger.LogWarning("A Docker image is missing a container port in the configuration file '{Path}'. The service '{Service}' will be ignored.", leapConfig.Path, service.Name);
@@ -175,100 +175,100 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                         continue;
                     }
 
-                    if (dockerBindingYaml.HostPort.HasValue && !this._portManager.TryRegisterPort(dockerBindingYaml.HostPort.Value, out var reason))
+                    if (dockerRunnerYaml.HostPort.HasValue && !this._portManager.TryRegisterPort(dockerRunnerYaml.HostPort.Value, out var reason))
                     {
                         this._logger.LogWarning("A Docker image has an invalid host port '{Port}' in the configuration file '{Path}'. Reason: '{Reason'}. The service '{Service}' will be ignored.", containerPort.Value, leapConfig.Path, reason, service.Name);
                         continue;
                     }
 
-                    if (string.IsNullOrWhiteSpace(dockerBindingYaml.Protocol))
+                    if (string.IsNullOrWhiteSpace(dockerRunnerYaml.Protocol))
                     {
-                        dockerBindingYaml.Protocol = "http";
+                        dockerRunnerYaml.Protocol = "http";
                     }
-                    else if (!SupportedBackendProtocols.Contains(dockerBindingYaml.Protocol, StringComparer.OrdinalIgnoreCase))
+                    else if (!SupportedBackendProtocols.Contains(dockerRunnerYaml.Protocol))
                     {
-                        this._logger.LogWarning("A Docker image has an invalid protocol '{Protocol}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", dockerBindingYaml.Protocol, leapConfig.Path, service.Name);
+                        this._logger.LogWarning("A Docker image has an invalid protocol '{Protocol}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", dockerRunnerYaml.Protocol, leapConfig.Path, service.Name);
                         continue;
                     }
 
-                    service.Bindings.Add(new DockerBinding
+                    service.Runners.Add(new DockerRunner
                     {
                         Image = dockerImage,
                         ContainerPort = containerPort.Value,
-                        HostPort = dockerBindingYaml.HostPort,
-                        Protocol = dockerBindingYaml.Protocol,
+                        HostPort = dockerRunnerYaml.HostPort,
+                        Protocol = dockerRunnerYaml.Protocol,
                     });
                 }
-                else if (bindingYaml is CsprojBindingYaml csprojBindingYaml)
+                else if (runnerYaml is DotnetRunnerYaml dotnetRunnerYaml)
                 {
-                    var csprojPath = csprojBindingYaml.Path;
+                    var projectPath = dotnetRunnerYaml.ProjectPath;
 
-                    if (string.IsNullOrWhiteSpace(csprojPath))
+                    if (string.IsNullOrWhiteSpace(projectPath))
                     {
-                        this._logger.LogWarning("A csproj binding is missing a path in the configuration file '{Path}'. The service '{Service}' will be ignored.", leapConfig.Path, service.Name);
+                        this._logger.LogWarning("A .NET project runner is missing a project path in the configuration file '{Path}'. The service '{Service}' will be ignored.", leapConfig.Path, service.Name);
                         continue;
                     }
 
-                    csprojPath = EnsureAbsolutePath(csprojPath, leapConfig);
+                    projectPath = EnsureAbsolutePath(projectPath, leapConfig);
 
-                    if (csprojBindingYaml.Port.HasValue && !this._portManager.TryRegisterPort(csprojBindingYaml.Port.Value, out var reason))
+                    if (dotnetRunnerYaml.Port.HasValue && !this._portManager.TryRegisterPort(dotnetRunnerYaml.Port.Value, out var reason))
                     {
-                        this._logger.LogWarning("A .NET project binding has an invalid port '{Port}' in the configuration file '{Path}'. Reason: '{Reason}'. The service '{Service}' will be ignored.", csprojBindingYaml.Port, leapConfig.Path, reason, service.Name);
+                        this._logger.LogWarning("A .NET project runner has an invalid port '{Port}' in the configuration file '{Path}'. Reason: '{Reason}'. The service '{Service}' will be ignored.", dotnetRunnerYaml.Port, leapConfig.Path, reason, service.Name);
                         continue;
                     }
 
-                    if (string.IsNullOrWhiteSpace(csprojBindingYaml.Protocol))
+                    if (string.IsNullOrWhiteSpace(dotnetRunnerYaml.Protocol))
                     {
-                        csprojBindingYaml.Protocol = "http";
+                        dotnetRunnerYaml.Protocol = "http";
                     }
-                    else if (!SupportedBackendProtocols.Contains(csprojBindingYaml.Protocol, StringComparer.OrdinalIgnoreCase))
+                    else if (!SupportedBackendProtocols.Contains(dotnetRunnerYaml.Protocol))
                     {
-                        this._logger.LogWarning("A .NET project binding has an invalid protocol '{Protocol}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", csprojBindingYaml.Protocol, leapConfig.Path, service.Name);
+                        this._logger.LogWarning("A .NET project runner has an invalid protocol '{Protocol}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", dotnetRunnerYaml.Protocol, leapConfig.Path, service.Name);
                         continue;
                     }
 
-                    service.Bindings.Add(new CsprojBinding
+                    service.Runners.Add(new DotnetRunner
                     {
-                        Path = csprojPath,
-                        Port = csprojBindingYaml.Port,
-                        Protocol = csprojBindingYaml.Protocol,
+                        ProjectPath = projectPath,
+                        Port = dotnetRunnerYaml.Port,
+                        Protocol = dotnetRunnerYaml.Protocol,
                     });
                 }
-                else if (bindingYaml is OpenApiBindingYaml openApiBindingYaml)
+                else if (runnerYaml is OpenApiRunnerYaml openApiRunnerYaml)
                 {
                     // TODO validate that the files actually exists
                     // TODO also support URLS?
-                    var specPath = openApiBindingYaml.Specification;
+                    var specPath = openApiRunnerYaml.Specification;
 
                     if (string.IsNullOrEmpty(specPath))
                     {
-                        this._logger.LogWarning("An OpenAPI mock server binding is missing a specification path in the configuration file '{Path}'. The service '{Service}' will be ignored.", leapConfig.Path, service.Name);
+                        this._logger.LogWarning("An OpenAPI mock server runner is missing a specification path in the configuration file '{Path}'. The service '{Service}' will be ignored.", leapConfig.Path, service.Name);
                         continue;
                     }
 
                     specPath = EnsureAbsolutePath(specPath, leapConfig);
 
-                    if (openApiBindingYaml.Port.HasValue && !this._portManager.TryRegisterPort(openApiBindingYaml.Port.Value, out var reason))
+                    if (openApiRunnerYaml.Port.HasValue && !this._portManager.TryRegisterPort(openApiRunnerYaml.Port.Value, out var reason))
                     {
-                        this._logger.LogWarning("An OpenAPI mock server binding has an invalid port '{Port}' in the configuration file '{Path}'. Reason: '{Reason}'. The service '{Service}' will be ignored.", openApiBindingYaml.Port, leapConfig.Path, reason, service.Name);
+                        this._logger.LogWarning("An OpenAPI mock server runner has an invalid port '{Port}' in the configuration file '{Path}'. Reason: '{Reason}'. The service '{Service}' will be ignored.", openApiRunnerYaml.Port, leapConfig.Path, reason, service.Name);
                         continue;
                     }
 
-                    service.Bindings.Add(new OpenApiBinding
+                    service.Runners.Add(new OpenApiRunner
                     {
                         Specification = specPath,
-                        Port = openApiBindingYaml.Port,
+                        Port = openApiRunnerYaml.Port,
                     });
                 }
-                else if (bindingYaml is RemoteBindingYaml remoteBindingYaml)
+                else if (runnerYaml is RemoteRunnerYaml remoteRunnerYaml)
                 {
-                    if (!Uri.TryCreate(remoteBindingYaml.Url, UriKind.Absolute, out var url))
+                    if (!Uri.TryCreate(remoteRunnerYaml.Url, UriKind.Absolute, out var url))
                     {
-                        this._logger.LogWarning("A remote binding has an invalid URL '{Url}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", remoteBindingYaml.Url, leapConfig.Path, service.Name);
+                        this._logger.LogWarning("A remote runner has an invalid URL '{Url}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", remoteRunnerYaml.Url, leapConfig.Path, service.Name);
                         continue;
                     }
 
-                    service.Bindings.Add(new RemoteBinding
+                    service.Runners.Add(new RemoteRunner
                     {
                         Url = url.OriginalString,
                         Port = url.Port,
@@ -276,12 +276,12 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                 }
                 else
                 {
-                    // TODO warn that a service has an unknown binding type (print path to yaml file)
+                    // TODO warn that a service has an unknown runner type (print path to yaml file)
                     continue;
                 }
 
-                // TODO again, for now we only support one binding per service
-                service.ActiveBinding = service.Bindings[0];
+                // TODO again, for now we only support one runner per service
+                service.ActiveRunner = service.Runners[0];
 
                 // TODO prevent multiple services with the same name
                 state.Services[service.Name] = service;

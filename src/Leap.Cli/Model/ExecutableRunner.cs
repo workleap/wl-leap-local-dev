@@ -1,6 +1,6 @@
 ﻿namespace Leap.Cli.Model;
 
-internal sealed class ExecutableBinding : Binding
+internal sealed class ExecutableRunner : Runner
 {
     public string Command { get; set; } = string.Empty;
 

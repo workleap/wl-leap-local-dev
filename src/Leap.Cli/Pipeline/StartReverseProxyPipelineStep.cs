@@ -79,7 +79,7 @@ internal sealed class StartReverseProxyPipelineStep : IPipelineStep
         foreach (var (serviceName, service) in state.Services)
         {
             // Remote services aren't proxied and instead directly accessed by other services
-            if (service.ActiveBinding is RemoteBinding)
+            if (service.ActiveRunner is RemoteRunner)
             {
                 continue;
             }
@@ -101,7 +101,7 @@ internal sealed class StartReverseProxyPipelineStep : IPipelineStep
                 {
                     [clusterId + "/destination"] = new DestinationConfig
                     {
-                        Address = service.ActiveBinding?.Protocol + "://127.0.0.1:" + service.Ingress.InternalPort,
+                        Address = service.ActiveRunner?.Protocol + "://127.0.0.1:" + service.Ingress.InternalPort,
                     },
                 },
             };
