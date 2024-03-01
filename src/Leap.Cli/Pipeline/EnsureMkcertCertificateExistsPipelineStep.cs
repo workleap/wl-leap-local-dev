@@ -13,14 +13,19 @@ namespace Leap.Cli.Pipeline;
 // as well as Google: https://web.dev/articles/how-to-use-local-https
 internal sealed class EnsureMkcertCertificateExistsPipelineStep : IPipelineStep
 {
+    // ".localhost" is a top-level domain (TLD) reserved by the Internet Engineering Task Force (IETF)
+    // that is free to use localhost names as they would any other, without the risk of someone else owning it (like .com).
+    // https://www.iana.org/assignments/special-use-domain-names/special-use-domain-names.xhtml
+    // We didn't use ".local" because of the mDNS (Multicast DNS) protocol, which may cause issues accordind to this thread
+    // https://www.reddit.com/r/sysadmin/comments/gdeggi/
     private static readonly string[] SupportedDomainNames =
-    {
+    [
         "localhost", "127.0.0.1", "::1", // localhost
         "host.docker.internal", "host.containers.internal", // Docker and Podman
-        "*.officevibe.local", "*.officevibe-dev.com", // Officevibe
-        "*.sharegate.local", "*.sharegate-dev.com", // ShareGate
-        "*.workleap.local", "*.workleap-dev.com", // Workleap
-    };
+        "*.officevibe.localhost", "*.officevibe-dev.localhost", // Officevibe
+        "*.sharegate.localhost", "*.sharegate-dev.localhost", // ShareGate
+        "*.workleap.localhost", "*.workleap-dev.localhost" // Workleap
+    ];
 
     private readonly IFeatureManager _featureManager;
     private readonly ICliWrap _cliWrap;
@@ -53,7 +58,10 @@ internal sealed class EnsureMkcertCertificateExistsPipelineStep : IPipelineStep
         var certAlreadyExists = this._fileSystem.File.Exists(Constants.LocalCertificateCrtFilePath) && this._fileSystem.File.Exists(Constants.LocalCertificateKeyFilePath);
         if (certAlreadyExists)
         {
-            this._logger.LogTrace("Local development certificate already exists");
+            this._logger.LogInformation("Local development certificate already exists. Use it for HTTPS in your services:");
+            this._logger.LogInformation(" - Certificate: {CertificateFilePath}", Constants.LocalCertificateCrtFilePath.Replace(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "~"));
+            this._logger.LogInformation(" - Private key: {PrivateKeyFilePath}", Constants.LocalCertificateKeyFilePath.Replace(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "~"));
+
             return;
         }
 
@@ -169,18 +177,18 @@ internal sealed class EnsureMkcertCertificateExistsPipelineStep : IPipelineStep
 
         this._logger.LogDebug("Creating the local development certificate...");
 
-        var crtCreateArgs = new[] { "-cert-file", Constants.LocalCertificateCrtFilePath, "-key-file", Constants.LocalCertificateKeyFilePath }.Concat(SupportedDomainNames);
+        string[] crtCreateArgs = ["-cert-file", Constants.LocalCertificateCrtFilePath, "-key-file", Constants.LocalCertificateKeyFilePath, .. SupportedDomainNames];
         var crtCreateCommand = new Command(mkcertExePath).WithArguments(crtCreateArgs).WithValidation(CommandResultValidation.None);
         var crtCreateResult = await this._cliWrap.ExecuteBufferedAsync(crtCreateCommand, cancellationToken);
 
-#pragma warning disable CA1508 // Somehow the compiler believes exit code is always zero
         if (crtCreateResult.ExitCode != 0)
-#pragma warning restore CA1508
         {
             throw new LeapException($"An error occured while creating the local certificate, mkcert returned exit code {crtCreateResult.ExitCode}");
         }
 
-        this._logger.LogInformation("Local development certificate created in directory {CertificateDirectory}", Constants.CertificatesDirectoryPath);
+        this._logger.LogInformation("Local development certificate created. Use it for HTTPS in your services:");
+        this._logger.LogInformation(" - Certificate: {CertificateFilePath}", Constants.LocalCertificateCrtFilePath.Replace(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "~"));
+        this._logger.LogInformation(" - Private key: {PrivateKeyFilePath}", Constants.LocalCertificateKeyFilePath.Replace(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "~"));
     }
 
     public Task StopAsync(ApplicationState state, CancellationToken cancellationToken)

@@ -4,6 +4,10 @@
       "commandName": "Project",
       "commandLineArgs": "run"
     },
+    "run-phase2": {
+      "commandName": "Project",
+      "commandLineArgs": "run --feature-flags LeapPhase2"
+    },
     "config add": {
       "commandName": "Project",
       "commandLineArgs": "config add C:\\src\\leap.yaml"

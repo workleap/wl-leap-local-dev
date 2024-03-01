@@ -1,42 +1,28 @@
-﻿using Leap.Cli.DockerCompose;
+﻿using Leap.Cli.Aspire;
 using Leap.Cli.Extensions;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
-using Leap.Cli.ProcessCompose;
 using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Pipeline;
 
 internal sealed class WireServicesAndDependenciesPipelineStep : IPipelineStep
 {
-    private static readonly HashSet<string> ExcludedDockerServices = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        AzuriteDependency.DependencyType,
-        EventGridDependency.DependencyType,
-        MongoDependency.DependencyType,
-        PostgresDependency.DependencyType,
-        RedisDependency.DependencyType,
-        SqlServerDependency.DependencyType,
-    };
-
     private readonly IFeatureManager _featureManager;
     private readonly ILogger<WireServicesAndDependenciesPipelineStep> _logger;
     private readonly IEnvironmentVariableManager _environmentVariables;
-    private readonly IConfigureDockerCompose _dockerCompose;
-    private readonly IConfigureProcessCompose _processCompose;
+    private readonly IAspireManager _aspire;
 
     public WireServicesAndDependenciesPipelineStep(
         IFeatureManager featureManager,
         ILogger<WireServicesAndDependenciesPipelineStep> logger,
         IEnvironmentVariableManager environmentVariables,
-        IConfigureDockerCompose dockerCompose,
-        IConfigureProcessCompose processCompose)
+        IAspireManager aspire)
     {
         this._featureManager = featureManager;
         this._logger = logger;
         this._environmentVariables = environmentVariables;
-        this._dockerCompose = dockerCompose;
-        this._processCompose = processCompose;
+        this._aspire = aspire;
     }
 
     public Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
@@ -51,21 +37,20 @@ internal sealed class WireServicesAndDependenciesPipelineStep : IPipelineStep
 
         foreach (var (envvarName, envvarValue, scope) in orderedEnvironmentVariables)
         {
-            if (scope == EnvironmentVariableScope.Container)
+            foreach (var resource in this._aspire.Builder.Resources)
             {
-                foreach (var (serviceName, serviceYaml) in this._dockerCompose.Configuration.Services)
+                var envCallbackAnnotation = new EnvironmentCallbackAnnotation(context =>
                 {
-                    if (!ExcludedDockerServices.Contains(serviceName))
-                    {
-                        serviceYaml.Environment.TryAdd(envvarName, envvarValue);
-                    }
+                    context.EnvironmentVariables.TryAdd(envvarName, envvarValue);
+                });
+
+                if (resource is ExecutableResource executable && scope == EnvironmentVariableScope.Host)
+                {
+                    executable.Annotations.Add(envCallbackAnnotation);
                 }
-            }
-            else if (scope == EnvironmentVariableScope.Host)
-            {
-                foreach (var processYaml in this._processCompose.Configuration.Processes.Values)
+                else if (resource is ContainerResource container && scope == EnvironmentVariableScope.Container)
                 {
-                    processYaml.Environment.TryAdd(envvarName, envvarValue);
+                    container.Annotations.Add(envCallbackAnnotation);
                 }
             }
         }

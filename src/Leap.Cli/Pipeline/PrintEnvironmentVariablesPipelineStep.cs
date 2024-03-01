@@ -26,7 +26,7 @@ internal sealed class PrintEnvironmentVariablesPipelineStep : IPipelineStep
 
             foreach (var (name, value, _) in publicEnvironmentVariables)
             {
-                this._logger.LogInformation("{Name}: {Value}", name, value);
+                this._logger.LogInformation(" - {Name}: {Value}", name, value);
             }
         }
 

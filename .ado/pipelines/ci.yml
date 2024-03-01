@@ -24,6 +24,10 @@ jobs:
           packageType: sdk
           useGlobalJson: true
 
+      - script: |
+          dotnet workload install aspire
+        displayName: Install Aspire workload
+
       - task: PowerShell@2
         displayName: "Pack and install"
         inputs:

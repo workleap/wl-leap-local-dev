@@ -119,10 +119,13 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                     }
 
                     var workingDirectory = exeBindingYaml.WorkingDirectory;
-                    if (workingDirectory != null)
+                    if (workingDirectory == null)
                     {
-                        workingDirectory = EnsureAbsolutePath(workingDirectory, leapConfig);
+                        this._logger.LogWarning("An executable binding is missing a working directory in the configuration file '{Path}'. The service '{Service}' will be ignored.", leapConfig.Path, service.Name);
+                        continue;
                     }
+
+                    workingDirectory = EnsureAbsolutePath(workingDirectory, leapConfig);
 
                     if (exeBindingYaml.Port.HasValue && !this._portManager.IsPortInValidRange(exeBindingYaml.Port.Value))
                     {
@@ -134,7 +137,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                     {
                         exeBindingYaml.Protocol = "http";
                     }
-                    else if (!SupportedBackendProtocols.Contains(exeBindingYaml.Protocol, StringComparer.OrdinalIgnoreCase))
+                    else if (!SupportedBackendProtocols.Contains(exeBindingYaml.Protocol))
                     {
                         this._logger.LogWarning("An executable binding has an invalid protocol '{Protocol}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", exeBindingYaml.Protocol, leapConfig.Path, service.Name);
                         continue;

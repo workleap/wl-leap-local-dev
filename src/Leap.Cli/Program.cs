@@ -2,6 +2,7 @@ using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
 using System.IO.Abstractions;
+using Leap.Cli.Aspire;
 using Leap.Cli.Commands;
 using Leap.Cli.Configuration;
 using Leap.Cli.Dependencies;
@@ -10,7 +11,7 @@ using Leap.Cli.DockerCompose;
 using Leap.Cli.Model;
 using Leap.Cli.Pipeline;
 using Leap.Cli.Platform;
-using Leap.Cli.ProcessCompose;
+using Leap.Cli.Prism;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -96,10 +97,6 @@ builder.UseDependencyInjection((services, context) =>
     services.AddSingleton<IConfigureDockerCompose>(x => x.GetRequiredService<DockerComposeManager>());
     services.AddSingleton<IDockerComposeManager>(x => x.GetRequiredService<DockerComposeManager>());
 
-    services.AddSingleton<ProcessComposeManager>();
-    services.AddSingleton<IConfigureProcessCompose>(x => x.GetRequiredService<ProcessComposeManager>());
-    services.AddSingleton<IProcessComposeManager>(x => x.GetRequiredService<ProcessComposeManager>());
-
     services.AddSingleton<EnvironmentVariablesManager>();
     services.AddSingleton<IConfigureEnvironmentVariables>(x => x.GetRequiredService<EnvironmentVariablesManager>());
     services.AddSingleton<IEnvironmentVariableManager>(x => x.GetRequiredService<EnvironmentVariablesManager>());
@@ -108,6 +105,7 @@ builder.UseDependencyInjection((services, context) =>
     services.AddSingleton<IConfigureAppSettingsJson>(x => x.GetRequiredService<AppSettingsJsonManager>());
     services.AddSingleton<IAppSettingsJsonManager>(x => x.GetRequiredService<AppSettingsJsonManager>());
 
+    services.AddSingleton<IAspireManager, AspireManager>();
     services.AddSingleton<IPrismManager, PrismManager>();
     services.AddSingleton<IUserSettingsManager, UserSettingsManager>();
 
@@ -124,12 +122,11 @@ builder.UseDependencyInjection((services, context) =>
         ServiceDescriptor.Singleton<IPipelineStep, PrepareBindingsPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, StartAzureCliDockerProxyPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, PreparePrismExecutablesPipelineStep>(),
-        ServiceDescriptor.Singleton<IPipelineStep, ConfigureOpenTelemetryPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, WireServicesAndDependenciesPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, EnsureDockerIsRunningPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, StartDockerComposePipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, AfterStartingDependenciesPipelineStep>(),
-        ServiceDescriptor.Singleton<IPipelineStep, StartProcessComposePipelineStep>(),
+        ServiceDescriptor.Singleton<IPipelineStep, StartAspirePipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, StartReverseProxyPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, WriteAppSettingsJsonPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, PrintEnvironmentVariablesPipelineStep>(),

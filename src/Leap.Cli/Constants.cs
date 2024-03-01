@@ -5,7 +5,6 @@ internal static class Constants
     private const string LeapRootConfigDirectoryName = ".leap";
     private const string LeapGeneratedDirectoryName = "generated";
     private const string LeapDockerComposeDirectoryName = "docker-compose";
-    private const string LeapProcessComposeDirectoryName = "process-compose";
     private const string LeapPrismDirectoryName = "prism";
     private const string LeapCertificatesDirectoryName = "certificates";
 
@@ -39,10 +38,7 @@ internal static class Constants
     /// <summary>The directory that contains the generated Docker Compose files</summary>
     public static readonly string DockerComposeDirectoryPath = Path.Combine(GeneratedDirectoryPath, LeapDockerComposeDirectoryName);
 
-    /// <summary>The directory that contains the generated Process Compose files</summary>
-    public static readonly string ProcessComposeDirectoryPath = Path.Combine(GeneratedDirectoryPath, LeapProcessComposeDirectoryName);
-
-    /// <summary>The directory that contains the generated Process Compose files</summary>
+    /// <summary>The directory that contains the generated Prism files</summary>
     public static readonly string PrismDirectoryPath = Path.Combine(GeneratedDirectoryPath, LeapPrismDirectoryName);
 
     /// <summary>The directory that contains the generated local development certificate files</summary>

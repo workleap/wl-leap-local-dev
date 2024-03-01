@@ -24,6 +24,7 @@ Process {
         Write-Host -ForegroundColor Green "$packageName might already be uninstalled, continuing..."
     }
 
+
     # Find the nupkg file in the output directory
     $outputDir = Join-Path $PSScriptRoot ".output"
     $nupkgFileName = Get-ChildItem -Path $outputDir -Filter "*.nupkg" -File | Select-Object -First 1 -ExpandProperty Name

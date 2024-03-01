@@ -1,10 +1,7 @@
-﻿using Leap.Cli.DockerCompose;
-using Leap.Cli.DockerCompose.Yaml;
+﻿using Leap.Cli.Aspire;
 using Leap.Cli.Extensions;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
-using Leap.Cli.ProcessCompose;
-using Leap.Cli.ProcessCompose.Yaml;
 using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Pipeline;
@@ -13,27 +10,21 @@ internal sealed class PrepareBindingsPipelineStep : IPipelineStep
 {
     private readonly IFeatureManager _featureManager;
     private readonly ILogger<PrepareBindingsPipelineStep> _logger;
-    private readonly IConfigureProcessCompose _processCompose;
-    private readonly IConfigureDockerCompose _dockerCompose;
+    private readonly IAspireManager _aspire;
     private readonly IConfigureEnvironmentVariables _environmentVariables;
-    private readonly IPrismManager _prismManager;
     private readonly IPortManager _portManager;
 
     public PrepareBindingsPipelineStep(
         IFeatureManager featureManager,
         ILogger<PrepareBindingsPipelineStep> logger,
-        IConfigureProcessCompose processCompose,
-        IConfigureDockerCompose dockerCompose,
+        IAspireManager aspire,
         IConfigureEnvironmentVariables environmentVariables,
-        IPrismManager prismManager,
         IPortManager portManager)
     {
         this._featureManager = featureManager;
         this._logger = logger;
-        this._processCompose = processCompose;
-        this._dockerCompose = dockerCompose;
+        this._aspire = aspire;
         this._environmentVariables = environmentVariables;
-        this._prismManager = prismManager;
         this._portManager = portManager;
     }
 
@@ -61,28 +52,24 @@ internal sealed class PrepareBindingsPipelineStep : IPipelineStep
         service.Ingress.InternalPort ??= service.ActiveBinding?.Port ?? this._portManager.GetRandomAvailablePort(cancellationToken);
         service.Ingress.Path ??= "/";
 
-        // Networking-related environment variables for services that need to know their URL
-        var advertisedPort = service.ActiveBinding is DockerBinding db ? db.ContainerPort : service.Ingress.InternalPort;
-        service.EnvironmentVariables.TryAdd("PORT", advertisedPort.ToString()!);
-
         // .NET specific environment variables. Not harmful for non-.NET services.
-        service.EnvironmentVariables.TryAdd("ASPNETCORE_URLS", $"http://+:{advertisedPort}");
+        // .NET runners can still override these values in their own environment variables.
         service.EnvironmentVariables.TryAdd("DOTNET_ENVIRONMENT", "Development");
 
-        // OpenTelemetry
-        service.EnvironmentVariables.TryAdd("OTEL_SERVICE_NAME", service.Name);
-        service.EnvironmentVariables.TryAdd("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf");
-
-        // Hide OpenTelemetry traffic from .NET apps logs
+        // Hide OpenTelemetry traffic from .NET apps logs (it's noisy)
         service.EnvironmentVariables.TryAdd("Logging__LogLevel__System.Net.Http.HttpClient.OtlpMetricExporter", "Warning");
         service.EnvironmentVariables.TryAdd("Logging__LogLevel__System.Net.Http.HttpClient.OtlpTraceExporter", "Warning");
 
-        // Export more information to Zipkin. Based on .NET Aspire:
+        // Based on this internal .NET Aspire method that we can't directly use (reserved to ".AddProject" which we can't use)
         // https://github.com/dotnet/aspire/blob/cdcc995aac7b220351868c40ad2d7c6b66b6c7c2/src/Aspire.Hosting/Extensions/ProjectResourceBuilderExtensions.cs#L53-L56
         service.EnvironmentVariables.TryAdd("OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES", "true");
         service.EnvironmentVariables.TryAdd("OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES", "true");
 
-        // TODO connecting dependencies to services and services each other
+        // https://github.com/dotnet/aspire/blob/cdcc995aac7b220351868c40ad2d7c6b66b6c7c2/src/Aspire.Hosting/Dashboard/ConsoleLogsConfigurationExtensions.cs
+        service.EnvironmentVariables["DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION"] = "true";
+        service.EnvironmentVariables["LOGGING__CONSOLE__FORMATTERNAME"] = "simple";
+        service.EnvironmentVariables["LOGGING__CONSOLE__FORMATTEROPTIONS__TIMESTAMPFORMAT"] = "yyyy-MM-ddTHH:mm:ss.fffffff ";
+
         switch (service.ActiveBinding)
         {
             case ExecutableBinding exeBinding:
@@ -127,95 +114,58 @@ internal sealed class PrepareBindingsPipelineStep : IPipelineStep
 
     private void HandleExecutableBinding(Service service, ExecutableBinding exeBinding)
     {
-        var commandParts = new List<string>
-        {
-            ProcessArgument.Escape(exeBinding.Command),
-        };
-
-        commandParts.AddRange(exeBinding.Arguments.Select(ProcessArgument.Escape));
-
         // TODO shall we sanitize the name of the service? Get inspiration from Dapr
-        var process = new ProcessComposeProcessYaml
-        {
-            Command = string.Join(' ', commandParts),
-            WorkingDirectory = exeBinding.WorkingDirectory,
-        };
-
-        foreach (var (name, value) in service.EnvironmentVariables)
-        {
-            process.Environment[name] = value;
-        }
-
-        this._processCompose.Configuration.Processes[service.Name] = process;
+        this._aspire.Builder
+            .AddExecutable(service.Name, exeBinding.Command, exeBinding.WorkingDirectory, exeBinding.Arguments)
+            .WithEndpoint(scheme: "http", hostPort: service.Ingress.InternalPort)
+            .WithEnvironment(service.EnvironmentVariables)
+            .WithOtlpExporter();
     }
 
     private void HandleDockerBinding(Service service, DockerBinding dockerBinding)
     {
         // TODO shall we sanitize the name of the service?
-        var dockerService = new DockerComposeServiceYaml
-        {
-            Image = dockerBinding.Image,
-            Restart = DockerComposeConstants.Restart.No,
-        };
+        // Tag is set to null to prevent Aspire from adding latest (tag is already included in our image property)
+        this._aspire.Builder.AddContainer(service.Name, dockerBinding.Image, tag: string.Empty)
 
-        if (service.Ingress.ExternalPort.HasValue)
-        {
-            dockerService.Ports = new List<DockerComposePortMappingYaml>
-            {
-                new DockerComposePortMappingYaml(service.Ingress.InternalPort!.Value, dockerBinding.ContainerPort),
-            };
-        }
-
-        foreach (var (name, value) in service.EnvironmentVariables)
-        {
-            dockerService.Environment[name] = value;
-        }
-
-        this._dockerCompose.Configuration.Services[service.Name] = dockerService;
+            // TODO tester docker containers avec aspire (networking)
+            .WithEndpoint(scheme: "http", hostPort: service.Ingress.InternalPort, containerPort: dockerBinding.ContainerPort)
+            .WithEnvironment(service.EnvironmentVariables)
+            .WithOtlpExporter();
     }
 
     private void HandleCsprojBinding(Service service, CsprojBinding csprojBinding)
     {
-        var csprojPath = csprojBinding.Path;
-        var workingDirectoryPath = Path.GetDirectoryName(csprojPath);
+        var workingDirectoryPath = Path.GetDirectoryName(csprojBinding.Path);
 
-        // TODO shall we sanitize the name of the service?
-        var process = new ProcessComposeProcessYaml
-        {
-            Command = string.Join(' ', "dotnet", "run", "--no-launch-profile", "--project", ProcessArgument.Escape(csprojPath)),
-            WorkingDirectory = workingDirectoryPath,
-        };
+        string[] dotnetRunArgs = ["run", "--project", csprojBinding.Path, "--no-launch-profile"];
 
-        foreach (var (name, value) in service.EnvironmentVariables)
-        {
-            process.Environment[name] = value;
-        }
-
-        this._processCompose.Configuration.Processes[service.Name] = process;
+        // TODO shall we sanitize the name of the service? Get inspiration from Dapr
+        this._aspire.Builder
+            .AddExecutable(service.Name, "dotnet", workingDirectoryPath!, dotnetRunArgs)
+            .WithEndpoint(scheme: "http", hostPort: service.Ingress.InternalPort)
+            .WithEnvironment(service.EnvironmentVariables)
+            .WithOtlpExporter();
     }
 
     private void HandleOpenApiBinding(Service service, OpenApiBinding openApiBinding)
     {
-        var specPath = openApiBinding.Specification;
-        var workingDirectoryPath = Path.GetDirectoryName(specPath);
-
-        var commandParts = new[]
-        {
-            this._prismManager.PrismExecutablePath,
-            "mock",
-            "--port", service.Ingress.InternalPort!.Value.ToString(),
-            "--dynamic",
-            ProcessArgument.Escape(specPath),
-        };
+        // See:
+        // https://github.com/stoplightio/prism/blob/v5.5.4/docs/getting-started/01-installation.md#docker
+        // https://github.com/stoplightio/prism/blob/v5.5.4/Dockerfile#L69
+        const int prismContainerPort = 4010;
 
         // TODO shall we sanitize the name of the service?
-        var process = new ProcessComposeProcessYaml
-        {
-            Command = string.Join(' ', commandParts),
-            WorkingDirectory = workingDirectoryPath,
-        };
+        var container = new ContainerResource(service.Name, entrypoint: "mock --host 0.0.0.0 --dynamic /tmp/swagger.yml");
 
-        this._processCompose.Configuration.Processes[service.Name] = process;
+        this._aspire.Builder.AddResource(container)
+
+            // Tag is set to null to prevent Aspire from adding latest (tag is already included in our image property)
+            .WithAnnotation(new ContainerImageAnnotation { Image = "stoplight/prism:5", Tag = string.Empty })
+            .WithVolumeMount(openApiBinding.Specification, "/tmp/swagger.yml")
+
+            // TODO tester docker containers avec aspire (networking)
+            .WithEndpoint(scheme: "http", hostPort: service.Ingress.InternalPort, containerPort: prismContainerPort);
     }
 
     public Task StopAsync(ApplicationState state, CancellationToken cancellationToken)

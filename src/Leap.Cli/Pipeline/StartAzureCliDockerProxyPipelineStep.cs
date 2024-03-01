@@ -49,6 +49,7 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
         var isAzureCliInstalled = await this.IsAzureCliInstalledAsync(cancellationToken);
         if (!isAzureCliInstalled)
         {
+            this._logger.LogTrace("Azure CLI is not installed, skipping setup of Azure CLI proxy for Docker containers...");
             return;
         }
 

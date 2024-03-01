@@ -1,6 +1,5 @@
 ﻿namespace Leap.Cli.Model;
 
-// TODO docker bindings need to be shutdown when Leap is stopped
 internal sealed class DockerBinding : Binding
 {
     public string Image { get; set; } = string.Empty;

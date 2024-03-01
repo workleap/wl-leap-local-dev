@@ -1,7 +1,7 @@
 ﻿using Leap.Cli.Extensions;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
-using Leap.Cli.ProcessCompose;
+using Leap.Cli.Prism;
 using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Pipeline;

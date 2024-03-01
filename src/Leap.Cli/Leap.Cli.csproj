@@ -13,6 +13,11 @@
     <NoWarn>NU5111;NU5110;$(NoWarn)</NoWarn>
     <ToolCommandName>leap</ToolCommandName>
     <InvariantGlobalization>true</InvariantGlobalization>
+    <IsAspireHost>true</IsAspireHost>
+
+    <!-- https://github.com/dotnet/aspire/blob/v8.0.0-preview.3.24105.21/src/Aspire.Hosting.Sdk/SDK/Sdk.targets#L17-L18 -->
+    <IsPublishable>true</IsPublishable>
+    <IsPackable>true</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Hosting" Version="8.0.0-preview.3.24105.21" />
     <PackageReference Include="CliWrap" Version="3.6.6" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />

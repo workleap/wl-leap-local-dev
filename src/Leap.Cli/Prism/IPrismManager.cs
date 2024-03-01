@@ -1,4 +1,4 @@
-﻿namespace Leap.Cli.ProcessCompose;
+﻿namespace Leap.Cli.Prism;
 
 internal interface IPrismManager
 {

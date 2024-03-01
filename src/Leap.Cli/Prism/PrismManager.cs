@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using Leap.Cli.Platform;
 
-namespace Leap.Cli.ProcessCompose;
+namespace Leap.Cli.Prism;
 
 internal sealed class PrismManager : IPrismManager
 {

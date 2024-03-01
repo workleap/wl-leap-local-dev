@@ -6,7 +6,7 @@ internal sealed class ExecutableBinding : Binding
 
     public string[] Arguments { get; set; } = Array.Empty<string>();
 
-    public string? WorkingDirectory { get; set; }
+    public string WorkingDirectory { get; set; } = string.Empty;
 
     public override int? Port { get; set; }
 }
