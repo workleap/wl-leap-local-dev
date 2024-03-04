@@ -124,9 +124,16 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
         });
     }
 
-    private static void ConfigureAppSettingsJson(JsonObject _)
+    private static void ConfigureAppSettingsJson(JsonObject appsettings)
     {
-        // TODO replicate the environment variables above in appsettings.json
+        appsettings["Azure:Storage:ConnectionString"] = AzuriteConstants.HostConnectionString;
+        appsettings["Azure:Storage:Blob:ConnectionString"] = AzuriteConstants.HostConnectionString;
+        appsettings["Azure:Storage:Queue:ConnectionString"] = AzuriteConstants.HostConnectionString;
+        appsettings["Azure:Storage:Table:ConnectionString"] = AzuriteConstants.HostConnectionString;
+
+        appsettings["Azure:Storage:Blob:ServiceUri"] = AzuriteConstants.HostBlobServiceUri;
+        appsettings["Azure:Storage:Queue:ServiceUri"] = AzuriteConstants.HostQueueServiceUri;
+        appsettings["Azure:Storage:Table:ServiceUri"] = AzuriteConstants.HostTableServiceUri;
     }
 
     protected override async Task AfterStartAsync(AzuriteDependency dependency, CancellationToken cancellationToken)
