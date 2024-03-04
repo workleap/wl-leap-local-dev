@@ -89,7 +89,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         // Declare the service URL to the other services
         this._environmentVariables.Configure(x =>
         {
-            var envvarName = "SERVICE__" + service.Name.ToUpperInvariant() + "__URL";
+            var envvarName = "SERVICES__" + service.Name.ToUpperInvariant() + "__BASEURL";
 
             string hostServiceUrl;
             string containerServiceUrl;
