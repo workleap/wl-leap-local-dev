@@ -37,13 +37,12 @@ internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDe
     {
         await this.EnsureEventGridSettingsFileExists(cancellationToken);
         ConfigureDockerCompose(this._dockerCompose.Configuration);
+        this._environmentVariables.Configure(ConfigureEnvironmentVariables);
     }
 
     protected override Task AfterStartAsync(EventGridDependency dependency, CancellationToken cancellationToken)
     {
-        this._environmentVariables.Configure(ConfigureEnvironmentVariables);
         this._logger.LogInformation("Event Grid emulator is up and running, you can edit your topic registrations at {FilePath}", Constants.LeapEventGridSettingsFilePath);
-
         return Task.CompletedTask;
     }
 
