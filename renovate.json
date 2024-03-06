@@ -35,6 +35,12 @@
       "extends": [":disableMajorUpdates"]
     },
     {
+      "matchManagers": ["nuget"],
+      "matchPackageNames": ["Aspire.Hosting"],
+      "description": ".NET Aspire is currently in preview and might become stable around the release of .NET 9.0",
+      "ignoreUnstable": true
+    },
+    {
       "matchPackageNames": ["dotnet-sdk"],
       "groupName": "Dotnet SDK",
       "description": "Only update patch and minor for the dotnet SDK version within the global.json",

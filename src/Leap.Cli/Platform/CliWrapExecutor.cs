@@ -1,32 +1,84 @@
-﻿using CliWrap;
+﻿using System.Diagnostics;
+using CliWrap;
 using CliWrap.Buffered;
+using CliWrap.Exceptions;
+using Leap.Cli.Platform.Telemetry;
 using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Platform;
 
-internal sealed class CliWrapExecutor : ICliWrap
+internal sealed class CliWrapExecutor(ITelemetryHelper telemetryHelper, ILogger<CliWrapExecutor> logger) : ICliWrap
 {
-    private readonly ILogger _cliWrap;
-
-    public CliWrapExecutor(ILogger<CliWrapExecutor> cliWrap)
+    public async Task<CommandResult> ExecuteAsync(Command command, CancellationToken forcefulCancellationToken, CancellationToken gracefulCancellationToken = default)
     {
-        this._cliWrap = cliWrap;
+        using var activity = this.CreateCommandActivity(command);
+
+        this.LogCommandExecution(command);
+
+        try
+        {
+            var result = await command.ExecuteAsync(forcefulCancellationToken, gracefulCancellationToken);
+
+            activity?.SetStatus(ActivityStatusCode.Ok);
+            activity?.AddTag(TelemetryConstants.Attributes.Process.ExitCode, result.ExitCode);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            if (ex is CommandExecutionException ceex)
+            {
+                activity?.AddTag(TelemetryConstants.Attributes.Process.ExitCode, ceex.ExitCode);
+            }
+
+            throw;
+        }
     }
 
-    public Task<CommandResult> ExecuteAsync(Command command, CancellationToken forcefulCancellationToken, CancellationToken gracefulCancellationToken = default)
+    public async Task<BufferedCommandResult> ExecuteBufferedAsync(Command command, CancellationToken cancellationToken)
     {
+        using var activity = this.CreateCommandActivity(command);
+
         this.LogCommandExecution(command);
-        return command.ExecuteAsync(forcefulCancellationToken, gracefulCancellationToken);
+
+        try
+        {
+            var result = await command.ExecuteBufferedAsync(cancellationToken);
+
+            activity?.SetStatus(ActivityStatusCode.Ok);
+            activity?.AddTag(TelemetryConstants.Attributes.Process.ExitCode, result.ExitCode);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            if (ex is CommandExecutionException ceex)
+            {
+                activity?.AddTag(TelemetryConstants.Attributes.Process.ExitCode, ceex.ExitCode);
+            }
+
+            throw;
+        }
     }
 
-    public Task<BufferedCommandResult> ExecuteBufferedAsync(Command command, CancellationToken cancellationToken)
+    private Activity? CreateCommandActivity(Command command)
     {
-        this.LogCommandExecution(command);
-        return command.ExecuteBufferedAsync(cancellationToken);
+        var activity = telemetryHelper.StartChildActivity(TelemetryConstants.ActivityNames.Process, ActivityKind.Client);
+
+        if (activity != null)
+        {
+            activity.DisplayName = command.TargetFilePath;
+        }
+
+        return activity;
     }
 
     private void LogCommandExecution(ICommandConfiguration command)
     {
-        this._cliWrap.LogTrace("Executing command {Command} {Arguments}", command.TargetFilePath, command.Arguments);
+        logger.LogTrace("Executing command {Command} {Arguments}", command.TargetFilePath, command.Arguments);
     }
 }

@@ -34,7 +34,7 @@ internal sealed class UpdateHostsFileCommandHandler(IPlatformHelper platformHelp
 {
     public async Task<int> HandleAsync(UpdateHostsFileCommandOptions options, CancellationToken cancellationToken)
     {
-        if (!platformHelper.IsCurrentProcessElevated())
+        if (!platformHelper.IsCurrentProcessElevated)
         {
             return 1;
         }

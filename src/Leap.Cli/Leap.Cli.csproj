@@ -18,6 +18,17 @@
     <!-- https://github.com/dotnet/aspire/blob/v8.0.0-preview.3.24105.21/src/Aspire.Hosting.Sdk/SDK/Sdk.targets#L17-L18 -->
     <IsPublishable>true</IsPublishable>
     <IsPackable>true</IsPackable>
+
+    <!-- We do not want the assembly informational version to be suffixed with the git commit hash (x.y.z+hash)
+    because we use it to determine if Leap is currently running on a stable version of not (x.y.z)
+    to determine if we send the telemetry to the production application insights resource.
+    https://learn.microsoft.com/en-us/dotnet/core/compatibility/sdk/8.0/source-link#recommended-action -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+
+    <!-- Using a prefix here will pevent a developer running Leap in an IDE in Release configuration
+    from sending telemetry to the production application insights resource.
+    This is overriden by our build scripts. -->
+    <Version>1.0.0-local</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,11 +36,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.2.0" />
     <PackageReference Include="Aspire.Hosting" Version="8.0.0-preview.3.24105.21" />
     <PackageReference Include="CliWrap" Version="3.6.6" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="OpenTelemetry" Version="1.7.0" />
+    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.7.0" />
     <PackageReference Include="Spectre.Console" Version="0.48.0" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
     <PackageReference Include="System.CommandLine.NamingConventionBinder" Version="2.0.0-beta4.22272.1" />

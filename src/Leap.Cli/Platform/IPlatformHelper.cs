@@ -8,9 +8,13 @@ internal interface IPlatformHelper
 
     Architecture ProcessArchitecture { get; }
 
-    Task MakeExecutableAsync(string targetPath, CancellationToken cancellationToken);
+    bool IsRunningOnBuildAgent { get; }
 
-    bool IsCurrentProcessElevated();
+    bool IsRunningInReleaseConfiguration { get; }
+
+    bool IsRunningOnStableVersion { get; }
+
+    bool IsCurrentProcessElevated { get; }
 
     Task StartLeapElevatedAsync(string[] args, CancellationToken cancellationToken);
 }

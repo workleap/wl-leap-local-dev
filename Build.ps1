@@ -32,9 +32,9 @@ Process {
         Write-Host "##vso[build.updatebuildnumber]$version"
 
         Exec { & dotnet clean -c Release }
-        Exec { & dotnet build -c Release }
-        Exec { & dotnet test  -c Release --no-build --results-directory "$outputDir" --no-restore -l "trx" -l "console;verbosity=detailed" }
-        Exec { & dotnet pack  -c Release -o "$outputDir" /p:Version=$version }
+        Exec { & dotnet build -c Release /p:Version=$version }
+        Exec { & dotnet test  -c Release --no-build --results-directory "$outputDir" --no-restore --logger "trx" --logger "console;verbosity=detailed" }
+        Exec { & dotnet pack  -c Release --no-build --output "$outputDir" /p:Version=$version }
     }
     finally {
         Pop-Location

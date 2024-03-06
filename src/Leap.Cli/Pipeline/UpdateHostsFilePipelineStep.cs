@@ -51,7 +51,7 @@ internal sealed class UpdateHostsFilePipelineStep : IPipelineStep
         var finalUniqueHostnames = existingHostnames.Concat(requiredHostnames).ToArray();
         this._logger.LogTrace("Updating hosts file to add the following hostnames: {Hostnames}", string.Join(", ", missingHostnames));
 
-        if (this._platformHelper.IsCurrentProcessElevated())
+        if (this._platformHelper.IsCurrentProcessElevated)
         {
             await this._hostsFileManager.UpdateHostnamesAsync(finalUniqueHostnames, cancellationToken);
         }

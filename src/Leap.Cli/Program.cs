@@ -11,7 +11,7 @@ using Leap.Cli.DockerCompose;
 using Leap.Cli.Model;
 using Leap.Cli.Pipeline;
 using Leap.Cli.Platform;
-using Leap.Cli.Prism;
+using Leap.Cli.Platform.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -71,6 +71,7 @@ builder.UseDependencyInjection((services, context) =>
     services.AddSingleton<IPlatformHelper, PlatformHelper>();
     services.AddSingleton<IPortManager, PortManager>();
     services.AddSingleton<IHostsFileManager, HostsFileManager>();
+    services.AddSingleton<ITelemetryHelper, TelemetryHelper>();
     services.AddSingleton<AzuriteAuthenticationHandler>();
 
     services.AddHttpClient()
@@ -106,7 +107,6 @@ builder.UseDependencyInjection((services, context) =>
     services.AddSingleton<IAppSettingsJsonManager>(x => x.GetRequiredService<AppSettingsJsonManager>());
 
     services.AddSingleton<IAspireManager, AspireManager>();
-    services.AddSingleton<IPrismManager, PrismManager>();
     services.AddSingleton<IUserSettingsManager, UserSettingsManager>();
 
     services.TryAddEnumerable(new[]
@@ -121,7 +121,6 @@ builder.UseDependencyInjection((services, context) =>
         ServiceDescriptor.Singleton<IPipelineStep, BeforeStartingDependenciesPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, PrepareServiceRunnersPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, StartAzureCliDockerProxyPipelineStep>(),
-        ServiceDescriptor.Singleton<IPipelineStep, PreparePrismExecutablesPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, WireServicesAndDependenciesPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, EnsureDockerIsRunningPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, StartDockerComposePipelineStep>(),
@@ -133,6 +132,8 @@ builder.UseDependencyInjection((services, context) =>
         ServiceDescriptor.Singleton<IPipelineStep, WaitForUserCancellationPipelineStep>(),
     });
 });
+
+builder.UseTelemetry();
 
 var parser = builder.Build();
 var exitCode = parser.Invoke(args);
