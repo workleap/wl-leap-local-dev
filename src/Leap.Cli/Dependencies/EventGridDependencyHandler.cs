@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System.IO.Abstractions;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Leap.Cli.Platform.Telemetry;
 
 namespace Leap.Cli.Dependencies;
 
@@ -39,6 +40,7 @@ internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDe
 
     protected override async Task BeforeStartAsync(EventGridDependency dependency, CancellationToken cancellationToken)
     {
+        TelemetryMeters.TrackEventGridStart();
         await this.EnsureEventGridSettingsFileExists(cancellationToken);
         ConfigureDockerCompose(this._dockerCompose.Configuration);
         this._environmentVariables.Configure(ConfigureEnvironmentVariables);

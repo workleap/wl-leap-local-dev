@@ -51,6 +51,10 @@ internal sealed class TelemetryHelper : ITelemetryHelper, IDisposable
             meterProviderBuilder.AddAzureMonitorMetricExporter(x => x.ConnectionString = devAppInsightsConnectionString);
         }
 
+        meterProviderBuilder.AddMeter([
+            TelemetryMeters.LeapMeter.Name,
+        ]);
+
         this._tracerProvider = tracerProviderBuilder.Build();
         this._meterProvider = meterProviderBuilder.Build();
     }

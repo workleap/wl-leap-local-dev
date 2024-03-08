@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
+using Leap.Cli.Platform.Telemetry;
 using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Dependencies.Azurite;
@@ -38,6 +39,7 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
 
     protected override Task BeforeStartAsync(AzuriteDependency dependency, CancellationToken cancellationToken)
     {
+        TelemetryMeters.TrackAzuriteStart();
         ConfigureDockerCompose(this._dockerCompose.Configuration);
         this._environmentVariables.Configure(ConfigureEnvironmentVariables);
         ConfigureAppSettingsJson(this._appSettingsJson.Configuration);

@@ -4,6 +4,7 @@ using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
+using Leap.Cli.Platform.Telemetry;
 using Leap.Cli.Yaml;
 using Microsoft.Extensions.Logging;
 
@@ -43,6 +44,7 @@ internal sealed class SqlServerDependencyHandler : DependencyHandler<SqlServerDe
 
     protected override Task BeforeStartAsync(SqlServerDependency dependency, CancellationToken cancellationToken)
     {
+        TelemetryMeters.TrackSqlServerStart();
         this.ConfigureDockerCompose(this._dockerCompose.Configuration);
         this._environmentVariables.Configure(ConfigureEnvironmentVariables);
         ConfigureAppSettingsJson(this._appSettingsJson.Configuration);

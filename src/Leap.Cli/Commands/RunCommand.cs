@@ -27,6 +27,7 @@ internal sealed class RunCommandHandler(IEnumerable<IPipelineStep> pipelineSteps
 
     public async Task<int> HandleAsync(RunCommandOptions runCommandOptions, CancellationToken cancellationToken)
     {
+        TelemetryMeters.TrackLeapRun();
         this._pipeline = new LeapPipeline(pipelineSteps, telemetryHelper, loggerFactory, runCommandOptions.Diagnostic);
         await this._pipeline.RunAsync(cancellationToken);
         return 0;

@@ -2,6 +2,7 @@
 using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
+using Leap.Cli.Platform.Telemetry;
 using Leap.Cli.Yaml;
 using Microsoft.Extensions.Logging;
 
@@ -38,6 +39,7 @@ internal sealed class PostgresDependencyHandler : DependencyHandler<PostgresDepe
 
     protected override Task BeforeStartAsync(PostgresDependency dependency, CancellationToken cancellationToken)
     {
+        TelemetryMeters.TrackPostgresStart();
         ConfigureDockerCompose(this._dockerCompose.Configuration);
         this._environmentVariables.Configure(ConfigureEnvironmentVariables);
         ConfigureAppSettingsJson(this._appSettingsJson.Configuration);

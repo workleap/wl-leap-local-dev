@@ -2,6 +2,7 @@
 using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
+using Leap.Cli.Platform.Telemetry;
 using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Dependencies;
@@ -36,6 +37,7 @@ internal sealed class RedisDependencyHandler : DependencyHandler<RedisDependency
 
     protected override Task BeforeStartAsync(RedisDependency dependency, CancellationToken cancellationToken)
     {
+        TelemetryMeters.TrackRedisStart();
         ConfigureDockerCompose(this._dockerCompose.Configuration);
         this._environmentVariables.Configure(ConfigureEnvironmentVariables);
         ConfigureAppSettingsJson(this._appSettingsJson.Configuration);
