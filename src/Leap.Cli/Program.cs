@@ -111,6 +111,7 @@ builder.UseDependencyInjection((services, context) =>
 
     services.TryAddEnumerable(new[]
     {
+        ServiceDescriptor.Singleton<IPipelineStep, TrackLeapRunDurationPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, EnsureOperatingSystemAndArchitecturePipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, EnsureAtLeastOneLeapConfigFilePipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, EnsureLeapDirectoriesCreatedPipelineStep>(),
