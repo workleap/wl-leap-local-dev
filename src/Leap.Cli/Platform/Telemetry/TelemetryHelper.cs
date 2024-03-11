@@ -28,7 +28,6 @@ internal sealed class TelemetryHelper : ITelemetryHelper, IDisposable
             .AddProcessor(new SetEndUserIdTagProcessor())
             .AddSource(TelemetryConstants.AssemblyName);
 
-        // TODO register metrics here or remove this code if we don't use metrics at all
         var meterProviderBuilder = Sdk.CreateMeterProviderBuilder()
             .SetResourceBuilder(resourceBuilder);
 
@@ -36,6 +35,11 @@ internal sealed class TelemetryHelper : ITelemetryHelper, IDisposable
         {
             tracerProviderBuilder.AddConsoleExporter();
             meterProviderBuilder.AddConsoleExporter();
+        }
+        else if (Environment.GetEnvironmentVariable("LEAP_TELEMETRY_OPTOUT") is not null)
+        {
+            // Do not send telemetry by not registering any exporters
+            // The console exporters are spammy and not useful outside of telemetry-related development
         }
         else if (platformHelper is { IsRunningOnStableVersion: true, IsRunningInReleaseConfiguration: true })
         {
