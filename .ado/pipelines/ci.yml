@@ -35,43 +35,15 @@ jobs:
           filePath: "BuildAndInstall.ps1"
           pwsh: true
 
-      - bash: |
-          set -x
-          sudo apt install libnss3-tools -y && \
-          curl -JLO "https://dl.filippo.io/mkcert/latest?for=linux/amd64" && \
-          chmod +x mkcert-v*-linux-amd64 && \
-          sudo cp mkcert-v*-linux-amd64 /usr/local/bin/mkcert && \
-          mkcert -install
-        condition: eq(variables.imageName, 'ubuntu-latest')
-        displayName: "Linux: Install mkcert"
+      - template: templates/install-mkcert.yml
 
       - task: AzureCLI@2
         displayName: "Execute leap run"
         inputs:
           azureSubscription: "ARM - gsoft-idp-dev"
           scriptType: pscore
-          scriptLocation: inlineScript
-          inlineScript: |
-            @"
-            dependencies:
-              - type: mongo
-              - type: redis
-              - type: postgres
-              - type: sqlserver
-              - type: eventgrid
-              - type: azurite
-                containers:
-                  - mycontainer
-                tables:
-                  - mytable
-                queues:
-                  - myqueue
-            "@ | Set-Content -Path leap.yaml -Force && `
-            `
-            leap run && `
-            dotnet tool uninstall Workleap.Leap --global
-
-        # TODO It does't seem easy to rely on Docker for testing on Windows & macOS, try again another time
+          scriptLocation: scriptPath
+          scriptPath: ".ado/pipelines/templates/leap-run.ps1"
         condition: eq(variables.imageName, 'ubuntu-latest')
 
       - template: templates/docker-container-check.yml
@@ -109,3 +81,57 @@ jobs:
           publishVstsFeed: "gsoftdev"
           packagesToPush: ".output/*.nupkg"
           allowPackageConflicts: false
+
+      - task: PublishPipelineArtifact@1
+        inputs:
+          targetPath: "./.output/"
+          artifactName: LeapNugetPackage
+        condition: eq(variables.imageName, 'windows-latest')
+
+  - job: testPackage
+    displayName: Test package from other OS
+    dependsOn: build
+
+    pool:
+      vmImage: ubuntu-latest
+
+    variables:
+      imageName: ubuntu-latest
+
+    steps:
+      - checkout: self
+        clean: true
+        fetchDepth: 0
+
+      - task: UseDotNet@2
+        displayName: "Use .NET SDK"
+        inputs:
+          packageType: sdk
+          useGlobalJson: true
+
+      - task: DownloadPipelineArtifact@2
+        inputs:
+          artifact: LeapNugetPackage
+          targetPath: "./.output/"
+
+      - script: |
+          dotnet workload install aspire
+        displayName: Install Aspire workload
+
+
+      - task: PowerShell@2
+        displayName: "Install Leap"
+        inputs:
+          targetType: "filePath"
+          filePath: "Install.ps1"
+          pwsh: true
+
+      - template: templates/install-mkcert.yml
+
+      - task: AzureCLI@2
+        displayName: "Execute leap run"
+        inputs:
+          azureSubscription: "ARM - gsoft-idp-dev"
+          scriptType: pscore
+          scriptLocation: scriptPath
+          scriptPath: ".ado/pipelines/templates/leap-run.ps1"

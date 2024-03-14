@@ -1,0 +1,8 @@
+steps:
+  - bash: |
+      set -x
+      sudo apt install libnss3-tools -y && \
+      sudo apt install mkcert -y && \
+      mkcert -install
+    condition: eq(variables.imageName, 'ubuntu-latest')
+    displayName: "Linux: Install mkcert"
