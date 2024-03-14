@@ -14,16 +14,12 @@ Process {
 
     $packageName = "Workleap.Leap"
 
-    # Build the project and create the nupkg file
-    Exec { & "$(Join-Path $PSScriptRoot "Build.ps1")" }
-
     # Attempt to uninstall the tool if it's already installed
     try {
         Exec { & dotnet tool uninstall $packageName --global }
     } catch {
         Write-Host -ForegroundColor Green "$packageName might already be uninstalled, continuing..."
     }
-
 
     # Find the nupkg file in the output directory
     $outputDir = Join-Path $PSScriptRoot ".output"

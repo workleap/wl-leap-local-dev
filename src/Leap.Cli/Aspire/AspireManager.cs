@@ -21,31 +21,6 @@ internal sealed class AspireManager : IAspireManager
         this._logger = logger;
 
         var builder = DistributedApplication.CreateBuilder();
-
-        // TODO do we want to assign a well-known .NET Aspire port (same for the Aspire OTLP exporter port) instead of the default 18888 / 18889?
-        // TODO do we want to proxy the Aspire dashboard URL to our YARP reverse proxy in order to have a nicer local domain URL?
-        builder.Services.AddSingleton<IDistributedApplicationLifecycleHook, NetworkingEnvironmentVariablesLifecycleHook>();
-        builder.Services.AddSingleton<IHostLifetime, NoopHostLifetime>();
-
-        builder.Services.AddLogging(logging =>
-        {
-            logging.ClearProviders();
-            logging.AddProvider(new SimpleColoredConsoleLoggerProvider());
-        });
-
-        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            ["Logging:LogLevel:Microsoft.Hosting.Lifetime"] = "Warning",
-            ["Logging:LogLevel:Microsoft.AspNetCore"] = "Warning",
-
-            // .NET Aspire is too verbose by default
-            ["Logging:LogLevel:Aspire.Hosting"] = "Warning",
-
-            // Silence the "could not remove process's standard output file" error that sometimes occurs when stopping the Aspire hosting process
-            // It happens even with a brand new blank ASP.NET Core web API project
-            ["Aspire.Hosting.Dcp.dcpctrl.ExecutableReconciler"] = "None",
-        });
-
         this.Builder = builder;
     }
 
@@ -58,7 +33,7 @@ internal sealed class AspireManager : IAspireManager
         DistributedApplication? app = null;
         try
         {
-            app = this.Builder.Build();
+            app = this.BuildDistributedApplication();
             await app.StartAsync(cancellationToken);
         }
         catch (Exception ex)
@@ -76,5 +51,34 @@ internal sealed class AspireManager : IAspireManager
         this._logger.LogInformation(" - Send OpenTelemetry traces, metrics and logs to {AspireDashboardOtlpUrl}", AspireDashboardOtlpUrlDefaultValue);
 
         return app;
+    }
+
+    private DistributedApplication BuildDistributedApplication()
+    {
+        // TODO do we want to assign a well-known .NET Aspire port (same for the Aspire OTLP exporter port) instead of the default 18888 / 18889?
+        // TODO do we want to proxy the Aspire dashboard URL to our YARP reverse proxy in order to have a nicer local domain URL?
+        this.Builder.Services.AddSingleton<IDistributedApplicationLifecycleHook, NetworkingEnvironmentVariablesLifecycleHook>();
+        this.Builder.Services.AddSingleton<IHostLifetime, NoopHostLifetime>();
+
+        this.Builder.Services.AddLogging(logging =>
+        {
+            logging.ClearProviders();
+            logging.AddProvider(new SimpleColoredConsoleLoggerProvider());
+        });
+
+        this.Builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Logging:LogLevel:Microsoft.Hosting.Lifetime"] = "Warning",
+            ["Logging:LogLevel:Microsoft.AspNetCore"] = "Warning",
+
+            // .NET Aspire is too verbose by default
+            ["Logging:LogLevel:Aspire.Hosting"] = "Warning",
+
+            // Silence the "could not remove process's standard output file" error that sometimes occurs when stopping the Aspire hosting process
+            // It happens even with a brand new blank ASP.NET Core web API project
+            ["Aspire.Hosting.Dcp.dcpctrl.ExecutableReconciler"] = "None",
+        });
+
+        return this.Builder.Build();
     }
 }

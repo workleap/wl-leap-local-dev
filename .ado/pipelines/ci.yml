@@ -32,7 +32,7 @@ jobs:
         displayName: "Pack and install"
         inputs:
           targetType: "filePath"
-          filePath: "Install.ps1"
+          filePath: "BuildAndInstall.ps1"
           pwsh: true
 
       - bash: |

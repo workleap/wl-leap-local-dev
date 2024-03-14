@@ -29,6 +29,12 @@ internal sealed class StartAspirePipelineStep : IPipelineStep
             return;
         }
 
+        // No need to start aspire if there are no services to run
+        if (state.Services.Count == 0)
+        {
+            return;
+        }
+
         this._app = await this._aspireManager.StartAsync(cancellationToken);
     }
 
