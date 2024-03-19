@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using Leap.Cli.Dependencies;
 using Leap.Cli.Dependencies.Azurite;
@@ -47,6 +48,12 @@ internal sealed class PortManager : IPortManager
 
     public bool TryRegisterPort(int port, [NotNullWhen(false)] out InvalidPortReason? reason)
     {
+        if (!this.IsLocalhostTcpPortAvailable(port))
+        {
+            reason = InvalidPortReason.InUse;
+            return false;
+        }
+
         if (!this.IsPortInValidRange(port))
         {
             reason = InvalidPortReason.OutOfBounds;
@@ -55,7 +62,7 @@ internal sealed class PortManager : IPortManager
 
         if (!ReservedPorts.Add(port))
         {
-            reason = InvalidPortReason.AlreadyUsed;
+            reason = InvalidPortReason.ReservedByLeap;
             return false;
         }
 
@@ -66,5 +73,18 @@ internal sealed class PortManager : IPortManager
     public bool IsPortInValidRange(int port)
     {
         return port is > 0 and <= 65535;
+    }
+
+    private bool IsLocalhostTcpPortAvailable(int port)
+    {
+        // Check both address families to avoid surprises
+        return this.IsTcpListenerAvailable(IPAddress.IPv6Loopback, port)
+            && this.IsTcpListenerAvailable(IPAddress.Loopback, port);
+    }
+
+    private bool IsTcpListenerAvailable(IPAddress address, int port)
+    {
+        var tcpListeners = IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners();
+        return tcpListeners.All(x => x.Port != port || x.Address.ToString() != address.ToString());
     }
 }

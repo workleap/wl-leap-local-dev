@@ -1,8 +1,9 @@
-﻿using YamlDotNet.Serialization;
+﻿using Leap.Cli.Model.Traits;
+using YamlDotNet.Serialization;
 
 namespace Leap.Cli.Configuration.Yaml;
 
-internal sealed class IngressYaml
+internal sealed class IngressYaml : IHasPort
 {
     [YamlMember(Alias = "host", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
     public string? Host { get; set; }

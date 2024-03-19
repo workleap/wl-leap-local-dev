@@ -1,8 +1,9 @@
-﻿using YamlDotNet.Serialization;
+﻿using Leap.Cli.Model.Traits;
+using YamlDotNet.Serialization;
 
 namespace Leap.Cli.Configuration.Yaml;
 
-internal sealed class DockerRunnerYaml : RunnerYaml
+internal sealed class DockerRunnerYaml : RunnerYaml, IHasProtocol
 {
     public const string YamlDiscriminator = "docker";
 

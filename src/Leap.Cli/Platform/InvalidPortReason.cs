@@ -3,5 +3,6 @@
 internal enum InvalidPortReason
 {
     OutOfBounds,
-    AlreadyUsed,
+    ReservedByLeap,
+    InUse,
 }

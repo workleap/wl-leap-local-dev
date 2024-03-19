@@ -1,7 +1,9 @@
-﻿using Leap.Cli.Configuration;
+﻿using System.Text.RegularExpressions;
+using Leap.Cli.Configuration;
 using Leap.Cli.Configuration.Yaml;
 using Leap.Cli.Extensions;
 using Leap.Cli.Model;
+using Leap.Cli.Model.Traits;
 using Leap.Cli.Platform;
 using Microsoft.Extensions.Logging;
 
@@ -67,16 +69,24 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
 
                 if (serviceYaml.Ingress is { } ingressYaml)
                 {
-                    // TODO validate host against the supported hosts from the local certificate
-                    // so like "demo.workleap.local" is OK but something like "demo.mydomain.com" is not
                     if (ingressYaml.Host != null)
                     {
                         service.Ingress.Host = ingressYaml.Host;
+                        if (!IsDomainSupported(service.Ingress.Host))
+                        {
+                            this._logger.LogWarning("A service '{Service}' has an invalid host '{Host}' in the configuration file '{Path}'. The service will be ignored.", serviceName, service.Ingress.Host, leapConfig.Path);
+                            continue;
+                        }
                     }
 
-                    // TODO validate is a valid URL port, not already occupied by other services
                     if (ingressYaml.Port is { } port)
                     {
+                        if (!this._portManager.TryRegisterPort(port, out var reason))
+                        {
+                            this._logger.LogWarning("A service '{Service}' has an invalid port '{Port}' in the configuration file '{Path}'. The port is {Reason}. The service will be ignored.", serviceName, port, leapConfig.Path, reason.Value.ToString());
+                            continue;
+                        }
+
                         service.Ingress.ExternalPort = port;
                     }
 
@@ -93,6 +103,31 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                 {
                     this._logger.LogWarning("A service '{Service}' is missing a runner in the configuration file '{Path}' and will be ignored.", service.Name, leapConfig.Path);
                     continue;
+                }
+
+                if (runnerYaml is IHasPort hasPortYaml)
+                {
+                    if (hasPortYaml.Port is { } port)
+                    {
+                        if (!this._portManager.TryRegisterPort(port, out var reason))
+                        {
+                            this._logger.LogWarning("A service '{Service}' contains a runner expected to launch and bind to an invalid port '{Port}' in the configuration file '{Path}'. The port is {Reason}. The service will be ignored.", serviceName, port, leapConfig.Path, reason.Value);
+                            continue;
+                        }
+                    }
+                }
+
+                if (runnerYaml is IHasProtocol hasProtocolYaml)
+                {
+                    if (string.IsNullOrWhiteSpace(hasProtocolYaml.Protocol))
+                    {
+                        hasProtocolYaml.Protocol = "http";
+                    }
+                    else if (!SupportedBackendProtocols.Contains(hasProtocolYaml.Protocol))
+                    {
+                        this._logger.LogWarning("A runner has an invalid protocol '{Protocol}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", hasProtocolYaml.Protocol, leapConfig.Path, service.Name);
+                        continue;
+                    }
                 }
 
                 if (runnerYaml is ExecutableRunnerYaml exeRunnerYaml)
@@ -127,22 +162,6 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
 
                     workingDirectory = EnsureAbsolutePath(workingDirectory, leapConfig);
 
-                    if (exeRunnerYaml.Port.HasValue && !this._portManager.IsPortInValidRange(exeRunnerYaml.Port.Value))
-                    {
-                        this._logger.LogWarning("An executable runner has an invalid port '{Port}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", exeRunnerYaml.Port.Value, leapConfig.Path, service.Name);
-                        continue;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(exeRunnerYaml.Protocol))
-                    {
-                        exeRunnerYaml.Protocol = "http";
-                    }
-                    else if (!SupportedBackendProtocols.Contains(exeRunnerYaml.Protocol))
-                    {
-                        this._logger.LogWarning("An executable runner has an invalid protocol '{Protocol}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", exeRunnerYaml.Protocol, leapConfig.Path, service.Name);
-                        continue;
-                    }
-
                     service.Runners.Add(new ExecutableRunner
                     {
                         Command = exeRunnerYaml.Command,
@@ -175,22 +194,6 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                         continue;
                     }
 
-                    if (dockerRunnerYaml.HostPort.HasValue && !this._portManager.TryRegisterPort(dockerRunnerYaml.HostPort.Value, out var reason))
-                    {
-                        this._logger.LogWarning("A Docker image has an invalid host port '{Port}' in the configuration file '{Path}'. Reason: '{Reason'}. The service '{Service}' will be ignored.", containerPort.Value, leapConfig.Path, reason, service.Name);
-                        continue;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(dockerRunnerYaml.Protocol))
-                    {
-                        dockerRunnerYaml.Protocol = "http";
-                    }
-                    else if (!SupportedBackendProtocols.Contains(dockerRunnerYaml.Protocol))
-                    {
-                        this._logger.LogWarning("A Docker image has an invalid protocol '{Protocol}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", dockerRunnerYaml.Protocol, leapConfig.Path, service.Name);
-                        continue;
-                    }
-
                     service.Runners.Add(new DockerRunner
                     {
                         Image = dockerImage,
@@ -211,22 +214,6 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
 
                     projectPath = EnsureAbsolutePath(projectPath, leapConfig);
 
-                    if (dotnetRunnerYaml.Port.HasValue && !this._portManager.TryRegisterPort(dotnetRunnerYaml.Port.Value, out var reason))
-                    {
-                        this._logger.LogWarning("A .NET project runner has an invalid port '{Port}' in the configuration file '{Path}'. Reason: '{Reason}'. The service '{Service}' will be ignored.", dotnetRunnerYaml.Port, leapConfig.Path, reason, service.Name);
-                        continue;
-                    }
-
-                    if (string.IsNullOrWhiteSpace(dotnetRunnerYaml.Protocol))
-                    {
-                        dotnetRunnerYaml.Protocol = "http";
-                    }
-                    else if (!SupportedBackendProtocols.Contains(dotnetRunnerYaml.Protocol))
-                    {
-                        this._logger.LogWarning("A .NET project runner has an invalid protocol '{Protocol}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", dotnetRunnerYaml.Protocol, leapConfig.Path, service.Name);
-                        continue;
-                    }
-
                     service.Runners.Add(new DotnetRunner
                     {
                         ProjectPath = projectPath,
@@ -236,7 +223,11 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                 }
                 else if (runnerYaml is OpenApiRunnerYaml openApiRunnerYaml)
                 {
-                    // TODO validate that the files actually exists
+                    if (!File.Exists(openApiRunnerYaml.Specification))
+                    {
+                        this._logger.LogWarning("An OpenAPI mock server runner is missing a specification file '{Path}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", openApiRunnerYaml.Specification, leapConfig.Path, service.Name);
+                        continue;
+                    }
                     // TODO also support URLS?
                     var specPath = openApiRunnerYaml.Specification;
 
@@ -247,12 +238,6 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                     }
 
                     specPath = EnsureAbsolutePath(specPath, leapConfig);
-
-                    if (openApiRunnerYaml.Port.HasValue && !this._portManager.TryRegisterPort(openApiRunnerYaml.Port.Value, out var reason))
-                    {
-                        this._logger.LogWarning("An OpenAPI mock server runner has an invalid port '{Port}' in the configuration file '{Path}'. Reason: '{Reason}'. The service '{Service}' will be ignored.", openApiRunnerYaml.Port, leapConfig.Path, reason, service.Name);
-                        continue;
-                    }
 
                     service.Runners.Add(new OpenApiRunner
                     {
@@ -276,15 +261,21 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                 }
                 else
                 {
-                    // TODO warn that a service has an unknown runner type (print path to yaml file)
+                    this._logger.LogWarning("A service '{Service}' has an unknown runner type in the configuration file '{Path}'. The service will be ignored.", service.Name, leapConfig.Path);
                     continue;
                 }
 
-                // TODO again, for now we only support one runner per service
+                if (service.Runners.Count > 1)
+                {
+                    this._logger.LogWarning("A service '{Service}' has more than one runner in the configuration file '{Path}'. The '{RunnerKind}' runner will be used as it is the first declared.", service.Name, leapConfig.Path, service.Runners[0]);
+                }
+
                 service.ActiveRunner = service.Runners[0];
 
-                // TODO prevent multiple services with the same name
-                state.Services[service.Name] = service;
+                if (!state.Services.TryAdd(service.Name, service))
+                {
+                    this._logger.LogWarning("A service '{Service}' is defined multiple times in the configuration file '{Path}'. Only the first definition will be used.", service.Name, leapConfig.Path);
+                }
             }
         }
     }
@@ -302,6 +293,20 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
         path = Path.GetFullPath(path);
 
         return path;
+    }
+
+    private static bool IsDomainSupported(string domain)
+    {
+        foreach (var pattern in Constants.SupportedLocalDevelopmentCertificateDomainNames)
+        {
+            var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*") + "$";
+            if (Regex.IsMatch(domain, regexPattern, RegexOptions.IgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public Task StopAsync(ApplicationState state, CancellationToken cancellationToken)

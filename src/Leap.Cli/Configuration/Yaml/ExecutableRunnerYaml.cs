@@ -1,9 +1,10 @@
-﻿using YamlDotNet.Core;
+﻿using Leap.Cli.Model.Traits;
+using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 
 namespace Leap.Cli.Configuration.Yaml;
 
-internal sealed class ExecutableRunnerYaml : RunnerYaml
+internal sealed class ExecutableRunnerYaml : RunnerYaml, IHasPort, IHasProtocol
 {
     public const string YamlDiscriminator = "executable";
 

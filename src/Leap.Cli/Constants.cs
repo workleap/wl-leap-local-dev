@@ -15,6 +15,20 @@ internal static class Constants
     private const string LeapCertificateCrtFileName = "workleap-dev-certificate.crt";
     private const string LeapCertificateKeyFileName = "workleap-dev-certificate.key";
 
+    // ".localhost" is a top-level domain (TLD) reserved by the Internet Engineering Task Force (IETF)
+    // that is free to use localhost names as they would any other, without the risk of someone else owning it (like .com).
+    // https://www.iana.org/assignments/special-use-domain-names/special-use-domain-names.xhtml
+    // We didn't use ".local" because of the mDNS (Multicast DNS) protocol, which may cause issues according to this thread
+    // https://www.reddit.com/r/sysadmin/comments/gdeggi/
+    public static readonly string[] SupportedLocalDevelopmentCertificateDomainNames =
+    [
+        "localhost", "127.0.0.1", "::1", // localhost
+        "host.docker.internal", "host.containers.internal", // Docker and Podman
+        "*.officevibe.localhost", "*.officevibe-dev.localhost", // Officevibe
+        "*.sharegate.localhost", "*.sharegate-dev.localhost", // ShareGate
+        "*.workleap.localhost", "*.workleap-dev.localhost" // Workleap
+    ];
+
     // "1347" means "leap" in leetspeak (https://en.wikipedia.org/wiki/Leet)
     public const int LeapReverseProxyPort = 1347;
 

@@ -1,8 +1,9 @@
-﻿using YamlDotNet.Serialization;
+﻿using Leap.Cli.Model.Traits;
+using YamlDotNet.Serialization;
 
 namespace Leap.Cli.Configuration.Yaml;
 
-internal sealed class OpenApiRunnerYaml : RunnerYaml
+internal sealed class OpenApiRunnerYaml : RunnerYaml, IHasPort
 {
     public const string YamlDiscriminator = "openapi";
 

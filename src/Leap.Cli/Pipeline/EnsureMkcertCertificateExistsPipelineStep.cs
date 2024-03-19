@@ -13,19 +13,6 @@ namespace Leap.Cli.Pipeline;
 // as well as Google: https://web.dev/articles/how-to-use-local-https
 internal sealed class EnsureMkcertCertificateExistsPipelineStep : IPipelineStep
 {
-    // ".localhost" is a top-level domain (TLD) reserved by the Internet Engineering Task Force (IETF)
-    // that is free to use localhost names as they would any other, without the risk of someone else owning it (like .com).
-    // https://www.iana.org/assignments/special-use-domain-names/special-use-domain-names.xhtml
-    // We didn't use ".local" because of the mDNS (Multicast DNS) protocol, which may cause issues accordind to this thread
-    // https://www.reddit.com/r/sysadmin/comments/gdeggi/
-    private static readonly string[] SupportedDomainNames =
-    [
-        "localhost", "127.0.0.1", "::1", // localhost
-        "host.docker.internal", "host.containers.internal", // Docker and Podman
-        "*.officevibe.localhost", "*.officevibe-dev.localhost", // Officevibe
-        "*.sharegate.localhost", "*.sharegate-dev.localhost", // ShareGate
-        "*.workleap.localhost", "*.workleap-dev.localhost" // Workleap
-    ];
 
     private readonly IFeatureManager _featureManager;
     private readonly ICliWrap _cliWrap;
@@ -177,7 +164,7 @@ internal sealed class EnsureMkcertCertificateExistsPipelineStep : IPipelineStep
 
         this._logger.LogDebug("Creating the local development certificate...");
 
-        string[] crtCreateArgs = ["-cert-file", Constants.LocalCertificateCrtFilePath, "-key-file", Constants.LocalCertificateKeyFilePath, .. SupportedDomainNames];
+        string[] crtCreateArgs = ["-cert-file", Constants.LocalCertificateCrtFilePath, "-key-file", Constants.LocalCertificateKeyFilePath, .. Constants.SupportedLocalDevelopmentCertificateDomainNames];
         var crtCreateCommand = new Command(mkcertExePath).WithArguments(crtCreateArgs).WithValidation(CommandResultValidation.None);
         var crtCreateResult = await this._cliWrap.ExecuteBufferedAsync(crtCreateCommand, cancellationToken);
 
