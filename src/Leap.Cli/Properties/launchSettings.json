@@ -13,20 +13,6 @@
       "environmentVariables": {
         "LEAP_TELEMETRY_OPTOUT": "1"
       }
-    },
-    "config add": {
-      "commandName": "Project",
-      "commandLineArgs": "config add C:\\src\\leap.yaml",
-      "environmentVariables": {
-        "LEAP_TELEMETRY_OPTOUT": "1"
-      }
-    },
-    "config remove": {
-      "commandName": "Project",
-      "commandLineArgs": "config remove C:\\src\\leap.yaml",
-      "environmentVariables": {
-        "LEAP_TELEMETRY_OPTOUT": "1"
-      }
     }
   }
 }

@@ -18,7 +18,7 @@ internal sealed class EnsureAtLeastOneLeapConfigFilePipelineStep : IPipelineStep
 
         if (leapConfigs.Length == 0)
         {
-            throw new LeapException("You must first create a leap.yaml file in the current directory.");
+            throw new LeapException("No config file found, provide a leap.yaml file in the current directory or use the --file argument.");
         }
     }
 

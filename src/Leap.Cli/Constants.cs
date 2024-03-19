@@ -7,8 +7,6 @@ internal static class Constants
     private const string LeapDockerComposeDirectoryName = "docker-compose";
     private const string LeapCertificatesDirectoryName = "certificates";
 
-    private const string LeapSettingsFileName = "usersettings.json";
-
     private const string EventGridSettingsFileName = "eventgridsettings.json";
 
     public const string LeapYamlFileName = "leap.yaml";
@@ -24,9 +22,6 @@ internal static class Constants
 
     /// <summary>The root directory path for Leap configuration</summary>
     public static readonly string RootDirectoryPath = Path.Combine(UserProfileDirectoryPath, LeapRootConfigDirectoryName);
-
-    /// <summary>User-managed configuration file path</summary>
-    public static readonly string LeapUserSettingsFilePath = Path.Combine(RootDirectoryPath, LeapSettingsFileName);
 
     /// <summary>User-managed event grid configuration file path</summary>
     public static readonly string LeapEventGridSettingsFilePath = Path.Combine(RootDirectoryPath, EventGridSettingsFileName);

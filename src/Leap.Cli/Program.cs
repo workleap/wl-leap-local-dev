@@ -37,11 +37,6 @@ var featureFlagsOption = new Option<string[]>(["--feature-flags"])
 var rootCommand = new RootCommand("Workleap's Local Environment Application Proxy")
 {
     new RunCommand(),
-    new ConfigCommand
-    {
-        new ConfigAddCommand(),
-        new ConfigRemoveCommand(),
-    },
     new UpdateHostsFileCommand(),
 };
 
@@ -78,7 +73,8 @@ builder.UseDependencyInjection((services, context) =>
         .AddHttpClient(AzuriteConstants.HttpClientName)
         .AddHttpMessageHandler<AzuriteAuthenticationHandler>();
 
-    services.AddSingleton<ILeapYamlAccessor, LeapYamlAccessor>();
+    services.AddSingleton<LeapConfigManager>();
+    services.AddSingleton<ILeapYamlAccessor>(x => x.GetRequiredService<LeapConfigManager>());
 
     services.AddSingleton<IDependencyHandler, MongoDependencyHandler>();
     services.AddSingleton<IDependencyHandler, RedisDependencyHandler>();
@@ -107,7 +103,6 @@ builder.UseDependencyInjection((services, context) =>
     services.AddSingleton<IAppSettingsJsonManager>(x => x.GetRequiredService<AppSettingsJsonManager>());
 
     services.AddSingleton<IAspireManager, AspireManager>();
-    services.AddSingleton<IUserSettingsManager, UserSettingsManager>();
 
     services.TryAddEnumerable(new[]
     {
