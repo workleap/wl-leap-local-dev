@@ -7,6 +7,7 @@ internal static class Constants
     private const string LeapDockerComposeDirectoryName = "docker-compose";
     private const string LeapCertificatesDirectoryName = "certificates";
 
+    private const string AppSettingsFileName = "appsettings.json";
     private const string EventGridSettingsFileName = "eventgridsettings.json";
 
     public const string LeapYamlFileName = "leap.yaml";
@@ -32,7 +33,7 @@ internal static class Constants
     // "1347" means "leap" in leetspeak (https://en.wikipedia.org/wiki/Leet)
     public const int LeapReverseProxyPort = 1347;
 
-    private static readonly string UserProfileDirectoryPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+    private static readonly string UserProfileDirectoryPath = Path.GetFullPath(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 
     /// <summary>The root directory path for Leap configuration</summary>
     public static readonly string RootDirectoryPath = Path.Combine(UserProfileDirectoryPath, LeapRootConfigDirectoryName);
@@ -42,6 +43,9 @@ internal static class Constants
 
     /// <summary>The directory that contains auto-generated Leap files</summary>
     public static readonly string GeneratedDirectoryPath = Path.Combine(RootDirectoryPath, LeapGeneratedDirectoryName);
+
+    /// <summary>Leap generated appsettings.json file path</summary>
+    public static readonly string LeapAppSettingsFilePath = Path.Combine(GeneratedDirectoryPath, AppSettingsFileName);
 
     /// <summary>The directory that contains the generated Docker Compose files</summary>
     public static readonly string DockerComposeDirectoryPath = Path.Combine(GeneratedDirectoryPath, LeapDockerComposeDirectoryName);

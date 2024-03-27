@@ -24,7 +24,7 @@ internal sealed class AppSettingsJsonManager : IAppSettingsJsonManager
 
     public async Task WriteUpdatedAppSettingsJson(CancellationToken cancellationToken)
     {
-        var appSettingsJsonFilePath = Path.Combine(Constants.GeneratedDirectoryPath, "appsettings.json");
+        var appSettingsJsonFilePath = Constants.LeapAppSettingsFilePath;
 
         await using var stream = this._fileSystem.File.Create(appSettingsJsonFilePath);
         await using var streamWriter = new StreamWriter(stream);

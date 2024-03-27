@@ -54,7 +54,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
 
         // .NET specific environment variables. Not harmful for non-.NET services.
         // .NET runners can still override these values in their own environment variables.
-        service.EnvironmentVariables.TryAdd("DOTNET_ENVIRONMENT", "Development");
+        service.EnvironmentVariables.TryAdd("DOTNET_ENVIRONMENT", "Local");
 
         // Hide OpenTelemetry traffic from .NET apps logs (it's noisy)
         service.EnvironmentVariables.TryAdd("Logging__LogLevel__System.Net.Http.HttpClient.OtlpMetricExporter", "Warning");

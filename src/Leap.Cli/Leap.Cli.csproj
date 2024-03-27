@@ -60,4 +60,8 @@
   <ItemGroup>
     <None Include="..\..\README.md" Link="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\Constants.cs" Link="Shared\Constants.cs" />
+  </ItemGroup>
 </Project>

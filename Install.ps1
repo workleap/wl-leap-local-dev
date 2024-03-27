@@ -23,7 +23,7 @@ Process {
 
     # Find the nupkg file in the output directory
     $outputDir = Join-Path $PSScriptRoot ".output"
-    $nupkgFileName = Get-ChildItem -Path $outputDir -Filter "*.nupkg" -File | Select-Object -First 1 -ExpandProperty Name
+    $nupkgFileName = Get-ChildItem -Path $outputDir -Filter "*Workleap.Leap.*.nupkg" -File | Select-Object -First 1 -ExpandProperty Name
 
     if (-not $nupkgFileName) {
         throw "No nupkg file found in $outputDir"
