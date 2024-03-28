@@ -13,19 +13,22 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
     private readonly IAspireManager _aspire;
     private readonly IConfigureEnvironmentVariables _environmentVariables;
     private readonly IPortManager _portManager;
+    private readonly IConfigureAppSettingsJson _appSettingsJson;
 
     public PrepareServiceRunnersPipelineStep(
         IFeatureManager featureManager,
         ILogger<PrepareServiceRunnersPipelineStep> logger,
         IAspireManager aspire,
         IConfigureEnvironmentVariables environmentVariables,
-        IPortManager portManager)
+        IPortManager portManager,
+        IConfigureAppSettingsJson appSettingsJson)
     {
         this._featureManager = featureManager;
         this._logger = logger;
         this._aspire = aspire;
         this._environmentVariables = environmentVariables;
         this._portManager = portManager;
+        this._appSettingsJson = appSettingsJson;
     }
 
     public Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
@@ -86,30 +89,33 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
                 break;
         }
 
+        var envvarName = "SERVICES__" + service.Name.ToUpperInvariant() + "__BASEURL";
+
+        string hostServiceUrl;
+        string containerServiceUrl;
+
+        if (service.ActiveRunner is RemoteRunner remoteRunner)
+        {
+            hostServiceUrl = containerServiceUrl = remoteRunner.Url;
+        }
+        else
+        {
+            hostServiceUrl = $"https://{service.Ingress.Host}:{service.Ingress.ExternalPort}";
+
+            // TODO won't work with custom domain, consider mapping custom hosts in docker-compose.yaml
+            // TODO wait, if we map custom hosts, we won't be able to trust the certificate from inside the container
+            containerServiceUrl = $"http://host.docker.internal:{service.Ingress.InternalPort}";
+        }
+
         // Declare the service URL to the other services
         this._environmentVariables.Configure(x =>
         {
-            var envvarName = "SERVICES__" + service.Name.ToUpperInvariant() + "__BASEURL";
-
-            string hostServiceUrl;
-            string containerServiceUrl;
-
-            if (service.ActiveRunner is RemoteRunner remoteRunner)
-            {
-                hostServiceUrl = containerServiceUrl = remoteRunner.Url;
-            }
-            else
-            {
-                hostServiceUrl = $"https://{service.Ingress.Host}:{service.Ingress.ExternalPort}";
-
-                // TODO won't work with custom domain, consider mapping custom hosts in docker-compose.yaml
-                // TODO wait, if we map custom hosts, we won't be able to trust the certificate from inside the container
-                containerServiceUrl = $"http://host.docker.internal:{service.Ingress.InternalPort}";
-            }
-
             x.Add(new EnvironmentVariable(envvarName, hostServiceUrl, EnvironmentVariableScope.Host));
             x.Add(new EnvironmentVariable(envvarName, containerServiceUrl, EnvironmentVariableScope.Container));
         });
+
+        // Declare the service URL to the appsettings.json
+        this._appSettingsJson.Configuration["Services:" + service.Name + ":BaseUrl"] = hostServiceUrl;
     }
 
     private void HandleExecutableRunner(Service service, ExecutableRunner exeRunner)
