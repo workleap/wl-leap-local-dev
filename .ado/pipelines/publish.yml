@@ -5,6 +5,9 @@ trigger:
   paths:
     include:
       - /src/*
+  tags:
+    include:
+      - "*.*.*"
 
 pool:
   vmImage: ubuntu-latest
