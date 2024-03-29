@@ -44,4 +44,3 @@ steps:
       publishVstsFeed: "gsoft"
       packagesToPush: ".output/*.nupkg"
       allowPackageConflicts: false
-    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
