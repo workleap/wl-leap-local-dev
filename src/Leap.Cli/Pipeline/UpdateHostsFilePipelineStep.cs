@@ -1,5 +1,4 @@
 ﻿using Leap.Cli.Commands;
-using Leap.Cli.Extensions;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
 using Microsoft.Extensions.Logging;
@@ -8,18 +7,15 @@ namespace Leap.Cli.Pipeline;
 
 internal sealed class UpdateHostsFilePipelineStep : IPipelineStep
 {
-    private readonly IFeatureManager _featureManager;
     private readonly IPlatformHelper _platformHelper;
     private readonly IHostsFileManager _hostsFileManager;
     private readonly ILogger _logger;
 
     public UpdateHostsFilePipelineStep(
-        IFeatureManager featureManager,
         IPlatformHelper platformHelper,
         IHostsFileManager hostsFileManager,
         ILogger<UpdateHostsFilePipelineStep> logger)
     {
-        this._featureManager = featureManager;
         this._platformHelper = platformHelper;
         this._hostsFileManager = hostsFileManager;
         this._logger = logger;
@@ -27,12 +23,6 @@ internal sealed class UpdateHostsFilePipelineStep : IPipelineStep
 
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
-        if (!this._featureManager.IsEnabled(FeatureIdentifiers.LeapPhase2))
-        {
-            this._logger.LogPipelineStepSkipped(nameof(UpdateHostsFilePipelineStep), FeatureIdentifiers.LeapPhase2);
-            return;
-        }
-
         var existingHostnames = await this._hostsFileManager.GetHostnamesAsync(cancellationToken);
         if (existingHostnames == null)
         {

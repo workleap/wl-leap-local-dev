@@ -1,5 +1,4 @@
-﻿using Leap.Cli.Extensions;
-using Leap.Cli.Model;
+﻿using Leap.Cli.Model;
 using Leap.Cli.Platform;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -13,27 +12,18 @@ namespace Leap.Cli.Pipeline;
 
 internal sealed class StartReverseProxyPipelineStep : IPipelineStep
 {
-    private readonly IFeatureManager _featureManager;
     private readonly ILogger _logger;
 
     private WebApplication? _app;
 
     public StartReverseProxyPipelineStep(
-        IFeatureManager featureManager,
         ILogger<StartReverseProxyPipelineStep> logger)
     {
-        this._featureManager = featureManager;
         this._logger = logger;
     }
 
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
-        if (!this._featureManager.IsEnabled(FeatureIdentifiers.LeapPhase2))
-        {
-            this._logger.LogPipelineStepSkipped(nameof(StartReverseProxyPipelineStep), FeatureIdentifiers.LeapPhase2);
-            return;
-        }
-
         if (state.Services.Count == 0)
         {
             return;

@@ -1,30 +1,22 @@
 ﻿using Leap.Cli.Aspire;
-using Leap.Cli.Extensions;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
-using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Pipeline;
 
 internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
 {
-    private readonly IFeatureManager _featureManager;
-    private readonly ILogger<PrepareServiceRunnersPipelineStep> _logger;
     private readonly IAspireManager _aspire;
     private readonly IConfigureEnvironmentVariables _environmentVariables;
     private readonly IPortManager _portManager;
     private readonly IConfigureAppSettingsJson _appSettingsJson;
 
     public PrepareServiceRunnersPipelineStep(
-        IFeatureManager featureManager,
-        ILogger<PrepareServiceRunnersPipelineStep> logger,
         IAspireManager aspire,
         IConfigureEnvironmentVariables environmentVariables,
         IPortManager portManager,
         IConfigureAppSettingsJson appSettingsJson)
     {
-        this._featureManager = featureManager;
-        this._logger = logger;
         this._aspire = aspire;
         this._environmentVariables = environmentVariables;
         this._portManager = portManager;
@@ -43,12 +35,6 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
 
     private void PrepareService(Service service, CancellationToken cancellationToken)
     {
-        if (!this._featureManager.IsEnabled(FeatureIdentifiers.LeapPhase2))
-        {
-            this._logger.LogPipelineStepSkipped(nameof(PrepareServiceRunnersPipelineStep), FeatureIdentifiers.LeapPhase2);
-            return;
-        }
-
         // TODO very dirty way of populating networking information, to refactor
         service.Ingress.Host ??= "127.0.0.1";
         service.Ingress.ExternalPort ??= Constants.LeapReverseProxyPort;

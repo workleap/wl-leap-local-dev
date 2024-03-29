@@ -1,6 +1,4 @@
-﻿using Leap.Cli.Extensions;
-using Leap.Cli.Model;
-using Leap.Cli.Platform;
+﻿using Leap.Cli.Model;
 using Leap.Cli.Platform.Telemetry;
 using Microsoft.Extensions.Logging;
 
@@ -8,16 +6,13 @@ namespace Leap.Cli.Pipeline;
 
 internal sealed class WaitForUserCancellationPipelineStep : IPipelineStep
 {
-    private readonly IFeatureManager _featureManager;
     private readonly ITelemetryHelper _telemetryHelper;
     private readonly ILogger _logger;
 
     public WaitForUserCancellationPipelineStep(
-        IFeatureManager featureManager,
         ITelemetryHelper telemetryHelper,
         ILogger<WaitForUserCancellationPipelineStep> logger)
     {
-        this._featureManager = featureManager;
         this._telemetryHelper = telemetryHelper;
         this._logger = logger;
     }
@@ -25,12 +20,6 @@ internal sealed class WaitForUserCancellationPipelineStep : IPipelineStep
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
         this._telemetryHelper.StopRootActivity();
-
-        if (!this._featureManager.IsEnabled(FeatureIdentifiers.LeapPhase2))
-        {
-            this._logger.LogPipelineStepSkipped(nameof(WireServicesAndDependenciesPipelineStep), FeatureIdentifiers.LeapPhase2);
-            return;
-        }
 
         // There's no need to wait for user cancellation if there's no service to run
         if (state.Services.Count == 0)

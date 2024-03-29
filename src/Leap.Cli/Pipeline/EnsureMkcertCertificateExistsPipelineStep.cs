@@ -1,7 +1,6 @@
 ﻿using System.IO.Abstractions;
 using System.Runtime.InteropServices;
 using CliWrap;
-using Leap.Cli.Extensions;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
 using Microsoft.Extensions.Logging;
@@ -14,20 +13,17 @@ namespace Leap.Cli.Pipeline;
 internal sealed class EnsureMkcertCertificateExistsPipelineStep : IPipelineStep
 {
 
-    private readonly IFeatureManager _featureManager;
     private readonly ICliWrap _cliWrap;
     private readonly IFileSystem _fileSystem;
     private readonly IPlatformHelper _platformHelper;
     private readonly ILogger _logger;
 
     public EnsureMkcertCertificateExistsPipelineStep(
-        IFeatureManager featureManager,
         ICliWrap cliWrap,
         IFileSystem fileSystem,
         IPlatformHelper platformHelper,
         ILogger<EnsureMkcertCertificateExistsPipelineStep> logger)
     {
-        this._featureManager = featureManager;
         this._cliWrap = cliWrap;
         this._fileSystem = fileSystem;
         this._platformHelper = platformHelper;
@@ -36,12 +32,6 @@ internal sealed class EnsureMkcertCertificateExistsPipelineStep : IPipelineStep
 
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
-        if (!this._featureManager.IsEnabled(FeatureIdentifiers.LeapPhase2))
-        {
-            this._logger.LogPipelineStepSkipped(nameof(EnsureMkcertCertificateExistsPipelineStep), FeatureIdentifiers.LeapPhase2);
-            return;
-        }
-
         var certAlreadyExists = this._fileSystem.File.Exists(Constants.LocalCertificateCrtFilePath) && this._fileSystem.File.Exists(Constants.LocalCertificateKeyFilePath);
         if (certAlreadyExists)
         {
