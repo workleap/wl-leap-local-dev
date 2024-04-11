@@ -1,4 +1,5 @@
-﻿using Aspire.Hosting.Lifecycle;
+using Aspire.Hosting;
+using Aspire.Hosting.Lifecycle;
 using Leap.Cli.Pipeline;
 using Leap.Cli.Platform;
 using Microsoft.Extensions.Configuration;
@@ -11,8 +12,9 @@ namespace Leap.Cli.Aspire;
 internal sealed class AspireManager : IAspireManager
 {
     // https://github.com/dotnet/aspire/blob/v8.0.0-preview.3.24105.21/src/Aspire.Dashboard/DashboardWebApplication.cs#L18-L21
-    private const string AspireDashboardOtlpUrlDefaultValue = "http://localhost:18889";
-    private const string AspireDashboardUrlDefaultValue = "http://localhost:18888";
+    internal const string AspireDashboardOtlpUrlDefaultValue = "https://localhost:18889";
+    internal const string AspireDashboardUrlDefaultValue = "https://localhost:18888";
+    internal const string AspireResourceServiceEndpointUrl = "https://localhost:18887";
 
     private readonly ILogger _logger;
 

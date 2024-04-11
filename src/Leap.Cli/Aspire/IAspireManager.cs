@@ -1,4 +1,6 @@
-﻿namespace Leap.Cli.Aspire;
+using Aspire.Hosting;
+
+namespace Leap.Cli.Aspire;
 
 internal interface IAspireManager
 {

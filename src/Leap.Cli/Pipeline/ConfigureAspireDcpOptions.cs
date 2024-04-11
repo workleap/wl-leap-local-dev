@@ -1,6 +1,7 @@
-﻿using System.IO.Abstractions;
+using System.IO.Abstractions;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Aspire.Hosting;
 using Leap.Cli.Aspire;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;

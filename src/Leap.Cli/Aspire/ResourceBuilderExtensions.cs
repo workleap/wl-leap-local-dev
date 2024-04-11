@@ -1,3 +1,5 @@
+using Aspire.Hosting.ApplicationModel;
+
 namespace Leap.Cli.Aspire;
 
 internal static class ResourceBuilderExtensions

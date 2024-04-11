@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -11,7 +11,7 @@ internal sealed class PortManager : IPortManager
 {
     private static readonly HashSet<int> ReservedPorts = new HashSet<int>
     {
-        // Avoidind standard ports to prevent conflicts
+        // Avoiding standard ports to prevent conflicts
         80,
         443,
 

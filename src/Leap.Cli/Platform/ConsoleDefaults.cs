@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
 
 namespace Leap.Cli.Platform;
@@ -7,7 +7,7 @@ internal static class ConsoleDefaults
 {
     public static void SetInvariantCulture()
     {
-        // So we never have to worry about formating dates and numbers in a culture-specific way while doing string interpolation
+        // So we never have to worry about formatting dates and numbers in a culture-specific way while doing string interpolation
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
     }

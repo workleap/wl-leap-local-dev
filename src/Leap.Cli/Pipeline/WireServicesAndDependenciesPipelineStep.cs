@@ -1,4 +1,5 @@
-﻿using Leap.Cli.Aspire;
+using Aspire.Hosting.ApplicationModel;
+using Leap.Cli.Aspire;
 using Leap.Cli.Model;
 
 namespace Leap.Cli.Pipeline;

@@ -1,4 +1,5 @@
-﻿using Aspire.Hosting.Lifecycle;
+using Aspire.Hosting.ApplicationModel;
+using Aspire.Hosting.Lifecycle;
 
 namespace Leap.Cli.Aspire;
 

@@ -1,4 +1,6 @@
-﻿using Leap.Cli.Aspire;
+using Aspire.Hosting;
+using Aspire.Hosting.ApplicationModel;
+using Leap.Cli.Aspire;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
 
@@ -109,7 +111,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         // TODO shall we sanitize the name of the service? Get inspiration from Dapr
         this._aspire.Builder
             .AddExecutable(service.Name, exeRunner.Command, exeRunner.WorkingDirectory, exeRunner.Arguments)
-            .WithEndpoint(scheme: "http", hostPort: service.Ingress.InternalPort)
+            .WithEndpoint(scheme: "http", port: service.Ingress.InternalPort)
             .WithEnvironment(service.EnvironmentVariables)
             .WithOtlpExporter();
     }
@@ -121,7 +123,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         this._aspire.Builder.AddContainer(service.Name, dockerRunner.Image, tag: string.Empty)
 
             // TODO tester docker containers avec aspire (networking)
-            .WithEndpoint(scheme: "http", hostPort: service.Ingress.InternalPort, containerPort: dockerRunner.ContainerPort)
+            .WithEndpoint(scheme: "http", port: service.Ingress.InternalPort, targetPort: dockerRunner.ContainerPort)
             .WithEnvironment(service.EnvironmentVariables)
             .WithOtlpExporter();
     }
@@ -135,7 +137,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         // TODO shall we sanitize the name of the service? Get inspiration from Dapr
         this._aspire.Builder
             .AddExecutable(service.Name, "dotnet", workingDirectoryPath!, dotnetRunArgs)
-            .WithEndpoint(scheme: "http", hostPort: service.Ingress.InternalPort)
+            .WithEndpoint(scheme: "http", port: service.Ingress.InternalPort)
             .WithEnvironment(service.EnvironmentVariables)
             .WithOtlpExporter();
     }
@@ -154,10 +156,10 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
 
             // Tag is set to null to prevent Aspire from adding latest (tag is already included in our image property)
             .WithAnnotation(new ContainerImageAnnotation { Image = "stoplight/prism:5", Tag = string.Empty })
-            .WithVolumeMount(openApiRunner.Specification, "/tmp/swagger.yml")
+            .WithVolume(openApiRunner.Specification, "/tmp/swagger.yml")
 
             // TODO tester docker containers avec aspire (networking)
-            .WithEndpoint(scheme: "http", hostPort: service.Ingress.InternalPort, containerPort: prismContainerPort);
+            .WithEndpoint(scheme: "http", port: service.Ingress.InternalPort, targetPort: prismContainerPort);
     }
 
     public Task StopAsync(ApplicationState state, CancellationToken cancellationToken)

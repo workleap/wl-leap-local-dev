@@ -31,12 +31,17 @@
     <Version>1.0.0-local</Version>
   </PropertyGroup>
 
+  <!-- Remote ASPIRE002 warning -->
+  <ItemGroup>
+    <ProjectCapability Include="Aspire" Condition=" '$(IsAspireHost)' == 'true' " />
+  </ItemGroup>
+
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting" Version="8.0.0-preview.4.24156.9" />
+    <PackageReference Include="Aspire.Hosting" Version="8.0.0-preview.5.24201.12" />
     <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.2.0" />
     <PackageReference Include="CliWrap" Version="3.6.6" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
