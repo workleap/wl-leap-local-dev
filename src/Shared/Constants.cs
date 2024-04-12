@@ -9,6 +9,7 @@ internal static class Constants
 
     private const string AppSettingsFileName = "appsettings.json";
     private const string EventGridSettingsFileName = "eventgridsettings.json";
+    public const string FusionAuthKickstartFileName = "kickstart-local.json";
 
     public const string LeapYamlFileName = "leap.yaml";
     public const string SecondaryLeapYamlFileName = "leap.yml";
@@ -43,6 +44,9 @@ internal static class Constants
 
     /// <summary>The directory that contains auto-generated Leap files</summary>
     public static readonly string GeneratedDirectoryPath = Path.Combine(RootDirectoryPath, LeapGeneratedDirectoryName);
+
+    /// <summary>Leap generated FusionAuth kickstart file path</summary>
+    public static readonly string FusionAuthKickstartFilePath = Path.Combine(GeneratedDirectoryPath, FusionAuthKickstartFileName);
 
     /// <summary>Leap generated appsettings.json file path</summary>
     public static readonly string LeapAppSettingsFilePath = Path.Combine(GeneratedDirectoryPath, AppSettingsFileName);

@@ -82,6 +82,7 @@ builder.UseDependencyInjection((services, context) =>
     services.AddSingleton<IDependencyHandler, SqlServerDependencyHandler>();
     services.AddSingleton<IDependencyHandler, PostgresDependencyHandler>();
     services.AddSingleton<IDependencyHandler, EventGridDependencyHandler>();
+    services.AddSingleton<IDependencyHandler, FusionAuthDependencyHandler>();
 
     services.AddSingleton<IDependencyYamlHandler, MongoDependencyYamlHandler>();
     services.AddSingleton<IDependencyYamlHandler, RedisDependencyYamlHandler>();
@@ -89,6 +90,7 @@ builder.UseDependencyInjection((services, context) =>
     services.AddSingleton<IDependencyYamlHandler, SqlServerDependencyYamlHandler>();
     services.AddSingleton<IDependencyYamlHandler, PostgresDependencyYamlHandler>();
     services.AddSingleton<IDependencyYamlHandler, EventGridDependencyYamlHandler>();
+    services.AddSingleton<IDependencyYamlHandler, FusionAuthDependencyYamlHandler>();
 
     services.AddSingleton<DockerComposeManager>();
     services.AddSingleton<IConfigureDockerCompose>(x => x.GetRequiredService<DockerComposeManager>());

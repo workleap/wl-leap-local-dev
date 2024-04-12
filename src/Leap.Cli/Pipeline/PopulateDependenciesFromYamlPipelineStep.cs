@@ -34,7 +34,29 @@ internal sealed class PopulateDependenciesFromYamlPipelineStep : IPipelineStep
             var dependencyYaml = dependencyGroup.Aggregate(new DependencyYaml(), dependencyHandler.Merge);
             var dependency = dependencyHandler.ToDependencyModel(dependencyYaml);
 
-            state.Dependencies.Add(dependency);
+            if (!state.Dependencies.Contains(dependency))
+            {
+                state.Dependencies.Add(dependency);
+            }
+
+            this.PopulateDependencies(dependency, state);
+        }
+    }
+
+    private void PopulateDependencies(Dependency dependency, ApplicationState state)
+    {
+        foreach (var childDependency in dependency.Dependencies)
+        {
+            // TODO:
+            // This will probably cause problems when it comes to actually merging dependencies that have settings like azurite.
+            // Currently, these merges are performed by the yaml handlers, but dependencies not declared by yaml, but rather
+            // parent dependencies don't rely on this merge process before being constructed.
+            if (!state.Dependencies.Contains(childDependency))
+            {
+                state.Dependencies.Add(childDependency);
+                // Only process children the first time this is added to avoid infinite recursion
+                this.PopulateDependencies(childDependency, state);
+            }
         }
     }
 
