@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -60,7 +60,7 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
                 "--loose", // Don't throw on invalid request headers or parameters
                 "--location", "/data", // This is our persistent data volume
 
-                // Bind each worklord on a non-standard port to prevent conflicts with developers that already use Azurite with default ports
+                // Bind each workload on a non-standard port to prevent conflicts with developers that already use Azurite with default ports
                 "--blobHost", "0.0.0.0", "--blobPort", AzuriteConstants.BlobPort.ToString(),
                 "--queueHost", "0.0.0.0", "--queuePort", AzuriteConstants.QueuePort.ToString(),
                 "--tableHost", "0.0.0.0", "--tablePort", AzuriteConstants.TablePort.ToString(),

@@ -125,6 +125,7 @@ builder.UseDependencyInjection((services, context) =>
         ServiceDescriptor.Singleton<IPipelineStep, AfterStartingDependenciesPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, ConfigureAspireDcpOptions>(),
         ServiceDescriptor.Singleton<IPipelineStep, ConfigureAspireDashboard>(),
+        ServiceDescriptor.Singleton<IPipelineStep, AddDependenciesToAspireDashboard>(),
         ServiceDescriptor.Singleton<IPipelineStep, StartAspirePipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, StartReverseProxyPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, WriteAppSettingsJsonPipelineStep>(),
