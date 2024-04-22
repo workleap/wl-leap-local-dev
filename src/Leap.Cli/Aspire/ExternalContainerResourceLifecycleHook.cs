@@ -78,15 +78,18 @@ internal sealed class ExternalContainerResourceLifecycleHook(ILogger<ExternalCon
                         new Progress<string>(line => resourceLogger.LogInformation("{StdOut}", line)));
 
                     await notificationService.PublishUpdateAsync(resource, state => (state with { State = "Finished" }));
+                    await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                }
+                catch (OperationCanceledException ex) when (ex.CancellationToken == cancellationToken)
+                {
+                    break;
                 }
                 catch (Exception ex)
                 {
                     logger.LogError(ex, "Error while updating container info");
                 }
-
-                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
             }
-        }, cancellationToken);
+        }, CancellationToken.None); // Do not use the cancellationToken as there is no await on this Task, so the exception would be unobserved
     }
 
     public async ValueTask DisposeAsync()
