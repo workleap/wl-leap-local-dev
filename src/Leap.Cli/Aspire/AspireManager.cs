@@ -1,4 +1,4 @@
-using Aspire.Hosting;
+﻿using Aspire.Hosting;
 using Aspire.Hosting.Lifecycle;
 using Leap.Cli.Pipeline;
 using Leap.Cli.Platform;
@@ -50,7 +50,7 @@ internal sealed class AspireManager : IAspireManager
 
         this._logger.LogInformation(".NET Aspire started successfully:");
         this._logger.LogInformation(" - Access the dashboard at {AspireDashboardUrl}", AspireDashboardUrlDefaultValue);
-        this._logger.LogInformation(" - Send OpenTelemetry traces, metrics and logs to {AspireDashboardOtlpUrl}", AspireDashboardOtlpUrlDefaultValue);
+        this._logger.LogInformation(" - Send OpenTelemetry traces, metrics and logs to {AspireDashboardOtlpUrl} using GRPC", AspireDashboardOtlpUrlDefaultValue);
 
         return app;
     }

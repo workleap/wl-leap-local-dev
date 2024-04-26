@@ -13,7 +13,7 @@ internal static class ExternalContainerResourceExtensions
         return builder.AddResource(new ExternalContainerResource(name, containerNameOrId))
             .WithInitialState(new CustomResourceSnapshot
             {
-                ResourceType = "Leap Dependency",
+                ResourceType = Constants.LeapDependencyAspireResourceType,
                 Properties = []
             })
             .ExcludeFromManifest();

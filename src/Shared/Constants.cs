@@ -17,6 +17,8 @@ internal static class Constants
     private const string LeapCertificateCrtFileName = "workleap-dev-certificate.crt";
     private const string LeapCertificateKeyFileName = "workleap-dev-certificate.key";
 
+    public const string LeapDependencyAspireResourceType = "Leap dependency";
+
     // ".localhost" is a top-level domain (TLD) reserved by the Internet Engineering Task Force (IETF)
     // that is free to use localhost names as they would any other, without the risk of someone else owning it (like .com).
     // https://www.iana.org/assignments/special-use-domain-names/special-use-domain-names.xhtml
