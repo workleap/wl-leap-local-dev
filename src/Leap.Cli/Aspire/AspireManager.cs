@@ -28,7 +28,7 @@ internal sealed class AspireManager : IAspireManager
 
     public IDistributedApplicationBuilder Builder { get; }
 
-    public async Task<IAsyncDisposable> StartAsync(CancellationToken cancellationToken)
+    public async Task<DistributedApplication> StartAsync(CancellationToken cancellationToken)
     {
         this._logger.LogInformation("Starting .NET Aspire dashboard...");
 

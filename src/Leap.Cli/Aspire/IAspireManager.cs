@@ -6,5 +6,5 @@ internal interface IAspireManager
 {
     IDistributedApplicationBuilder Builder { get; }
 
-    Task<IAsyncDisposable> StartAsync(CancellationToken cancellationToken);
+    Task<DistributedApplication> StartAsync(CancellationToken cancellationToken);
 }

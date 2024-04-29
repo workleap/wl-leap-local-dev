@@ -113,9 +113,8 @@ internal sealed class StartReverseProxyPipelineStep : IPipelineStep
 
         builder.Services.AddReverseProxy().LoadFromMemory(routes, clusters)
 #pragma warning disable CA5359
-            // This might seems like a security issue, but it's not.
-            // We trust the subscribers' certificates as this emulator is intended to be used in a local environment,
-            // where certificates are mostly self-signed and not trusted by the Docker container.
+            // This isn't a security misconfiguration. We're in a local development environment
+            // and we want to allow self-signed certificates that are not trusted by the system.
             .ConfigureHttpClient((_, handler) => handler.SslOptions.RemoteCertificateValidationCallback = (_, _, _, _) => true);
 #pragma warning restore CA5359
 
@@ -134,6 +133,7 @@ internal sealed class StartReverseProxyPipelineStep : IPipelineStep
     {
         if (this._app != null)
         {
+            await this._app.StopAsync(cancellationToken);
             await this._app.DisposeAsync();
         }
     }

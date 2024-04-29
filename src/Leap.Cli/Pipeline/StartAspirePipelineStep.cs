@@ -1,18 +1,12 @@
-﻿using Leap.Cli.Aspire;
+﻿using Aspire.Hosting;
+using Leap.Cli.Aspire;
 using Leap.Cli.Model;
 
 namespace Leap.Cli.Pipeline;
 
-internal sealed class StartAspirePipelineStep : IPipelineStep
+internal sealed class StartAspirePipelineStep(IAspireManager aspireManager) : IPipelineStep
 {
-    private readonly IAspireManager _aspireManager;
-
-    private IAsyncDisposable? _app;
-
-    public StartAspirePipelineStep(IAspireManager aspireManager)
-    {
-        this._aspireManager = aspireManager;
-    }
+    private DistributedApplication? _app;
 
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
@@ -22,13 +16,14 @@ internal sealed class StartAspirePipelineStep : IPipelineStep
             return;
         }
 
-        this._app = await this._aspireManager.StartAsync(cancellationToken);
+        this._app = await aspireManager.StartAsync(cancellationToken);
     }
 
     public async Task StopAsync(ApplicationState state, CancellationToken cancellationToken)
     {
         if (this._app != null)
         {
+            await this._app.StopAsync(cancellationToken);
             await this._app.DisposeAsync();
         }
     }
