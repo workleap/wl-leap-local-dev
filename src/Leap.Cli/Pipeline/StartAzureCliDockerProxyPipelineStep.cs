@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -153,10 +152,10 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
 
                 // Suppress Ctrl+C, SIGINT, and SIGTERM signals because already handled by System.CommandLine
                 // through the cancellation token that is passed to the pipeline step.
-                builder.Services.AddSingleton<IHostLifetime, NoopHostLifetime>();
+                builder.IgnoreConsoleTerminationSignals();
 
                 builder.Logging.ClearProviders();
-                builder.Logging.AddProvider(new ForwardingLoggerProvider(resourceLogger));
+                builder.Logging.AddResourceLogger(resourceLogger);
 
                 builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
                 {
@@ -252,33 +251,5 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
 
         [JsonPropertyName("expires_on")]
         public string ExpiresOn { get; init; } = string.Empty;
-    }
-
-    private sealed class ForwardingLoggerProvider(ILogger underlyingLogger) : ILoggerProvider, ILogger
-    {
-        public ILogger CreateLogger(string categoryName)
-        {
-            return this;
-        }
-
-        public IDisposable? BeginScope<TState>(TState state)
-            where TState : notnull
-        {
-            return underlyingLogger.BeginScope(state);
-        }
-
-        public bool IsEnabled(LogLevel logLevel)
-        {
-            return underlyingLogger.IsEnabled(logLevel);
-        }
-
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-        {
-            underlyingLogger.Log(logLevel, eventId, state, exception, formatter);
-        }
-
-        public void Dispose()
-        {
-        }
     }
 }
