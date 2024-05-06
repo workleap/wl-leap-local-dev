@@ -50,7 +50,7 @@ internal sealed class LeapPipeline
             }
             catch (LeapException ex)
             {
-                this._logger.LogError("{Error}", ex.Message);
+                this._logger.LogError(ex, "{Error}", ex.Message);
                 return;
             }
             catch (OperationCanceledException)
