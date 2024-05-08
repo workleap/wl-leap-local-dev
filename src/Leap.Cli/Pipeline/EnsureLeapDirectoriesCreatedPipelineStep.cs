@@ -18,6 +18,7 @@ internal sealed class EnsureLeapDirectoriesCreatedPipelineStep : IPipelineStep
         this._fileSystem.Directory.CreateDirectory(Constants.GeneratedDirectoryPath);
         this._fileSystem.Directory.CreateDirectory(Constants.DockerComposeDirectoryPath);
         this._fileSystem.Directory.CreateDirectory(Constants.CertificatesDirectoryPath);
+        this._fileSystem.Directory.CreateDirectory(Constants.NuGetPackagesDirectoryPath);
 
         return Task.CompletedTask;
     }

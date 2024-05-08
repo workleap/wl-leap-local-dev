@@ -105,6 +105,7 @@ builder.UseDependencyInjection((services, context) =>
     services.AddSingleton<IAppSettingsJsonManager>(x => x.GetRequiredService<AppSettingsJsonManager>());
 
     services.AddSingleton<IAspireManager, AspireManager>();
+    services.AddSingleton<INuGetPackageDownloader, NuGetPackageDownloader>();
 
     services.TryAddEnumerable(new[]
     {
@@ -112,6 +113,7 @@ builder.UseDependencyInjection((services, context) =>
         ServiceDescriptor.Singleton<IPipelineStep, EnsureOperatingSystemAndArchitecturePipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, EnsureAtLeastOneLeapConfigFilePipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, EnsureLeapDirectoriesCreatedPipelineStep>(),
+        ServiceDescriptor.Singleton<IPipelineStep, BeginAspireDownloadTaskPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, EnsureMkcertCertificateExistsPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, PopulateDependenciesFromYamlPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, PopulateServicesFromYamlPipelineStep>(),
@@ -123,8 +125,6 @@ builder.UseDependencyInjection((services, context) =>
         ServiceDescriptor.Singleton<IPipelineStep, EnsureDockerIsRunningPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, StartDockerComposePipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, AfterStartingDependenciesPipelineStep>(),
-        ServiceDescriptor.Singleton<IPipelineStep, ConfigureAspireDcpOptions>(),
-        ServiceDescriptor.Singleton<IPipelineStep, ConfigureAspireDashboard>(),
         ServiceDescriptor.Singleton<IPipelineStep, AddDependenciesToAspireDashboard>(),
         ServiceDescriptor.Singleton<IPipelineStep, PrepareReverseProxyPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, StartAspirePipelineStep>(),

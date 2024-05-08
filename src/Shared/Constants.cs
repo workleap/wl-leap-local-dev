@@ -6,6 +6,7 @@ internal static class Constants
     private const string LeapGeneratedDirectoryName = "generated";
     private const string LeapDockerComposeDirectoryName = "docker-compose";
     private const string LeapCertificatesDirectoryName = "certificates";
+    private const string LeapNuGetPackagesDirectoryName = "nuget-packages";
 
     private const string AppSettingsFileName = "appsettings.json";
     private const string EventGridSettingsFileName = "eventgridsettings.json";
@@ -64,4 +65,7 @@ internal static class Constants
 
     /// <summary>The path of the generated local development certificate private key path</summary>
     public static readonly string LocalCertificateKeyFilePath = Path.Combine(CertificatesDirectoryPath, LeapCertificateKeyFileName);
+
+    /// <summary>The directory that contains NuGet packages that we download at runtime</summary>
+    public static readonly string NuGetPackagesDirectoryPath = Path.Combine(GeneratedDirectoryPath, LeapNuGetPackagesDirectoryName);
 }

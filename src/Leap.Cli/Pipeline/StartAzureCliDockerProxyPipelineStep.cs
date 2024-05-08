@@ -2,8 +2,6 @@
 using System.Net.Mime;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Aspire.Hosting;
-using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Lifecycle;
 using CliWrap;
 using Leap.Cli.Aspire;

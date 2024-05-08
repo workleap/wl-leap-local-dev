@@ -14,28 +14,20 @@ internal sealed class SimpleColoredConsoleLoggerProvider : ILoggerProvider, ILog
         [LogLevel.Critical] = ConsoleColor.Red,
     };
 
-    private static bool? _isConsoleRedirectionSupported;
-
-    private static bool IsConsoleRedirectionSupported
+    private static readonly Lazy<bool> LazyIsConsoleRedirectionSupported = new Lazy<bool>(() =>
     {
-        get
+        try
         {
-            if (!_isConsoleRedirectionSupported.HasValue)
-            {
-                try
-                {
-                    _ = Console.IsOutputRedirected;
-                    _isConsoleRedirectionSupported = true;
-                }
-                catch (PlatformNotSupportedException)
-                {
-                    _isConsoleRedirectionSupported = false;
-                }
-            }
-
-            return _isConsoleRedirectionSupported.Value;
+            _ = Console.IsOutputRedirected;
+            return true;
         }
-    }
+        catch (PlatformNotSupportedException)
+        {
+            return false;
+        }
+    });
+
+    private static bool IsConsoleRedirectionSupported => LazyIsConsoleRedirectionSupported.Value;
 
     public ILogger CreateLogger(string categoryName)
     {

@@ -1,5 +1,4 @@
-﻿using Aspire.Hosting;
-using Leap.Cli.Aspire;
+﻿using Leap.Cli.Aspire;
 using Leap.Cli.Model;
 
 namespace Leap.Cli.Pipeline;
@@ -16,7 +15,7 @@ internal sealed class StartAspirePipelineStep(IAspireManager aspireManager) : IP
             return;
         }
 
-        this._app = await aspireManager.StartAsync(cancellationToken);
+        this._app = await aspireManager.StartAppHostAsync(cancellationToken);
     }
 
     public async Task StopAsync(ApplicationState state, CancellationToken cancellationToken)

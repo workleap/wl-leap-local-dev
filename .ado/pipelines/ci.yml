@@ -80,7 +80,7 @@ jobs:
           command: push
           publishVstsFeed: "gsoftdev"
           packagesToPush: ".output/*.nupkg"
-          allowPackageConflicts: false
+          allowPackageConflicts: true
 
       - task: PublishPipelineArtifact@1
         inputs:

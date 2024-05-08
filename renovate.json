@@ -36,8 +36,8 @@
     },
     {
       "matchManagers": ["nuget"],
-      "matchPackageNames": ["Aspire.Hosting"],
-      "description": ".NET Aspire is currently in preview and might become stable around the release of .NET 9.0",
+      "matchPackageNames": ["Aspire.Hosting.AppHost"],
+      "description": ".NET Aspire is currently in preview until it becomes GA at MS Build 2024. Once GA, remove this rule.",
       "ignoreUnstable": true
     },
     {

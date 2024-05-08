@@ -1,6 +1,4 @@
-﻿using Aspire.Hosting;
-using Aspire.Hosting.ApplicationModel;
-using Aspire.Hosting.Lifecycle;
+﻿using Aspire.Hosting.Lifecycle;
 using Leap.Cli.Aspire;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;

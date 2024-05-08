@@ -1,6 +1,4 @@
-﻿using Aspire.Hosting.ApplicationModel;
-
-namespace Leap.Cli.Aspire;
+﻿namespace Leap.Cli.Aspire;
 
 internal sealed class ExternalContainerResource(string name, string containerNameOrId) : Resource(name)
 {
