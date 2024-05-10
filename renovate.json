@@ -35,12 +35,6 @@
       "extends": [":disableMajorUpdates"]
     },
     {
-      "matchManagers": ["nuget"],
-      "matchPackageNames": ["Aspire.Hosting.AppHost"],
-      "description": ".NET Aspire is currently in preview until it becomes GA at MS Build 2024. Once GA, remove this rule.",
-      "ignoreUnstable": true
-    },
-    {
       "matchPackageNames": ["dotnet-sdk"],
       "groupName": "Dotnet SDK",
       "description": "Only update patch and minor for the dotnet SDK version within the global.json",
