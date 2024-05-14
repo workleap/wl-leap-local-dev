@@ -16,6 +16,7 @@ public static class TelemetryMeters
     private static readonly Counter<long> AzuriteStartCounter = LeapMeter.CreateCounter<long>("dependency.azurite.starts");
     private static readonly Counter<long> FusionAuthStartCounter = LeapMeter.CreateCounter<long>("dependency.fusionauth.starts");
     private static readonly Counter<long> LeapRunDurationCounter = LeapMeter.CreateCounter<long>("leap.runs.duration_ms");
+    private static readonly Counter<long> OutdatedLeapCounter = LeapMeter.CreateCounter<long>("leap.outdated");
 
     public static void TrackLeapRun() => LeapRunCounter.Add(1, Tags);
     public static void TrackMongodbStart() => MongodbStartCounter.Add(1, Tags);
@@ -26,4 +27,5 @@ public static class TelemetryMeters
     public static void TrackAzuriteStart() => AzuriteStartCounter.Add(1, Tags);
     public static void TrackFusionAuthStart() => FusionAuthStartCounter.Add(1, Tags);
     public static void TrackLeapRunDuration(TimeSpan duration) => LeapRunDurationCounter.Add(Convert.ToInt64(duration.TotalMilliseconds), Tags);
+    public static void TrackOutdatedLeap() => OutdatedLeapCounter.Add(1, Tags);
 }

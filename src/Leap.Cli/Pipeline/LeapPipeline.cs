@@ -1,7 +1,9 @@
 ﻿using System.Runtime.ExceptionServices;
 using Leap.Cli.Model;
+using Leap.Cli.Platform;
 using Leap.Cli.Platform.Telemetry;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Leap.Cli.Pipeline;
 
@@ -10,12 +12,12 @@ internal sealed class LeapPipeline
     private readonly IPipelineStep[] _steps;
     private readonly ILogger _logger;
 
-    public LeapPipeline(IEnumerable<IPipelineStep> steps, ITelemetryHelper telemetryHelper, ILoggerFactory loggerFactory, bool diagnosticMode = false)
+    public LeapPipeline(IEnumerable<IPipelineStep> steps, ITelemetryHelper telemetryHelper, ILogger<LeapPipeline> logger, IOptions<LeapGlobalOptions> options)
     {
         this._steps = steps.ToArray();
-        this._logger = loggerFactory.CreateLogger<LeapPipeline>();
+        this._logger = logger;
 
-        if (diagnosticMode)
+        if (options.Value.EnableDiagnostic)
         {
             for (var i = 0; i < this._steps.Length; i++)
             {
@@ -31,6 +33,10 @@ internal sealed class LeapPipeline
         try
         {
             await this.StartAsync(state, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            this._logger.LogInformation("Leap is shutting down...");
         }
         finally
         {
@@ -59,7 +65,7 @@ internal sealed class LeapPipeline
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException("An unhandled exception occurred during the pipeline step '{Step}'.", ex);
+                throw new InvalidOperationException($"An unhandled exception occurred during the pipeline step '{step.GetType().Name}'.", ex);
             }
         }
     }

@@ -68,4 +68,64 @@ internal static class Constants
 
     /// <summary>The directory that contains NuGet packages that we download at runtime</summary>
     public static readonly string NuGetPackagesDirectoryPath = Path.Combine(GeneratedDirectoryPath, LeapNuGetPackagesDirectoryName);
+
+    /// <summary>
+    /// Constants for MSAL (Microsoft Authentication Library).
+    /// </summary>
+    public static class Msal
+    {
+        /// <summary>ID of our Leap Azure app registration.</summary>
+        public const string ClientId = "261e4e88-1750-4008-9f95-d638b40d60d4";
+
+        /// <summary>Workleap's Azure tenant ID available at https://portal.azure.com/</summary>
+        public const string WorkleapTenantId = "eb39acb7-fae3-4bc3-974c-b765aa1d6355";
+
+        /// <summary>
+        /// Constants used to configure the MSAL token cache on Unix systems. See:
+        /// https://github.com/AzureAD/microsoft-authentication-extensions-for-dotnet/wiki/Cross-platform-Token-Cache
+        /// </summary>
+        public static class Cache
+        {
+            // Values inspired from the MSAL integration in Semantic Kernel
+            // https://github.com/microsoft/semantic-kernel/blob/dotnet-1.11.1/dotnet/src/Plugins/Plugins.MsGraph/Connectors/CredentialManagers/LocalUserMSALCredentialManager.cs
+            public const string CacheFileName = "leap.msalcache.bin";
+            public static readonly string CacheDirectoryPath = GeneratedDirectoryPath;
+
+            public const string MacKeyChainServiceName = "com.workleap.leap.tokencache.service";
+            public const string MacKeyChainAccountName = "com.workleap.leap.tokencache.account";
+
+            public const string LinuxKeyRingSchema = "com.workleap.leap.tokencache";
+            public const string LinuxKeyRingCollection = "default";
+            public const string LinuxKeyRingLabel = "MSAL token cache for Leap.";
+            public static readonly KeyValuePair<string, string> LinuxKeyRingAttr1 = new KeyValuePair<string, string>("Version", "1"); // Desn't need to change
+            public static readonly KeyValuePair<string, string> LinuxKeyRingAttr2 = new KeyValuePair<string, string>("Product", "Leap");
+        }
+    }
+
+    public static class AzureDevOps
+    {
+        /// <summary>
+        /// Well-known Azure DevOps delegated scope (constant) used to access Azure DevOps APIs.
+        /// https://learn.microsoft.com/en-us/rest/api/azure/devops/tokens/?view=azure-devops-rest-7.0
+        /// </summary>
+        public const string AzureDevOpsScope = "499b84ac-1321-427f-aa17-267ca6975798/user_impersonation";
+
+        /// <summary>The ADO organization name where Leap is published.</summary>
+        public const string GSoftOrganizationName = "gsoft";
+
+        /// <summary>The name of the ADO artifacts feed where Leap is published.</summary>
+        public const string GSoftFeedName = "gsoft";
+
+        /// <summary>The URL of the Azure DevOps feed where Leap is published.</summary>
+        public const string GSoftFeedUrl = "https://pkgs.dev.azure.com/gsoft/_packaging/gsoft/nuget/v3/index.json";
+
+        /// <summary>The ID of the Leap CLI NuGet package in Azure DevOps feed.</summary>
+        public const string LeapNuGetPackageId = "7e26c0cd-3179-49c3-a3a7-e92df061eee5";
+
+        /// <summary>The name of the Leap CLI NuGet package.</summary>
+        public const string LeapNuGetPackageName = "Workleap.Leap";
+
+        /// <summary>Name of the HttpClient used to interact with Azure DevOps feeds.</summary>
+        public const string HttpClientName = "AzureDevOps";
+    }
 }

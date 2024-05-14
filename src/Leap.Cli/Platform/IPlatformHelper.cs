@@ -16,7 +16,7 @@ internal interface IPlatformHelper
 
     bool IsCurrentProcessElevated { get; }
 
-    string? DotnetRootPath { get; }
+    string CurrentApplicationVersion { get; }
 
     Task StartLeapElevatedAsync(string[] args, CancellationToken cancellationToken);
 }

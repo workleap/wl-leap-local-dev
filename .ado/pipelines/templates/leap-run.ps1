@@ -33,7 +33,7 @@ Process {
     # Since leap run would hang waiting for ctrl+c, this allows us to
     # keep executing our script while leap is running.
     $job = Start-Job -ScriptBlock {
-      leap run --feature-flags LeapPhase2
+      leap run --skip-version-check
     } -Name LeapJob
 
     Write-Host "Executing leap run"

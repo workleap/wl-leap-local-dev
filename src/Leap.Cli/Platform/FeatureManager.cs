@@ -1,13 +1,10 @@
-﻿namespace Leap.Cli.Platform;
+﻿using Microsoft.Extensions.Options;
 
-internal sealed class FeatureManager : IFeatureManager
+namespace Leap.Cli.Platform;
+
+internal sealed class FeatureManager(IOptions<LeapGlobalOptions> options) : IFeatureManager
 {
-    private readonly HashSet<string> _featureFlags;
-
-    public FeatureManager(string[] featureFlags)
-    {
-        this._featureFlags = new HashSet<string>(featureFlags, StringComparer.OrdinalIgnoreCase);
-    }
+    private readonly HashSet<string> _featureFlags = new HashSet<string>(options.Value.FeatureFlags, StringComparer.OrdinalIgnoreCase);
 
     public bool IsEnabled(string featureName)
     {

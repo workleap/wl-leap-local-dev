@@ -24,7 +24,7 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
     private readonly Lazy<OSPlatform> _lazyOsPlatform = new Lazy<OSPlatform>(GetCurrentOS);
     private readonly Lazy<bool> _lazyIsCurrentProcessElevated = new Lazy<bool>(IsCurrentProcessElevatedInternal);
     private readonly Lazy<bool> _lazyIsRunningOnStableVersion = new Lazy<bool>(IsRunningOnStableVersionInternal);
-    private readonly Lazy<string?> _lazyDotnetRootPath = new Lazy<string?>(GetDotnetRootPath);
+    private readonly Lazy<string> _lazyCurrentVersion = new Lazy<string>(GetCurrentVersion);
 
     public OSPlatform CurrentOS => this._lazyOsPlatform.Value;
 
@@ -44,7 +44,7 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
 
     public bool IsCurrentProcessElevated => this._lazyIsCurrentProcessElevated.Value;
 
-    public string? DotnetRootPath => this._lazyDotnetRootPath.Value;
+    public string CurrentApplicationVersion => this._lazyCurrentVersion.Value;
 
     private static OSPlatform GetCurrentOS()
     {
@@ -64,34 +64,6 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
         }
 
         throw new PlatformNotSupportedException();
-    }
-
-    // This is based on the .NET SDK's logic for finding the .NET root path
-    // https://github.com/dotnet/dotnet/blob/206024bcfc0c7a9d22d405d826ae5b75adbecd39/src/roslyn/src/Workspaces/Core/Portable/Workspace/ProjectSystem/FileWatchedPortableExecutableReferenceFactory.cs#L73-L86
-    private static string? GetDotnetRootPath()
-    {
-        if (Environment.GetEnvironmentVariable("DOTNET_ROOT") is { } dotnetRoot && !string.IsNullOrEmpty(dotnetRoot))
-        {
-            return dotnetRoot;
-        }
-
-        var currentOS = GetCurrentOS();
-        if (currentOS == OSPlatform.Windows)
-        {
-            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "dotnet");
-        }
-
-        if (currentOS == OSPlatform.Linux)
-        {
-            return "/usr/share/dotnet";
-        }
-
-        if (currentOS == OSPlatform.OSX)
-        {
-            return "/usr/local/share/dotnet";
-        }
-
-        return null;
     }
 
     [DllImport("libc")]
@@ -115,11 +87,14 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
 
     private static bool IsRunningOnStableVersionInternal()
     {
-        var assemblyVersion =
-            Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ??
-            Assembly.GetEntryAssembly()?.GetName()?.Version?.ToString();
+        return StableLeapVersionRegex.IsMatch(GetCurrentVersion());
+    }
 
-        return assemblyVersion is not null && StableLeapVersionRegex.IsMatch(assemblyVersion);
+    private static string GetCurrentVersion()
+    {
+        return Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? Assembly.GetEntryAssembly()?.GetName()?.Version?.ToString()
+            ?? throw new InvalidOperationException("Could not determine the current version.");
     }
 
     public async Task StartLeapElevatedAsync(string[] args, CancellationToken cancellationToken)

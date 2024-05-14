@@ -1,7 +1,12 @@
 using System.CommandLine;
 using System.CommandLine.Builder;
+using System.CommandLine.Invocation;
 using System.CommandLine.Parsing;
+using System.Diagnostics;
 using System.IO.Abstractions;
+using System.Net.Http.Headers;
+using System.Net.Mime;
+using Leap.Cli;
 using Leap.Cli.Aspire;
 using Leap.Cli.Commands;
 using Leap.Cli.Configuration;
@@ -15,24 +20,10 @@ using Leap.Cli.Platform.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using ConsoleExtensions = Leap.Cli.Platform.ConsoleExtensions;
 
 ConsoleDefaults.SetInvariantCulture();
 ConsoleDefaults.SetUtf8Encoding();
-
-var quietOption = new Option<bool>(["--quiet"])
-{
-    Description = "Hide debugging messages.",
-    Arity = ArgumentArity.ZeroOrOne,
-    IsHidden = true,
-};
-
-var featureFlagsOption = new Option<string[]>(["--feature-flags"])
-{
-    AllowMultipleArgumentsPerToken = true,
-    Description = "Enable feature flags.",
-    Arity = ArgumentArity.ZeroOrMore,
-    IsHidden = true,
-};
 
 var rootCommand = new RootCommand("Workleap's Local Environment Application Proxy")
 {
@@ -40,8 +31,11 @@ var rootCommand = new RootCommand("Workleap's Local Environment Application Prox
     new UpdateHostsFileCommand(),
 };
 
-rootCommand.AddGlobalOption(quietOption);
-rootCommand.AddGlobalOption(featureFlagsOption);
+rootCommand.AddGlobalOption(LeapGlobalOptions.IsQuietOption);
+rootCommand.AddGlobalOption(LeapGlobalOptions.FeatureFlagsOption);
+rootCommand.AddGlobalOption(LeapGlobalOptions.EnableDiagnosticOption);
+rootCommand.AddGlobalOption(LeapGlobalOptions.SkipVersionCheckOption);
+
 rootCommand.Name = "leap";
 
 var builder = new CommandLineBuilder(rootCommand);
@@ -49,18 +43,24 @@ var builder = new CommandLineBuilder(rootCommand);
 builder.UseDefaults();
 builder.UseDependencyInjection((services, context) =>
 {
+    services.Configure<LeapGlobalOptions>(options =>
+    {
+        options.IsQuiet = context.ParseResult.GetValueForOption(LeapGlobalOptions.IsQuietOption);
+        options.FeatureFlags = context.ParseResult.GetValueForOption(LeapGlobalOptions.FeatureFlagsOption) ?? [];
+        options.EnableDiagnostic = context.ParseResult.GetValueForOption(LeapGlobalOptions.EnableDiagnosticOption);
+        options.SkipVersionCheck = context.ParseResult.GetValueForOption(LeapGlobalOptions.SkipVersionCheckOption);
+    });
+
     services.AddLogging(loggingBuilder =>
     {
-        var isQuiet = context.ParseResult.GetValueForOption(quietOption);
+        var isQuiet = context.ParseResult.GetValueForOption(LeapGlobalOptions.IsQuietOption);
 
         loggingBuilder.AddFilter(nameof(Leap), isQuiet ? LogLevel.Information : LogLevel.Trace);
         loggingBuilder.AddFilter("System.Net.Http", LogLevel.Warning);
         loggingBuilder.AddProvider(new SimpleColoredConsoleLoggerProvider());
     });
 
-    var experimentsCommandLine = context.ParseResult.GetValueForOption(featureFlagsOption) ?? [];
-    services.AddSingleton<IFeatureManager>(new FeatureManager(experimentsCommandLine));
-
+    services.AddSingleton<IFeatureManager, FeatureManager>();
     services.AddSingleton<IFileSystem, FileSystem>();
     services.AddSingleton<ICliWrap, CliWrapExecutor>();
     services.AddSingleton<IPlatformHelper, PlatformHelper>();
@@ -69,8 +69,7 @@ builder.UseDependencyInjection((services, context) =>
     services.AddSingleton<ITelemetryHelper, TelemetryHelper>();
     services.AddSingleton<AzuriteAuthenticationHandler>();
 
-    services.AddHttpClient()
-        .AddHttpClient(AzuriteConstants.HttpClientName)
+    services.AddHttpClient(AzuriteConstants.HttpClientName)
         .AddHttpMessageHandler<AzuriteAuthenticationHandler>();
 
     services.AddSingleton<LeapConfigManager>();
@@ -107,9 +106,23 @@ builder.UseDependencyInjection((services, context) =>
     services.AddSingleton<IAspireManager, AspireManager>();
     services.AddSingleton<INuGetPackageDownloader, NuGetPackageDownloader>();
 
+    services.AddSingleton<AzureDevOpsAuthenticator>();
+    services.AddTransient<AzureDevOpsAuthenticationHandler>();
+    services.AddHttpClient(Constants.AzureDevOps.HttpClientName)
+        .AddHttpMessageHandler<AzureDevOpsAuthenticationHandler>()
+        .ConfigureHttpClient(x =>
+        {
+            // See https://github.com/microsoft/azure-devops-auth-samples/blob/master/ManagedClientConsoleAppSample/Program.cs
+            x.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(MediaTypeNames.Application.Json));
+            x.DefaultRequestHeaders.Add("User-Agent", "Leap");
+            x.DefaultRequestHeaders.Add("X-TFS-FedAuthRedirect", "Suppress");
+            x.Timeout = Timeout.InfiniteTimeSpan; // Cancellation is driven by cancellation tokens provided to the HttpClient
+        });
+
     services.TryAddEnumerable(new[]
     {
         ServiceDescriptor.Singleton<IPipelineStep, TrackLeapRunDurationPipelineStep>(),
+        ServiceDescriptor.Singleton<IPipelineStep, CheckForUpdatesPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, EnsureOperatingSystemAndArchitecturePipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, EnsureAtLeastOneLeapConfigFilePipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, EnsureLeapDirectoriesCreatedPipelineStep>(),
@@ -132,11 +145,31 @@ builder.UseDependencyInjection((services, context) =>
         ServiceDescriptor.Singleton<IPipelineStep, PrintEnvironmentVariablesPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, WaitForUserCancellationPipelineStep>(),
     });
+
+    services.AddSingleton<LeapPipeline>();
 });
 
 builder.UseTelemetry();
+
+builder.UseExceptionHandler(PrintDemystifiedException);
 
 var parser = builder.Build();
 var exitCode = parser.Invoke(args);
 
 return exitCode;
+
+// Reference: https://github.com/dotnet/command-line-api/blob/2.0.0-beta4.22272.1/src/System.CommandLine/Builder/CommandLineBuilderExtensions.cs#L307
+static void PrintDemystifiedException(Exception exception, InvocationContext context)
+{
+    if (exception is not OperationCanceledException)
+    {
+        ConsoleExtensions.SetTerminalForeground(ConsoleColor.Red);
+
+        Console.Write(context.LocalizationResources.ExceptionHandlerHeader());
+        Console.WriteLine(exception.Demystify());
+
+        ConsoleExtensions.ResetTerminalForegroundColor();
+    }
+
+    context.ExitCode = 1;
+}

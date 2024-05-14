@@ -6,13 +6,6 @@
       "environmentVariables": {
         "LEAP_TELEMETRY_OPTOUT": "1"
       }
-    },
-    "run-phase2": {
-      "commandName": "Project",
-      "commandLineArgs": "run --feature-flags LeapPhase2",
-      "environmentVariables": {
-        "LEAP_TELEMETRY_OPTOUT": "1"
-      }
     }
   }
 }
