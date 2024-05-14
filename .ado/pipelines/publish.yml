@@ -57,7 +57,7 @@ steps:
 
   - template: steps/linearb/linearb-deployment.yaml@templates
     parameters:
-    ${{ if startsWith(variables['Build.SourceBranch'], 'refs/tags/')}}
-      Environment: release
-    ${{ else }}
-      Environment: staging
+      ${{ if startsWith(variables['Build.SourceBranch'], 'refs/tags/')}}:
+        Environment: release
+      ${{ else }}:
+        Environment: staging
