@@ -1,5 +1,7 @@
 using System.Reflection;
+using Aspire.Hosting.Lifecycle;
 using Leap.Cli.Platform;
+using Leap.Cli.Platform.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -9,12 +11,13 @@ namespace Leap.Cli.Aspire;
 
 internal static class DistributedApplicationBuilderExtensions
 {
-    public static IDistributedApplicationBuilder ConfigureConsoleLogging(this IDistributedApplicationBuilder builder)
+    public static IDistributedApplicationBuilder ConfigureConsoleLogging(this IDistributedApplicationBuilder builder, LeapGlobalOptions leapGlobalOptions)
     {
+        builder.Services.AddSingleton(Options.Create(leapGlobalOptions));
         builder.Services.AddLogging(logging =>
         {
             logging.ClearProviders();
-            logging.AddProvider(new SimpleColoredConsoleLoggerProvider());
+            logging.AddColoredConsoleLogger(LoggingSource.Aspire);
         });
 
         // Makes sure that the aspire distributed application hosts console logs are properly configured.
@@ -26,8 +29,12 @@ internal static class DistributedApplicationBuilderExtensions
 
             // .NET Aspire is too verbose by default
             ["Logging:LogLevel:Aspire.Hosting"] = "Warning",
-
         });
+
+        if (leapGlobalOptions.Verbosity == LoggerVerbosity.Diagnostic)
+        {
+            builder.Services.TryAddLifecycleHook<EnableAspireDashboardDiagnosticLoggingLifecycleHook>();
+        }
 
         return builder;
     }

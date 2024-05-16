@@ -3,8 +3,8 @@ using System.Runtime.InteropServices;
 using Aspire.Hosting.Lifecycle;
 using Leap.Cli.Pipeline;
 using Leap.Cli.Platform;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Leap.Cli.Aspire;
 
@@ -18,15 +18,21 @@ internal sealed class AspireManager : IAspireManager
     private readonly ILogger _logger;
     private readonly INuGetPackageDownloader _nuGetPackageDownloader;
     private readonly IPlatformHelper _platformHelper;
+    private readonly IOptions<LeapGlobalOptions> _leapGlobalOptions;
 
     private Task<string> _downloadAspireOrchestrationPackageTask = Task.FromResult(string.Empty);
     private Task<string> _downloadAspireDashboardPackageTask = Task.FromResult(string.Empty);
 
-    public AspireManager(ILogger<AspireManager> logger, INuGetPackageDownloader nuGetPackageDownloader, IPlatformHelper platformHelper)
+    public AspireManager(
+        ILogger<AspireManager> logger,
+        INuGetPackageDownloader nuGetPackageDownloader,
+        IPlatformHelper platformHelper,
+        IOptions<LeapGlobalOptions> leapGlobalOptions)
     {
         this._logger = logger;
         this._nuGetPackageDownloader = nuGetPackageDownloader;
         this._platformHelper = platformHelper;
+        this._leapGlobalOptions = leapGlobalOptions;
 
         this.Builder = DistributedApplication.CreateBuilder();
     }
@@ -109,10 +115,10 @@ internal sealed class AspireManager : IAspireManager
 
         // TODO do we want to assign a well-known .NET Aspire port (same for the Aspire OTLP exporter port) instead of the default 18888 / 18889?
         // TODO do we want to proxy the Aspire dashboard URL to our YARP reverse proxy in order to have a nicer local domain URL?
-        this.Builder.Services.AddSingleton<IDistributedApplicationLifecycleHook, NetworkingEnvironmentVariablesLifecycleHook>();
+        this.Builder.Services.TryAddLifecycleHook<NetworkingEnvironmentVariablesLifecycleHook>();
 
         this.Builder.IgnoreConsoleTerminationSignals();
-        this.Builder.ConfigureConsoleLogging();
+        this.Builder.ConfigureConsoleLogging(this._leapGlobalOptions.Value);
         this.Builder.ConfigureDashboard();
 
         return this.Builder.Build();

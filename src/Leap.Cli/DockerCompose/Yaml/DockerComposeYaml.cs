@@ -17,9 +17,6 @@ internal sealed class DockerComposeYaml
         };
     }
 
-    [YamlMember(Alias = "version", ScalarStyle = ScalarStyle.DoubleQuoted)]
-    public string Version { get; set; } = DockerComposeConstants.Version38;
-
     [YamlMember(Alias = "name", ScalarStyle = ScalarStyle.DoubleQuoted)]
     public string Name { get; set; } = DockerComposeConstants.LeapProjectName;
 

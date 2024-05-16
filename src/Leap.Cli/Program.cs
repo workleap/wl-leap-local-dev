@@ -16,10 +16,10 @@ using Leap.Cli.DockerCompose;
 using Leap.Cli.Model;
 using Leap.Cli.Pipeline;
 using Leap.Cli.Platform;
+using Leap.Cli.Platform.Logging;
 using Leap.Cli.Platform.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 using ConsoleExtensions = Leap.Cli.Platform.ConsoleExtensions;
 
 ConsoleDefaults.SetInvariantCulture();
@@ -31,7 +31,7 @@ var rootCommand = new RootCommand("Workleap's Local Environment Application Prox
     new UpdateHostsFileCommand(),
 };
 
-rootCommand.AddGlobalOption(LeapGlobalOptions.IsQuietOption);
+rootCommand.AddGlobalOption(LeapGlobalOptions.VerbosityOption);
 rootCommand.AddGlobalOption(LeapGlobalOptions.FeatureFlagsOption);
 rootCommand.AddGlobalOption(LeapGlobalOptions.EnableDiagnosticOption);
 rootCommand.AddGlobalOption(LeapGlobalOptions.SkipVersionCheckOption);
@@ -45,20 +45,13 @@ builder.UseDependencyInjection((services, context) =>
 {
     services.Configure<LeapGlobalOptions>(options =>
     {
-        options.IsQuiet = context.ParseResult.GetValueForOption(LeapGlobalOptions.IsQuietOption);
+        options.Verbosity = context.ParseResult.GetValueForOption(LeapGlobalOptions.VerbosityOption);
         options.FeatureFlags = context.ParseResult.GetValueForOption(LeapGlobalOptions.FeatureFlagsOption) ?? [];
         options.EnableDiagnostic = context.ParseResult.GetValueForOption(LeapGlobalOptions.EnableDiagnosticOption);
         options.SkipVersionCheck = context.ParseResult.GetValueForOption(LeapGlobalOptions.SkipVersionCheckOption);
     });
 
-    services.AddLogging(loggingBuilder =>
-    {
-        var isQuiet = context.ParseResult.GetValueForOption(LeapGlobalOptions.IsQuietOption);
-
-        loggingBuilder.AddFilter(nameof(Leap), isQuiet ? LogLevel.Information : LogLevel.Trace);
-        loggingBuilder.AddFilter("System.Net.Http", LogLevel.Warning);
-        loggingBuilder.AddProvider(new SimpleColoredConsoleLoggerProvider());
-    });
+    services.AddLogging(x => x.AddColoredConsoleLogger(LoggingSource.Leap));
 
     services.AddSingleton<IFeatureManager, FeatureManager>();
     services.AddSingleton<IFileSystem, FileSystem>();
