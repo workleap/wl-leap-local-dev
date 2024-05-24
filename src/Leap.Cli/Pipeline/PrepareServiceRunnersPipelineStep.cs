@@ -148,16 +148,18 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         const int prismContainerPort = 4010;
 
         // TODO shall we sanitize the name of the service?
-        var container = new ContainerResource(service.Name, entrypoint: "mock --host 0.0.0.0 --dynamic /tmp/swagger.yml");
-
-        this._aspire.Builder.AddResource(container)
-
-            // Tag is set to null to prevent Aspire from adding latest (tag is already included in our image property)
-            .WithAnnotation(new ContainerImageAnnotation { Image = "stoplight/prism:5", Tag = string.Empty })
-            .WithVolume(openApiRunner.Specification, "/tmp/swagger.yml")
-
-            // TODO tester docker containers avec aspire (networking)
+        var builder = this._aspire.Builder.AddContainer(service.Name, "stoplight/prism", tag: "5")
             .WithEndpoint(scheme: "http", port: service.Ingress.InternalPort, targetPort: prismContainerPort);
+
+        if (openApiRunner.IsUrl)
+        {
+            builder.WithArgs(["mock", "--host", "0.0.0.0", "--dynamic", openApiRunner.Specification]);
+        }
+        else
+        {
+            builder.WithArgs(["mock", "--host", "0.0.0.0", "--dynamic", "/tmp/swagger.yml"])
+                .WithBindMount(openApiRunner.Specification, "/tmp/swagger.yml", isReadOnly: true);
+        }
     }
 
     public Task StopAsync(ApplicationState state, CancellationToken cancellationToken)

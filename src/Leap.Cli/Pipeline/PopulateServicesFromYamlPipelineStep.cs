@@ -213,26 +213,44 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                 }
                 else if (runnerYaml is OpenApiRunnerYaml openApiRunnerYaml)
                 {
-                    if (!File.Exists(openApiRunnerYaml.Specification))
-                    {
-                        this._logger.LogWarning("An OpenAPI mock server runner is missing a specification file '{Path}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", openApiRunnerYaml.Specification, leapConfig.Path, service.Name);
-                        continue;
-                    }
-                    // TODO also support URLS?
-                    var specPath = openApiRunnerYaml.Specification;
+                    var specPathOrUrl = openApiRunnerYaml.Specification;
 
-                    if (string.IsNullOrEmpty(specPath))
+                    if (string.IsNullOrEmpty(specPathOrUrl))
                     {
-                        this._logger.LogWarning("An OpenAPI mock server runner is missing a specification path in the configuration file '{Path}'. The service '{Service}' will be ignored.", leapConfig.Path, service.Name);
+                        this._logger.LogWarning("An OpenAPI mock server runner is missing an OpenAPI specification path or URL in the configuration file '{Path}'. The service '{Service}' will be ignored.", leapConfig.Path, service.Name);
                         continue;
                     }
 
-                    specPath = EnsureAbsolutePath(specPath, leapConfig);
+                    var isUrl = false;
+                    if (Uri.TryCreate(specPathOrUrl, UriKind.Absolute, out var specUrl) && SupportedBackendProtocols.Contains(specUrl.Scheme))
+                    {
+                        var builder = new UriBuilder(specUrl);
+                        if (builder.Host.ToLowerInvariant() is "127.0.0.1" or "localhost")
+                        {
+                            // Prism OpenAPI mock server is running in a container and can only access the host through host.docker.internal
+                            builder.Host = "host.docker.internal";
+                            specPathOrUrl = builder.Uri.ToString();
+                        }
+
+                        isUrl = true;
+                    }
+                    else
+                    {
+                        specPathOrUrl = EnsureAbsolutePath(specPathOrUrl, leapConfig);
+
+                        if (!File.Exists(specPathOrUrl))
+                        {
+                            this._logger.LogWarning("An OpenAPI mock server runner is missing an OpenAPI specification '{Path}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", specPathOrUrl, leapConfig.Path, service.Name);
+                            continue;
+                        }
+                    }
 
                     service.Runners.Add(new OpenApiRunner
                     {
-                        Specification = specPath,
+                        Specification = specPathOrUrl,
+                        IsUrl = isUrl,
                         Port = openApiRunnerYaml.Port,
+                        Protocol = "http",
                     });
                 }
                 else if (runnerYaml is RemoteRunnerYaml remoteRunnerYaml)
