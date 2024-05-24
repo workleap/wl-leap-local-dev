@@ -1,28 +1,21 @@
 using Leap.Cli.Aspire;
+using Leap.Cli.DockerCompose;
 using Leap.Cli.Model;
 
 namespace Leap.Cli.Pipeline;
 
-internal sealed class WireServicesAndDependenciesPipelineStep : IPipelineStep
+internal sealed class WireServicesAndDependenciesPipelineStep(
+    IEnvironmentVariableManager environmentVariables,
+    IConfigureDockerCompose configureDockerCompose,
+    IAspireManager aspire) : IPipelineStep
 {
-    private readonly IEnvironmentVariableManager _environmentVariables;
-    private readonly IAspireManager _aspire;
-
-    public WireServicesAndDependenciesPipelineStep(
-        IEnvironmentVariableManager environmentVariables,
-        IAspireManager aspire)
-    {
-        this._environmentVariables = environmentVariables;
-        this._aspire = aspire;
-    }
-
     public Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
-        var orderedEnvironmentVariables = this._environmentVariables.EnvironmentVariables.OrderBy(x => x.Name, StringComparer.Ordinal);
+        var orderedEnvironmentVariables = environmentVariables.EnvironmentVariables.OrderBy(x => x.Name, StringComparer.Ordinal);
 
         foreach (var (envvarName, envvarValue, scope) in orderedEnvironmentVariables)
         {
-            foreach (var resource in this._aspire.Builder.Resources)
+            foreach (var resource in aspire.Builder.Resources)
             {
                 var envCallbackAnnotation = new EnvironmentCallbackAnnotation(context =>
                 {
@@ -38,6 +31,15 @@ internal sealed class WireServicesAndDependenciesPipelineStep : IPipelineStep
                     container.Annotations.Add(envCallbackAnnotation);
                 }
             }
+        }
+
+        // Allow dependencies running in Docker Compose to reach custom services using *.localhost domains
+        var serviceIngressHosts = state.Services.Values.Select(x => x.Ingress.Host).OfType<string>();
+        var dockerComposeExtraHosts = serviceIngressHosts.Select(host => $"{host}:host-gateway").ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var dockerComposeServiceYaml in configureDockerCompose.Configuration.Services.Values)
+        {
+            dockerComposeServiceYaml.ExtraHosts.AddRange(dockerComposeExtraHosts);
         }
 
         return Task.CompletedTask;
