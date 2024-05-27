@@ -1,6 +1,6 @@
 ﻿namespace Leap.Cli.Model.Traits;
 
-public interface IHasProtocol
+internal interface IHasProtocol
 {
     public string? Protocol { get; set; }
 }

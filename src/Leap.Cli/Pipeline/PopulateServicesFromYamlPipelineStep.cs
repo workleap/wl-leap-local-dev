@@ -10,7 +10,8 @@ namespace Leap.Cli.Pipeline;
 
 internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
 {
-    private static readonly HashSet<string> SupportedBackendProtocols = ["http", "https"];
+    private static readonly HashSet<string> SupportedBackendProtocols = new(["http", "https"], StringComparer.OrdinalIgnoreCase);
+
     private readonly ILeapYamlAccessor _leapYamlAccessor;
     private readonly IPortManager _portManager;
     private readonly ILogger _logger;
@@ -84,6 +85,14 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                     if (ingressYaml.Path != null)
                     {
                         service.Ingress.Path = ingressYaml.Path;
+                    }
+                }
+
+                if (serviceYaml.EnvironmentVariables != null)
+                {
+                    foreach (var (key, value) in serviceYaml.EnvironmentVariables)
+                    {
+                        service.EnvironmentVariables[key] = value;
                     }
                 }
 

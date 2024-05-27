@@ -8,7 +8,7 @@ internal sealed class Service
 
     public Runner? ActiveRunner { get; set; }
 
-    public Dictionary<string, string> EnvironmentVariables { get; } = new();
+    public Dictionary<string, string> EnvironmentVariables { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public Ingress Ingress { get; } = new();
 }

@@ -1,6 +1,6 @@
 ﻿namespace Leap.Cli.Model.Traits;
 
-public interface IHasPort
+internal interface IHasPort
 {
     public int? Port { get; set; }
 }

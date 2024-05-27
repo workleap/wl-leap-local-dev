@@ -1,6 +1,6 @@
 ﻿namespace Leap.Cli.Platform;
 
-public interface IFeatureManager
+internal interface IFeatureManager
 {
     bool IsEnabled(string featureName);
 }
