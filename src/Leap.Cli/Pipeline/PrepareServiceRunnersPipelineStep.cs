@@ -133,7 +133,11 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
     {
         var workingDirectoryPath = Path.GetDirectoryName(dotnetRunner.ProjectPath);
 
-        string[] dotnetRunArgs = ["run", "--project", dotnetRunner.ProjectPath, "--no-launch-profile"];
+        // dotnet watch arguments inspired by .NET Aspire:
+        // https://github.com/dotnet/aspire/blob/v8.0.1/src/Aspire.Hosting/Dcp/ApplicationExecutor.cs#L1004-L1022
+        string[] dotnetRunArgs = dotnetRunner.Watch
+            ? ["watch", "--project", dotnetRunner.ProjectPath, "--no-launch-profile", "--non-interactive", "--no-hot-reload"]
+            : ["run", "--project", dotnetRunner.ProjectPath, "--no-launch-profile"];
 
         // TODO shall we sanitize the name of the service? Get inspiration from Dapr
         this._aspire.Builder

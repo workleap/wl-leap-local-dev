@@ -16,4 +16,7 @@ internal sealed class DotnetRunnerYaml : RunnerYaml, IHasPort, IHasProtocol
 
     [YamlMember(Alias = "protocol", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
     public string? Protocol { get; set; }
+
+    [YamlMember(Alias = "watch", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
+    public bool? Watch { get; set; }
 }

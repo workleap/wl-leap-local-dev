@@ -218,6 +218,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                         ProjectPath = projectPath,
                         Port = dotnetRunnerYaml.Port,
                         Protocol = dotnetRunnerYaml.Protocol,
+                        Watch = dotnetRunnerYaml.Watch.GetValueOrDefault(true),
                     });
                 }
                 else if (runnerYaml is OpenApiRunnerYaml openApiRunnerYaml)
