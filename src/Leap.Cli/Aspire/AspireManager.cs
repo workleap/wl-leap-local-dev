@@ -117,6 +117,7 @@ internal sealed class AspireManager : IAspireManager
         // TODO do we want to proxy the Aspire dashboard URL to our YARP reverse proxy in order to have a nicer local domain URL?
         this.Builder.Services.TryAddLifecycleHook<NetworkingEnvironmentVariablesLifecycleHook>();
         this.Builder.Services.TryAddLifecycleHook<UseLeapCertificateForAspireDashboardLifecycleHook>();
+        this.Builder.Services.TryAddLifecycleHook<DetectDotnetBuildRaceConditionErrorLifecycleHook>();
 
         this.Builder.IgnoreConsoleTerminationSignals();
         this.Builder.ConfigureConsoleLogging(this._leapGlobalOptions.Value);
