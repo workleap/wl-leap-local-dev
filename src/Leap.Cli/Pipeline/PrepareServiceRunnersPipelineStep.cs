@@ -164,8 +164,11 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         }
         else
         {
+            // We can't use the built-in "WithBindMount()" to mount the spec file because it would attempt to make the source spec path
+            // relative to the Aspire app host directory, but our spec path is already consolidated and absolute. See:
+            // https://github.com/dotnet/aspire/blob/v8.0.1/src/Aspire.Hosting/ContainerResourceBuilderExtensions.cs#L79
             builder.WithArgs(["mock", "--host", "0.0.0.0", "--dynamic", "/tmp/swagger.yml"])
-                .WithBindMount(openApiRunner.Specification, "/tmp/swagger.yml", isReadOnly: true);
+                .WithAnnotation(new ContainerMountAnnotation(openApiRunner.Specification, "/tmp/swagger.yml", ContainerMountType.BindMount, isReadOnly: true));
         }
     }
 
