@@ -12,8 +12,6 @@ Process {
         }
     }
 
-    $packageName = "Workleap.Leap"
-
     # Build the project and create the nupkg file
     Exec { & "$(Join-Path $PSScriptRoot "Build.ps1")" }
 

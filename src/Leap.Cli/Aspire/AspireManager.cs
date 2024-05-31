@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using System.Runtime.InteropServices;
 using Aspire.Hosting.Lifecycle;
+using CliWrap;
 using Leap.Cli.Pipeline;
 using Leap.Cli.Platform;
 using Microsoft.Extensions.Logging;
@@ -19,6 +20,7 @@ internal sealed class AspireManager : IAspireManager
     private readonly INuGetPackageDownloader _nuGetPackageDownloader;
     private readonly IPlatformHelper _platformHelper;
     private readonly IOptions<LeapGlobalOptions> _leapGlobalOptions;
+    private readonly ICliWrap _cliWrap;
 
     private Task<string> _downloadAspireOrchestrationPackageTask = Task.FromResult(string.Empty);
     private Task<string> _downloadAspireDashboardPackageTask = Task.FromResult(string.Empty);
@@ -27,12 +29,14 @@ internal sealed class AspireManager : IAspireManager
         ILogger<AspireManager> logger,
         INuGetPackageDownloader nuGetPackageDownloader,
         IPlatformHelper platformHelper,
-        IOptions<LeapGlobalOptions> leapGlobalOptions)
+        IOptions<LeapGlobalOptions> leapGlobalOptions,
+        ICliWrap cliWrap)
     {
         this._logger = logger;
         this._nuGetPackageDownloader = nuGetPackageDownloader;
         this._platformHelper = platformHelper;
         this._leapGlobalOptions = leapGlobalOptions;
+        this._cliWrap = cliWrap;
 
         this.Builder = DistributedApplication.CreateBuilder();
     }
@@ -89,7 +93,7 @@ internal sealed class AspireManager : IAspireManager
         DistributedApplication? app = null;
         try
         {
-            app = await this.BuildDistributedApplicationAsync();
+            app = await this.BuildDistributedApplicationAsync(cancellationToken);
             await app.StartAsync(cancellationToken);
         }
         catch (Exception ex)
@@ -109,9 +113,9 @@ internal sealed class AspireManager : IAspireManager
         return app;
     }
 
-    private async Task<DistributedApplication> BuildDistributedApplicationAsync()
+    private async Task<DistributedApplication> BuildDistributedApplicationAsync(CancellationToken cancellationToken)
     {
-        await this.UseCustomAspireWorkloadAsync();
+        await this.UseCustomAspireWorkloadAsync(cancellationToken);
 
         // TODO do we want to assign a well-known .NET Aspire port (same for the Aspire OTLP exporter port) instead of the default 18888 / 18889?
         // TODO do we want to proxy the Aspire dashboard URL to our YARP reverse proxy in order to have a nicer local domain URL?
@@ -126,7 +130,7 @@ internal sealed class AspireManager : IAspireManager
         return this.Builder.Build();
     }
 
-    private async Task UseCustomAspireWorkloadAsync()
+    private async Task UseCustomAspireWorkloadAsync(CancellationToken cancellationToken)
     {
         var orchestrationPackagePath = await this._downloadAspireOrchestrationPackageTask;
         var dashboardPackagePath = await this._downloadAspireDashboardPackageTask;
@@ -142,6 +146,45 @@ internal sealed class AspireManager : IAspireManager
             dashboardPath += ".exe";
         }
 
+        await this.VerifyDcpWorksAsync(dcpCliPath, cancellationToken);
+
         this.Builder.UseCustomAspireWorkload(new AspireWorkloadOptions(dcpBinPath, dcpCliPath, dashboardPath));
+    }
+
+    private async Task VerifyDcpWorksAsync(string dcpCliPath, CancellationToken cancellationToken)
+    {
+        // On Azure DevOps Windows CI agents, Aspire SOMETIMES fails to start because "dcp.exe info" returns a non-zero exit code:
+        // "System.InvalidOperationException: Command C:\Users\VssAdministrator\.leap\generated\nuget-packages\Aspire.Hosting.Orchestration.win-x64.8.0.1\tools\dcp.exe info returned non-zero exit code -1"
+        // The code that throws: https://github.com/dotnet/aspire/blob/v8.0.1/src/Aspire.Hosting/Dcp/DcpDependencyCheck.cs#L34
+        //
+        // This behavior hasn't been observed anywhere else. It seems to happen because it takes too long for "dcp info" to exit successfully.
+        // To mitigate this, we will attempt to execute the command ourselves and ensure it returns a zero exit code.
+        if (this._platformHelper.CurrentOS == OSPlatform.Windows && this._platformHelper.IsRunningOnBuildAgent)
+        {
+            const int maxRetryCount = 5;
+            for (var retryCount = 1; retryCount <= maxRetryCount; retryCount++)
+            {
+                this._logger.LogTrace("Checking if DCP works (attempt {RetryCount}/{MaxRetryCount})", retryCount, maxRetryCount);
+
+                var dcpInfoCommand = new Command(dcpCliPath).WithArguments("info").WithValidation(CommandResultValidation.None);
+                var dcpInfoResult = await this._cliWrap.ExecuteBufferedAsync(dcpInfoCommand, cancellationToken);
+
+                if (dcpInfoResult.IsSuccess)
+                {
+                    return;
+                }
+
+                this._logger.LogTrace("DCP check failed with exit code {ExitCode}, stdout: {StdOut}, stderr: {StdErr}", dcpInfoResult.ExitCode, dcpInfoResult.StandardOutput, dcpInfoResult.StandardError);
+
+                if (retryCount < maxRetryCount)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+                }
+                else
+                {
+                    // That's ok, .NET Aspire will attempt the same thing and throw an exception if it fails
+                }
+            }
+        }
     }
 }

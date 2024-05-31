@@ -12,6 +12,7 @@ resources:
     - repository: templates
       type: git
       name: Shared-Assets/Pipeline-Library
+      ref: refs/tags/0.5.0
 
 jobs:
   - template: jobs/semgrep-validation/semgrep-validation-template.yml@templates

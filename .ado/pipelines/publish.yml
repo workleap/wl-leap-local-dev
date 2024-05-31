@@ -28,21 +28,20 @@ steps:
     fetchDepth: 0
 
   - task: UseDotNet@2
-    displayName: "Use .NET SDK"
+    displayName: "Install .NET SDK from global.json"
     inputs:
-      packageType: sdk
+      packageType: "sdk"
       useGlobalJson: true
 
-  - script: |
-      dotnet workload install aspire
-    displayName: Install Aspire workload
-
-  - task: PowerShell@2
-    displayName: "Restore, build, test and pack"
+  - task: DotNetCoreCLI@2
+    displayName: "Install Aspire workload"
     inputs:
-      targetType: "filePath"
-      filePath: "Build.ps1"
-      pwsh: true
+      command: "custom"
+      custom: "workload"
+      arguments: "install aspire"
+
+  - pwsh: "./Build.ps1"
+    displayName: "Build"
 
   - task: NuGetAuthenticate@1
     displayName: "NuGet authenticate"
@@ -52,7 +51,7 @@ steps:
     inputs:
       command: push
       publishVstsFeed: "gsoft"
-      packagesToPush: ".output/*.nupkg"
+      packagesToPush: "./.output/*.nupkg"
       allowPackageConflicts: false
 
   - template: steps/linearb/linearb-deployment.yaml@templates

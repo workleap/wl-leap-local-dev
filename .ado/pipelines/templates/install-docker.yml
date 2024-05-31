@@ -1,0 +1,15 @@
+steps:
+  # Docker engine is already available on Linux.
+  # Docker engine is not available on Windows as we would need WSL and Docker Desktop.
+
+  # Docker engine is not installed on macOS agents by default due to licensing restrictions.
+  # Instead, we can use Colima as a container engine replacement on macOS with the Docker CLI.
+  # It is already installed on MS-hosted agents and Colima is also used in GitHub runners.
+  # https://github.com/actions/runner-images/blob/macos-12/20240527.4/images/macos/macos-12-Readme.md#tools
+  # https://github.com/actions/runner-images/issues/6216
+  - bash: |
+      brew install docker docker-compose && \
+      colima start && \
+      sudo ln -sf $HOME/.colima/default/docker.sock /var/run/docker.sock
+    condition: eq(variables['Agent.OS'], 'Darwin')
+    displayName: "macOS: Install Docker"

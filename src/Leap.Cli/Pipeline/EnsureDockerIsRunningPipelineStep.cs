@@ -4,29 +4,23 @@ using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Pipeline;
 
-internal sealed class EnsureDockerIsRunningPipelineStep : IPipelineStep
+internal sealed class EnsureDockerIsRunningPipelineStep(
+    IDockerComposeManager dockerCompose,
+    ILogger<EnsureLeapDirectoriesCreatedPipelineStep> logger) : IPipelineStep
 {
-    private readonly IDockerComposeManager _dockerCompose;
-    private readonly ILogger _logger;
-
-    public EnsureDockerIsRunningPipelineStep(IDockerComposeManager dockerCompose, ILogger<EnsureLeapDirectoriesCreatedPipelineStep> logger)
-    {
-        this._dockerCompose = dockerCompose;
-        this._logger = logger;
-    }
-
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
-        if (this._dockerCompose.Configuration.Services.Count == 0)
+        var requiresDocker = dockerCompose.Configuration.Services.Count > 0 || state.Services.Values.Any(x => x.ActiveRunner is DockerRunner);
+        if (!requiresDocker)
         {
             return;
         }
 
-        this._logger.LogDebug("Checking if Docker is running...");
+        logger.LogDebug("Checking if Docker is running...");
 
         try
         {
-            await this._dockerCompose.EnsureDockerIsRunningAsync(cancellationToken);
+            await dockerCompose.EnsureDockerIsRunningAsync(cancellationToken);
         }
         catch (LeapException)
         {

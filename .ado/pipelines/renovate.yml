@@ -1,6 +1,6 @@
 schedules:
-  - cron: '0 12 * * 1-5'
-    displayName: 'Daily run (except weekend)'
+  - cron: "0 12 * * 1-5"
+    displayName: "Daily run (except weekend)"
     branches:
       include:
         - main

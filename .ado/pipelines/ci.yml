@@ -2,11 +2,55 @@ trigger: none
 
 jobs:
   - job: build
+    pool:
+      vmImage: "ubuntu-latest"
+
+    steps:
+      - checkout: self
+        clean: true
+        fetchDepth: 0
+
+      - task: UseDotNet@2
+        displayName: "Install .NET SDK from global.json"
+        inputs:
+          packageType: "sdk"
+          useGlobalJson: true
+
+      - task: DotNetCoreCLI@2
+        displayName: "Install Aspire workload"
+        inputs:
+          command: "custom"
+          custom: "workload"
+          arguments: "install aspire"
+
+      - pwsh: "./Build.ps1"
+        displayName: "Build"
+
+      - task: NuGetAuthenticate@1
+        displayName: "NuGet authenticate"
+
+      - task: NuGetCommand@2
+        displayName: "NuGet push"
+        inputs:
+          command: push
+          publishVstsFeed: "gsoftdev"
+          packagesToPush: "./.output/*.nupkg"
+          allowPackageConflicts: true
+
+      - task: PublishPipelineArtifact@1
+        displayName: "Publish built artifacts"
+        inputs:
+          targetPath: "./.output/"
+          artifactName: LeapNugetPackage
+
+  - job: test
+    dependsOn: build
+    timeoutInMinutes: 10
     strategy:
       matrix:
         linux:
           imageName: "ubuntu-latest"
-        mac:
+        macos:
           imageName: "macOS-latest"
         windows:
           imageName: "windows-latest"
@@ -16,122 +60,25 @@ jobs:
     steps:
       - checkout: self
         clean: true
-        fetchDepth: 0
+        fetchDepth: 1
 
       - task: UseDotNet@2
-        displayName: "Use .NET SDK"
-        inputs:
-          packageType: sdk
-          useGlobalJson: true
-
-      - script: |
-          dotnet workload install aspire
-        displayName: Install Aspire workload
-
-      - task: PowerShell@2
-        displayName: "Pack and install"
-        inputs:
-          targetType: "filePath"
-          filePath: "BuildAndInstall.ps1"
-          pwsh: true
-
-      - template: templates/install-mkcert.yml
-
-      - task: AzureCLI@2
-        displayName: "Execute leap run"
-        inputs:
-          azureSubscription: "ARM - gsoft-idp-dev"
-          scriptType: pscore
-          scriptLocation: scriptPath
-          scriptPath: ".ado/pipelines/templates/leap-run.ps1"
-        condition: eq(variables.imageName, 'ubuntu-latest')
-
-      - template: templates/docker-container-check.yml
-        parameters:
-          containerName: "leap-mongo"
-
-      - template: templates/docker-container-check.yml
-        parameters:
-          containerName: "leap-redis"
-
-      - template: templates/docker-container-check.yml
-        parameters:
-          containerName: "leap-postgres"
-
-      - template: templates/docker-container-check.yml
-        parameters:
-          containerName: "leap-sqlserver"
-
-      - template: templates/docker-container-check.yml
-        parameters:
-          containerName: "leap-azurite"
-
-      - template: templates/docker-container-check.yml
-        parameters:
-          containerName: "leap-eventgrid"
-
-      - task: NuGetAuthenticate@1
-        condition: eq(variables.imageName, 'ubuntu-latest')
-        displayName: "NuGet authenticate"
-
-      - task: NuGetCommand@2
-        condition: eq(variables.imageName, 'ubuntu-latest')
-        inputs:
-          command: push
-          publishVstsFeed: "gsoftdev"
-          packagesToPush: ".output/*.nupkg"
-          allowPackageConflicts: true
-
-      - task: PublishPipelineArtifact@1
-        inputs:
-          targetPath: "./.output/"
-          artifactName: LeapNugetPackage
-        condition: eq(variables.imageName, 'windows-latest')
-
-  - job: testPackage
-    displayName: Test package from other OS
-    dependsOn: build
-
-    pool:
-      vmImage: ubuntu-latest
-
-    variables:
-      imageName: ubuntu-latest
-
-    steps:
-      - checkout: self
-        clean: true
-        fetchDepth: 0
-
-      - task: UseDotNet@2
-        displayName: "Use .NET SDK"
+        displayName: "Install .NET SDK from global.json"
         inputs:
           packageType: sdk
           useGlobalJson: true
 
       - task: DownloadPipelineArtifact@2
+        displayName: "Download built artifacts"
         inputs:
           artifact: LeapNugetPackage
           targetPath: "./.output/"
 
-      - script: |
-          dotnet workload install aspire
-        displayName: Install Aspire workload
-
-
-      - task: PowerShell@2
+      - pwsh: "./Install.ps1"
         displayName: "Install Leap"
-        inputs:
-          targetType: "filePath"
-          filePath: "Install.ps1"
-          pwsh: true
+
+      - template: templates/install-docker.yml
 
       - template: templates/install-mkcert.yml
 
-      - task: AzureCLI@2
-        displayName: "Execute leap run"
-        inputs:
-          azureSubscription: "ARM - gsoft-idp-dev"
-          scriptType: pscore
-          scriptLocation: scriptPath
-          scriptPath: ".ado/pipelines/templates/leap-run.ps1"
+      - template: templates/leap-run.yml
