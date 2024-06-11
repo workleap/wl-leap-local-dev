@@ -22,8 +22,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ConsoleExtensions = Leap.Cli.Platform.ConsoleExtensions;
 
-ConsoleDefaults.SetInvariantCulture();
-ConsoleDefaults.SetUtf8Encoding();
+StartupDefaults.ClearConflictingEnvironmentVariables();
+StartupDefaults.SetInvariantCulture();
+StartupDefaults.SetUtf8Encoding();
 
 var rootCommand = new RootCommand("Workleap's Local Environment Application Proxy")
 {
