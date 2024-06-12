@@ -77,8 +77,6 @@ jobs:
       - pwsh: "./Install.ps1"
         displayName: "Install Leap"
 
-      - template: templates/install-docker.yml
-
       - template: templates/install-mkcert.yml
 
       - template: templates/leap-run.yml
