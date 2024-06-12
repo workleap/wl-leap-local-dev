@@ -1,5 +1,5 @@
 #nullable enable
-static Workleap.Extensions.Leap.ConfigurationBuilderExtensions.AddLeapConfiguration(this Microsoft.Extensions.Configuration.IConfigurationBuilder! builder) -> Microsoft.Extensions.Configuration.IConfigurationBuilder!
-static Workleap.Extensions.Leap.HostExtensions.IsLocal(this Microsoft.Extensions.Hosting.IHostEnvironment! hostEnvironment) -> bool
-Workleap.Extensions.Leap.ConfigurationBuilderExtensions
-Workleap.Extensions.Leap.HostExtensions
+static Microsoft.Extensions.Configuration.LeapConfigurationBuilderExtensions.AddLeap(this Microsoft.Extensions.Configuration.IConfigurationBuilder! builder) -> Microsoft.Extensions.Configuration.IConfigurationBuilder!
+static Microsoft.Extensions.Hosting.LeapHostEnvironmentExtensions.IsLocal(this Microsoft.Extensions.Hosting.IHostEnvironment! hostEnvironment) -> bool
+Microsoft.Extensions.Configuration.LeapConfigurationBuilderExtensions
+Microsoft.Extensions.Hosting.LeapHostEnvironmentExtensions
