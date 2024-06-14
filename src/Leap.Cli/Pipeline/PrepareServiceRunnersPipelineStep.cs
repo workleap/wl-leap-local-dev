@@ -52,12 +52,17 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         service.EnvironmentVariables.TryAdd("Logging__LogLevel__System.Net.Http.HttpClient.OtlpMetricExporter", "Warning");
         service.EnvironmentVariables.TryAdd("Logging__LogLevel__System.Net.Http.HttpClient.OtlpTraceExporter", "Warning");
 
+        // .NET-specific local setup for OpenTelemetry
         // Based on this internal .NET Aspire method that we can't directly use (reserved to ".AddProject" which we can't use)
-        // https://github.com/dotnet/aspire/blob/cdcc995aac7b220351868c40ad2d7c6b66b6c7c2/src/Aspire.Hosting/Extensions/ProjectResourceBuilderExtensions.cs#L53-L56
+        // https://github.com/dotnet/aspire/blob/v8.0.1/src/Aspire.Hosting/ProjectResourceBuilderExtensions.cs#L184-L196
         service.EnvironmentVariables.TryAdd("OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES", "true");
         service.EnvironmentVariables.TryAdd("OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES", "true");
+        service.EnvironmentVariables.TryAdd("OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY", "in_memory");
+        service.EnvironmentVariables.TryAdd("OTEL_DOTNET_EXPERIMENTAL_ASPNETCORE_DISABLE_URL_QUERY_REDACTION", "true");
+        service.EnvironmentVariables.TryAdd("OTEL_DOTNET_EXPERIMENTAL_HTTPCLIENT_DISABLE_URL_QUERY_REDACTION", "true");
+        service.EnvironmentVariables.TryAdd("ASPNETCORE_FORWARDEDHEADERS_ENABLED", "true");
 
-        // https://github.com/dotnet/aspire/blob/cdcc995aac7b220351868c40ad2d7c6b66b6c7c2/src/Aspire.Hosting/Dashboard/ConsoleLogsConfigurationExtensions.cs
+        // https://github.com/dotnet/aspire/blob/v8.0.1/src/Aspire.Hosting/Dashboard/ConsoleLogsConfigurationExtensions.cs#L19-L23
         service.EnvironmentVariables["DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION"] = "true";
         service.EnvironmentVariables["LOGGING__CONSOLE__FORMATTERNAME"] = "simple";
         service.EnvironmentVariables["LOGGING__CONSOLE__FORMATTEROPTIONS__TIMESTAMPFORMAT"] = "yyyy-MM-ddTHH:mm:ss.fffffff ";

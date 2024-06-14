@@ -4,6 +4,7 @@ using Aspire.Hosting.Lifecycle;
 using CliWrap;
 using Leap.Cli.Pipeline;
 using Leap.Cli.Platform;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -39,6 +40,11 @@ internal sealed class AspireManager : IAspireManager
         this._cliWrap = cliWrap;
 
         this.Builder = DistributedApplication.CreateBuilder();
+
+        // Starting the Aspire app host in development mode enabled various local development features such as
+        // high-frequency OpenTelemetry push intervals, and no sampling.
+        // https://github.com/dotnet/aspire/blob/v8.0.1/src/Aspire.Hosting/OtlpConfigurationExtensions.cs#L55-L65
+        this.Builder.Environment.EnvironmentName = Environments.Development;
     }
 
     public IDistributedApplicationBuilder Builder { get; }
