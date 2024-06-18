@@ -154,7 +154,7 @@ internal sealed class EnsureMkcertCertificateExistsPipelineStep : IPipelineStep
 
         this._logger.LogDebug("Creating the local development certificate...");
 
-        string[] crtCreateArgs = ["-cert-file", Constants.LocalCertificateCrtFilePath, "-key-file", Constants.LocalCertificateKeyFilePath, .. Constants.SupportedLocalDevelopmentCertificateDomainNames];
+        string[] crtCreateArgs = ["-cert-file", Constants.LocalCertificateCrtFilePath, "-key-file", Constants.LocalCertificateKeyFilePath, .. Constants.MkcertSupportedDomainNames];
         var crtCreateCommand = new Command(mkcertExePath).WithArguments(crtCreateArgs).WithValidation(CommandResultValidation.None);
         var crtCreateResult = await this._cliWrap.ExecuteBufferedAsync(crtCreateCommand, cancellationToken);
 

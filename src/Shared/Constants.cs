@@ -25,13 +25,18 @@ internal static class Constants
     // https://www.iana.org/assignments/special-use-domain-names/special-use-domain-names.xhtml
     // We didn't use ".local" because of the mDNS (Multicast DNS) protocol, which may cause issues according to this thread
     // https://www.reddit.com/r/sysadmin/comments/gdeggi/
-    public static readonly string[] SupportedLocalDevelopmentCertificateDomainNames =
+    public static readonly string[] SupportedWildcardLocalhostDomainNames =
+    [
+        "*.officevibe.localhost",
+        "*.sharegate.localhost",
+        "*.workleap.localhost",
+    ];
+
+    public static readonly string[] MkcertSupportedDomainNames =
     [
         "localhost", "127.0.0.1", "::1", // localhost
         "host.docker.internal", "host.containers.internal", // Docker and Podman
-        "*.officevibe.localhost", "*.officevibe-dev.localhost", // Officevibe
-        "*.sharegate.localhost", "*.sharegate-dev.localhost", // ShareGate
-        "*.workleap.localhost", "*.workleap-dev.localhost" // Workleap
+        .. SupportedWildcardLocalhostDomainNames,
     ];
 
     // "1347" means "leap" in leetspeak (https://en.wikipedia.org/wiki/Leet)

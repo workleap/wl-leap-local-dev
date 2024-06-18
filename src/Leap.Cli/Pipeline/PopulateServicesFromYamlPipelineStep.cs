@@ -12,6 +12,12 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
 {
     private static readonly HashSet<string> SupportedBackendProtocols = new(["http", "https"], StringComparer.OrdinalIgnoreCase);
 
+    // Validates that user-defined hosts match one of the supported wildcard domains of our certificate,
+    // and only allow 3-parts subdomains (ex: foo.workleap.localhost) as a wildcard (*) does not allow dots.
+    internal static readonly Regex SupportedWildcardLocalhostDomainNamesRegex = new(
+        string.Join('|', Constants.SupportedWildcardLocalhostDomainNames.Select(ConvertWildcardDomainToPattern)),
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
     private readonly ILeapYamlAccessor _leapYamlAccessor;
     private readonly IPortManager _portManager;
     private readonly ILogger _logger;
@@ -25,6 +31,8 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
         this._portManager = portManager;
         this._logger = logger;
     }
+
+    private static string ConvertWildcardDomainToPattern(string domain) => $"^{Regex.Escape(domain).Replace("\\*", "[a-z0-9]+(-[a-z0-9]+)*")}$";
 
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
@@ -62,12 +70,15 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                 {
                     if (ingressYaml.Host != null)
                     {
-                        service.Ingress.Host = ingressYaml.Host;
-                        if (!IsDomainSupported(service.Ingress.Host))
+                        if (!SupportedWildcardLocalhostDomainNamesRegex.IsMatch(ingressYaml.Host))
                         {
-                            this._logger.LogWarning("A service '{Service}' has an invalid host '{Host}' in the configuration file '{Path}'. The service will be ignored.", serviceName, service.Ingress.Host, leapConfig.Path);
+                            this._logger.LogWarning(
+                                "A service '{Service}' has an invalid host '{Host}' in the configuration file '{Path}'. Host must match one of the supported wildcard domains '{WildcardDomains}', where '*' allows alphanumeric and hyphen characters. The service will be ignored.",
+                                serviceName, ingressYaml.Host, leapConfig.Path, string.Join(", ", Constants.SupportedWildcardLocalhostDomainNames));
                             continue;
                         }
+
+                        service.Ingress.Host = ingressYaml.Host;
                     }
 
                     if (ingressYaml.Port is { } port)
@@ -311,20 +322,6 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
         path = Path.GetFullPath(path);
 
         return path;
-    }
-
-    private static bool IsDomainSupported(string domain)
-    {
-        foreach (var pattern in Constants.SupportedLocalDevelopmentCertificateDomainNames)
-        {
-            var regexPattern = "^" + Regex.Escape(pattern).Replace("\\*", ".*") + "$";
-            if (Regex.IsMatch(domain, regexPattern, RegexOptions.IgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     public Task StopAsync(ApplicationState state, CancellationToken cancellationToken)
