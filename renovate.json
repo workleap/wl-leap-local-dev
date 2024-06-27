@@ -8,7 +8,8 @@
   ],
   "enabledManagers": [
     "azure-pipelines",
-    "nuget"
+    "nuget",
+    "custom.regex"
   ],
   "endpoint": "https://dev.azure.com/gsoft",
   "repositories": [
@@ -43,6 +44,19 @@
     {
       "matchManagers": ["azure-pipelines"],
       "groupName": "Pipeline dependencies"
+    }
+  ],
+  "customManagers": [
+    {
+      "description": "Workleap Event Grid emulator",
+      "customType": "regex",
+      "fileMatch": ["\\.cs$"],
+      "matchStringsStrategy": "any",
+      "matchStrings": [
+        "\"(?<depName>workleap/eventgridemulator):(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
     }
   ],
   "vulnerabilityAlerts": {
