@@ -1,4 +1,5 @@
-﻿using Aspire.Hosting.Lifecycle;
+﻿using System.Diagnostics;
+using Aspire.Hosting.Lifecycle;
 using Leap.Cli.Aspire;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
@@ -133,9 +134,15 @@ internal sealed class PrepareReverseProxyPipelineStep(IAspireManager aspireManag
 
                 builder.Services.AddReverseProxy().LoadFromMemory(routes, clusters)
 #pragma warning disable CA5359
-                    // This isn't a security misconfiguration. We're in a local development environment
-                    // and we want to allow self-signed certificates that are not trusted by the system.
-                    .ConfigureHttpClient((_, handler) => handler.SslOptions.RemoteCertificateValidationCallback = (_, _, _, _) => true);
+                    .ConfigureHttpClient((_, handler) =>
+                    {
+                        // This isn't a security misconfiguration. We're in a local development environment
+                        // and we want to allow self-signed certificates that are not trusted by the system.
+                        handler.SslOptions.RemoteCertificateValidationCallback = (_, _, _, _) => true;
+
+                        // Prevent YARP from removing OpenTelemetry-related headers when forwarding requests
+                        handler.ActivityHeadersPropagator = DistributedContextPropagator.CreatePassThroughPropagator();
+                    });
 #pragma warning restore CA5359
 
                 this._app = builder.Build();
