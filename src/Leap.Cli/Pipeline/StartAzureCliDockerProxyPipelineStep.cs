@@ -114,7 +114,7 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
 
         this._environmentVariables.Configure(x =>
         {
-            x.Add(new EnvironmentVariable("IDENTITY_ENDPOINT", "http://host.docker.internal:" + proxyPort, EnvironmentVariableScope.Container));
+            x.Add(new EnvironmentVariable("IDENTITY_ENDPOINT", $"http://host.docker.internal:{proxyPort}/token", EnvironmentVariableScope.Container));
             x.Add(new EnvironmentVariable("IMDS_ENDPOINT", "dummy_required_value", EnvironmentVariableScope.Container));
         });
     }
