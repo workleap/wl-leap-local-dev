@@ -8,6 +8,8 @@ internal sealed class DockerRunner : Runner
 
     public int? HostPort { get; set; }
 
+    public DockerRunnerVolumeMapping[] Volumes { get; set; } = [];
+
     public override int? Port
     {
         get => this.HostPort;

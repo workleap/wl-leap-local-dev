@@ -18,4 +18,7 @@ internal sealed class DockerRunnerYaml : RunnerYaml, IHasProtocol
 
     [YamlMember(Alias = "protocol", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
     public string? Protocol { get; set; }
+
+    [YamlMember(Alias = "volumes", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
+    public DockerRunnerVolumeMappingYaml?[]? Volumes { get; set; }
 }

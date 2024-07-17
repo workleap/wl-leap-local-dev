@@ -5,13 +5,9 @@ using YamlDotNet.Serialization;
 
 namespace Leap.Cli.DockerCompose.Yaml;
 
-internal sealed class DockerComposeVolumeMappingYamlTypeConverter : IYamlTypeConverter
+internal sealed partial class DockerComposeVolumeMappingYamlTypeConverter : IYamlTypeConverter
 {
     public static readonly DockerComposeVolumeMappingYamlTypeConverter Instance = new();
-
-    private static readonly Regex PortMappingRegex = new Regex(
-        "^(?<src>[^:]+):(?<dst>[^:]+)(:(?<mode>(ro|rw)))?$",
-        RegexOptions.Compiled | RegexOptions.Singleline);
 
     private DockerComposeVolumeMappingYamlTypeConverter()
     {
@@ -26,7 +22,7 @@ internal sealed class DockerComposeVolumeMappingYamlTypeConverter : IYamlTypeCon
     {
         var scalar = parser.Consume<Scalar>();
 
-        if (PortMappingRegex.Match(scalar.Value) is { Success: true } match)
+        if (VolumeMappingRegex().Match(scalar.Value) is { Success: true } match)
         {
             return new DockerComposeVolumeMappingYaml
             {
@@ -44,4 +40,7 @@ internal sealed class DockerComposeVolumeMappingYamlTypeConverter : IYamlTypeCon
         var mapping = (DockerComposeVolumeMappingYaml)value!;
         emitter.Emit(new Scalar(AnchorName.Empty, TagName.Empty, $"{mapping.Source}:{mapping.Destination}:{mapping.Mode}", ScalarStyle.DoubleQuoted, isPlainImplicit: true, isQuotedImplicit: true));
     }
+
+    [GeneratedRegex("^(?<src>[^:]+):(?<dst>[^:]+)(:(?<mode>(ro|rw)))?$", RegexOptions.Compiled | RegexOptions.Singleline)]
+    private static partial Regex VolumeMappingRegex();
 }

@@ -36,296 +36,366 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
 
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
-        var leapConfigs = await this._leapYamlAccessor.GetAllAsync(cancellationToken);
+        var leapYamls = await this._leapYamlAccessor.GetAllAsync(cancellationToken);
 
-        foreach (var leapConfig in leapConfigs)
+        foreach (var leapYaml in leapYamls)
         {
-            if (leapConfig.Content.Services == null)
+            if (leapYaml.Content.Services == null)
             {
                 continue;
             }
 
-            // TODO this is an extremely ugly loop, do some refactoring
-            foreach (var (serviceName, serviceYaml) in leapConfig.Content.Services)
+            foreach (var (serviceName, serviceYaml) in leapYaml.Content.Services)
             {
                 if (string.IsNullOrWhiteSpace(serviceName))
                 {
-                    this._logger.LogWarning("A service is missing a name in the configuration file '{Path}' and will be ignored.", leapConfig.Path);
+                    this._logger.LogWarning("A service is missing a name in the configuration file '{Path}' and will be ignored.", leapYaml.Path);
                     continue;
                 }
 
                 if (serviceYaml == null)
                 {
-                    this._logger.LogWarning("A service '{Service}' does not have a definition in the configuration file '{Path}' and will be ignored.", serviceName, leapConfig.Path);
+                    this._logger.LogWarning("A service '{Service}' does not have a definition in the configuration file '{Path}' and will be ignored.", serviceName, leapYaml.Path);
                     continue;
                 }
 
-                // TODO validate the service name (format/convention TBD)
-                var service = new Service
+                var service = new ServiceYamlConverter(this._logger, this._portManager, leapYaml, serviceYaml).Convert(serviceName);
+
+                if (service != null && !state.Services.TryAdd(service.Name, service))
                 {
-                    Name = serviceName,
-                };
-
-                if (serviceYaml.Ingress is { } ingressYaml)
-                {
-                    if (ingressYaml.Host != null)
-                    {
-                        if (!SupportedWildcardLocalhostDomainNamesRegex.IsMatch(ingressYaml.Host))
-                        {
-                            this._logger.LogWarning(
-                                "A service '{Service}' has an invalid host '{Host}' in the configuration file '{Path}'. Host must match one of the supported wildcard domains '{WildcardDomains}', where '*' allows alphanumeric and hyphen characters. The service will be ignored.",
-                                serviceName, ingressYaml.Host, leapConfig.Path, string.Join(", ", Constants.SupportedWildcardLocalhostDomainNames));
-                            continue;
-                        }
-
-                        service.Ingress.Host = ingressYaml.Host;
-                    }
-
-                    if (ingressYaml.Port is { } port)
-                    {
-                        if (!this._portManager.TryRegisterPort(port, out var reason))
-                        {
-                            this._logger.LogWarning("A service '{Service}' has an invalid port '{Port}' in the configuration file '{Path}'. The port is {Reason}. The service will be ignored.", serviceName, port, leapConfig.Path, reason.Value.ToString());
-                            continue;
-                        }
-
-                        service.Ingress.ExternalPort = port;
-                    }
-
-                    // TODO validate is a valid URL path part
-                    if (ingressYaml.Path != null)
-                    {
-                        service.Ingress.Path = ingressYaml.Path;
-                    }
-                }
-
-                if (serviceYaml.EnvironmentVariables != null)
-                {
-                    foreach (var (key, value) in serviceYaml.EnvironmentVariables)
-                    {
-                        service.EnvironmentVariables[key] = value;
-                    }
-                }
-
-                // TODO for now we only support one runner per service
-                var runnerYaml = serviceYaml.Runners?.FirstOrDefault();
-                if (runnerYaml == null)
-                {
-                    this._logger.LogWarning("A service '{Service}' is missing a runner in the configuration file '{Path}' and will be ignored.", service.Name, leapConfig.Path);
-                    continue;
-                }
-
-                if (runnerYaml is IHasPort hasPortYaml)
-                {
-                    if (hasPortYaml.Port is { } port)
-                    {
-                        if (!this._portManager.TryRegisterPort(port, out var reason))
-                        {
-                            this._logger.LogWarning("A service '{Service}' contains a runner expected to launch and bind to an invalid port '{Port}' in the configuration file '{Path}'. The port is {Reason}. The service will be ignored.", serviceName, port, leapConfig.Path, reason.Value);
-                            continue;
-                        }
-                    }
-                }
-
-                if (runnerYaml is IHasProtocol hasProtocolYaml)
-                {
-                    if (string.IsNullOrWhiteSpace(hasProtocolYaml.Protocol))
-                    {
-                        hasProtocolYaml.Protocol = "http";
-                    }
-                    else if (!SupportedBackendProtocols.Contains(hasProtocolYaml.Protocol))
-                    {
-                        this._logger.LogWarning("A runner has an invalid protocol '{Protocol}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", hasProtocolYaml.Protocol, leapConfig.Path, service.Name);
-                        continue;
-                    }
-                }
-
-                if (runnerYaml is ExecutableRunnerYaml exeRunnerYaml)
-                {
-                    if (string.IsNullOrEmpty(exeRunnerYaml.Command))
-                    {
-                        this._logger.LogWarning("An executable runner is missing a command in the configuration file '{Path}'. The service '{Service}' will be ignored.", leapConfig.Path, service.Name);
-                        continue;
-                    }
-
-                    var arguments = new List<string>();
-
-                    if (exeRunnerYaml.Arguments != null)
-                    {
-                        foreach (var argument in exeRunnerYaml.Arguments)
-                        {
-                            if (string.IsNullOrEmpty(argument))
-                            {
-                                continue;
-                            }
-
-                            arguments.Add(argument);
-                        }
-                    }
-
-                    var workingDirectory = exeRunnerYaml.WorkingDirectory;
-                    if (workingDirectory == null)
-                    {
-                        this._logger.LogWarning("An executable runner is missing a working directory in the configuration file '{Path}'. The service '{Service}' will be ignored.", leapConfig.Path, service.Name);
-                        continue;
-                    }
-
-                    workingDirectory = EnsureAbsolutePath(workingDirectory, leapConfig);
-
-                    service.Runners.Add(new ExecutableRunner
-                    {
-                        Command = exeRunnerYaml.Command,
-                        Arguments = arguments.ToArray(),
-                        WorkingDirectory = workingDirectory,
-                        Port = exeRunnerYaml.Port,
-                        Protocol = exeRunnerYaml.Protocol,
-                    });
-                }
-                else if (runnerYaml is DockerRunnerYaml dockerRunnerYaml)
-                {
-                    var dockerImage = dockerRunnerYaml.Image;
-
-                    if (string.IsNullOrWhiteSpace(dockerImage))
-                    {
-                        this._logger.LogWarning("A Docker image is missing a path in the configuration file '{Path}'. The service '{Service}' will be ignored.", leapConfig.Path, service.Name);
-                        continue;
-                    }
-
-                    var containerPort = dockerRunnerYaml.ContainerPort;
-                    if (!containerPort.HasValue)
-                    {
-                        this._logger.LogWarning("A Docker image is missing a container port in the configuration file '{Path}'. The service '{Service}' will be ignored.", leapConfig.Path, service.Name);
-                        continue;
-                    }
-
-                    if (!this._portManager.IsPortInValidRange(containerPort.Value))
-                    {
-                        this._logger.LogWarning("A Docker image has an invalid container port '{Port}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", containerPort.Value, leapConfig.Path, service.Name);
-                        continue;
-                    }
-
-                    service.Runners.Add(new DockerRunner
-                    {
-                        Image = dockerImage,
-                        ContainerPort = containerPort.Value,
-                        HostPort = dockerRunnerYaml.HostPort,
-                        Protocol = dockerRunnerYaml.Protocol,
-                    });
-                }
-                else if (runnerYaml is DotnetRunnerYaml dotnetRunnerYaml)
-                {
-                    var projectPath = dotnetRunnerYaml.ProjectPath;
-
-                    if (string.IsNullOrWhiteSpace(projectPath))
-                    {
-                        this._logger.LogWarning("A .NET project runner is missing a project path in the configuration file '{Path}'. The service '{Service}' will be ignored.", leapConfig.Path, service.Name);
-                        continue;
-                    }
-
-                    projectPath = EnsureAbsolutePath(projectPath, leapConfig);
-
-                    service.Runners.Add(new DotnetRunner
-                    {
-                        ProjectPath = projectPath,
-                        Port = dotnetRunnerYaml.Port,
-                        Protocol = dotnetRunnerYaml.Protocol,
-                        Watch = dotnetRunnerYaml.Watch.GetValueOrDefault(true),
-                    });
-                }
-                else if (runnerYaml is OpenApiRunnerYaml openApiRunnerYaml)
-                {
-                    var specPathOrUrl = openApiRunnerYaml.Specification;
-
-                    if (string.IsNullOrEmpty(specPathOrUrl))
-                    {
-                        this._logger.LogWarning("An OpenAPI mock server runner is missing an OpenAPI specification path or URL in the configuration file '{Path}'. The service '{Service}' will be ignored.", leapConfig.Path, service.Name);
-                        continue;
-                    }
-
-                    var isUrl = false;
-                    if (Uri.TryCreate(specPathOrUrl, UriKind.Absolute, out var specUrl) && SupportedBackendProtocols.Contains(specUrl.Scheme))
-                    {
-                        var builder = new UriBuilder(specUrl);
-                        if (builder.Host.ToLowerInvariant() is "127.0.0.1" or "localhost")
-                        {
-                            // Prism OpenAPI mock server is running in a container and can only access the host through host.docker.internal
-                            builder.Host = "host.docker.internal";
-                            specPathOrUrl = builder.Uri.ToString();
-                        }
-
-                        isUrl = true;
-                    }
-                    else
-                    {
-                        specPathOrUrl = EnsureAbsolutePath(specPathOrUrl, leapConfig);
-
-                        if (!File.Exists(specPathOrUrl))
-                        {
-                            this._logger.LogWarning("An OpenAPI mock server runner is missing an OpenAPI specification '{Path}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", specPathOrUrl, leapConfig.Path, service.Name);
-                            continue;
-                        }
-                    }
-
-                    service.Runners.Add(new OpenApiRunner
-                    {
-                        Specification = specPathOrUrl,
-                        IsUrl = isUrl,
-                        Port = openApiRunnerYaml.Port,
-                        Protocol = "http",
-                    });
-                }
-                else if (runnerYaml is RemoteRunnerYaml remoteRunnerYaml)
-                {
-                    if (!Uri.TryCreate(remoteRunnerYaml.Url, UriKind.Absolute, out var url))
-                    {
-                        this._logger.LogWarning("A remote runner has an invalid URL '{Url}' in the configuration file '{Path}'. The service '{Service}' will be ignored.", remoteRunnerYaml.Url, leapConfig.Path, service.Name);
-                        continue;
-                    }
-
-                    service.Runners.Add(new RemoteRunner
-                    {
-                        Url = url.OriginalString,
-                        Port = url.Port,
-                    });
-                }
-                else
-                {
-                    this._logger.LogWarning("A service '{Service}' has an unknown runner type in the configuration file '{Path}'. The service will be ignored.", service.Name, leapConfig.Path);
-                    continue;
-                }
-
-                if (service.Runners.Count > 1)
-                {
-                    this._logger.LogWarning("A service '{Service}' has more than one runner in the configuration file '{Path}'. The '{RunnerKind}' runner will be used as it is the first declared.", service.Name, leapConfig.Path, service.Runners[0]);
-                }
-
-                service.ActiveRunner = service.Runners[0];
-
-                if (!state.Services.TryAdd(service.Name, service))
-                {
-                    this._logger.LogWarning("A service '{Service}' is defined multiple times in the configuration file '{Path}'. Only the first definition will be used.", service.Name, leapConfig.Path);
+                    this._logger.LogWarning("A service with the name '{Service}' is defined multiple times in the configuration file '{Path}'. Only the first definition will be used.", service.Name, leapYaml.Path);
                 }
             }
         }
-    }
-
-    private static string EnsureAbsolutePath(string path, LeapYamlFile config)
-    {
-        if (!Path.IsPathRooted(path))
-        {
-            path = Path.Combine(Path.GetDirectoryName(config.Path)!, path);
-        }
-
-        // Fix slashes
-        // Based on: https://github.com/dotnet/aspire/blob/v8.0.0-preview.2.23619.3/src/Aspire.Hosting/Utils/PathNormalizer.cs
-        path = path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
-        path = Path.GetFullPath(path);
-
-        return path;
     }
 
     public Task StopAsync(ApplicationState state, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
+
+    private sealed class ServiceYamlConverter(ILogger logger, IPortManager portManager, LeapYamlFile leapYaml, ServiceYaml serviceYaml)
+    {
+        public Service? Convert(string serviceName)
+        {
+            try
+            {
+                // TODO validate the service name (format/convention TBD)
+                var service = new Service
+                {
+                    Name = serviceName,
+                };
+
+                this.ConvertIngress(service);
+                this.ConvertEnvironmentVariables(service);
+                this.ConvertRunners(service);
+
+                return service;
+            }
+            catch (LeapYamlConversionException ex)
+            {
+                logger.LogWarning("{ConversionExceptionMessage}", ex.Message);
+            }
+
+            return null;
+        }
+
+        private void ConvertIngress(Service service)
+        {
+            if (serviceYaml.Ingress is { } ingressYaml)
+            {
+                this.ConvertIngressHost(service, ingressYaml);
+                this.ConvertIngressPort(service, ingressYaml);
+                this.ConvertIngressPath(service, ingressYaml);
+            }
+        }
+
+        private void ConvertIngressHost(Service service, IngressYaml ingressYaml)
+        {
+            if (ingressYaml.Host == null)
+            {
+                return;
+            }
+
+            if (!SupportedWildcardLocalhostDomainNamesRegex.IsMatch(ingressYaml.Host))
+            {
+                throw new LeapYamlConversionException($"A service '{service.Name}' has an invalid host '{ingressYaml.Host}' in the configuration file '{leapYaml.Path}'. Host must match one of the supported wildcard domains '{string.Join(", ", Constants.SupportedWildcardLocalhostDomainNames)}', where '*' allows alphanumeric and hyphen characters. The service will be ignored.");
+            }
+
+            service.Ingress.Host = ingressYaml.Host;
+        }
+
+        private void ConvertIngressPort(Service service, IngressYaml ingressYaml)
+        {
+            if (ingressYaml.Port is not { } port)
+            {
+                return;
+            }
+
+            if (!portManager.TryRegisterPort(port, out var reason))
+            {
+                throw new LeapYamlConversionException($"A service '{service.Name}' has an invalid port '{port}' in the configuration file '{leapYaml.Path}'. The port is {reason.Value}. The service will be ignored.");
+            }
+
+            service.Ingress.ExternalPort = port;
+        }
+
+        private void ConvertIngressPath(Service service, IngressYaml ingressYaml)
+        {
+            // TODO validate is a valid URL path part
+            if (ingressYaml.Path != null)
+            {
+                service.Ingress.Path = ingressYaml.Path;
+            }
+        }
+
+        private void ConvertEnvironmentVariables(Service service)
+        {
+            if (serviceYaml.EnvironmentVariables != null)
+            {
+                foreach (var (key, value) in serviceYaml.EnvironmentVariables)
+                {
+                    service.EnvironmentVariables[key] = value;
+                }
+            }
+        }
+
+        private void ConvertRunners(Service service)
+        {
+            // TODO for now we only support one runner per service
+            var runnerYaml = serviceYaml.Runners?.FirstOrDefault()
+                ?? throw new LeapYamlConversionException($"A service '{service.Name}' is missing a runner in the configuration file '{leapYaml.Path}' and will be ignored.");
+
+            this.ConvertRunnerProtocolAndPort(service, runnerYaml);
+
+            var runner = runnerYaml switch
+            {
+                ExecutableRunnerYaml exeRunnerYaml => this.ConvertExecutableRunner(service, exeRunnerYaml),
+                DockerRunnerYaml dockerRunnerYaml => this.ConvertDockerRunner(service, dockerRunnerYaml),
+                DotnetRunnerYaml dotnetRunnerYaml => this.ConvertDotnetRunner(service, dotnetRunnerYaml),
+                OpenApiRunnerYaml openApiRunnerYaml => this.ConvertOpenApiRunner(service, openApiRunnerYaml),
+                RemoteRunnerYaml remoteRunnerYaml => this.ConvertRemoteRunner(service, remoteRunnerYaml),
+                _ => throw new LeapYamlConversionException($"A service '{service.Name}' has an unknown runner type in the configuration file '{leapYaml.Path}'. The service will be ignored.")
+            };
+
+            service.Runners.Add(runner);
+
+            if (service.Runners.Count > 1)
+            {
+                logger.LogWarning("A service '{Service}' has more than one runner in the configuration file '{Path}'. The '{RunnerKind}' runner will be used as it is the first declared.", service.Name, leapYaml.Path, service.Runners[0]);
+            }
+
+            service.ActiveRunner = service.Runners[0];
+        }
+
+        private void ConvertRunnerProtocolAndPort(Service service, RunnerYaml runnerYaml)
+        {
+            if (runnerYaml is not IHasProtocol hasProtocolYaml)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(hasProtocolYaml.Protocol))
+            {
+                hasProtocolYaml.Protocol = "http";
+            }
+            else if (!SupportedBackendProtocols.Contains(hasProtocolYaml.Protocol))
+            {
+                throw new LeapYamlConversionException($"A runner has an invalid protocol '{hasProtocolYaml.Protocol}' in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
+            }
+
+            if (runnerYaml is IHasPort { Port: { } port } && !portManager.TryRegisterPort(port, out var reason))
+            {
+                throw new LeapYamlConversionException($"A service '{service.Name}' contains a runner expected to launch and bind to an invalid port '{port}' in the configuration file '{leapYaml.Path}'. The port is {reason.Value}. The service will be ignored.");
+            }
+        }
+
+        private Runner ConvertExecutableRunner(Service service, ExecutableRunnerYaml exeRunnerYaml)
+        {
+            if (string.IsNullOrEmpty(exeRunnerYaml.Command))
+            {
+                throw new LeapYamlConversionException($"An executable runner is missing a command in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
+            }
+
+            var arguments = new List<string>();
+
+            if (exeRunnerYaml.Arguments != null)
+            {
+                foreach (var argument in exeRunnerYaml.Arguments)
+                {
+                    if (string.IsNullOrEmpty(argument))
+                    {
+                        continue;
+                    }
+
+                    arguments.Add(argument);
+                }
+            }
+
+            var workingDirectory = exeRunnerYaml.WorkingDirectory
+                ?? throw new LeapYamlConversionException($"An executable runner is missing a working directory in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
+
+            workingDirectory = EnsureAbsolutePath(workingDirectory, leapYaml);
+
+            return new ExecutableRunner
+            {
+                Command = exeRunnerYaml.Command,
+                Arguments = [.. arguments],
+                WorkingDirectory = workingDirectory,
+                Port = exeRunnerYaml.Port,
+                Protocol = exeRunnerYaml.Protocol,
+            };
+        }
+
+        private Runner ConvertDockerRunner(Service service, DockerRunnerYaml dockerRunnerYaml)
+        {
+            var dockerImage = dockerRunnerYaml.Image;
+
+            if (string.IsNullOrWhiteSpace(dockerImage))
+            {
+                throw new LeapYamlConversionException($"A Docker image is missing a path in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
+            }
+
+            var containerPort = dockerRunnerYaml.ContainerPort;
+            if (!containerPort.HasValue)
+            {
+                throw new LeapYamlConversionException($"A Docker image is missing a container port in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
+            }
+
+            if (!portManager.IsPortInValidRange(containerPort.Value))
+            {
+                throw new LeapYamlConversionException($"A Docker image has an invalid container port '{containerPort.Value}' in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
+            }
+
+            var dockerVolumeMappings = new List<DockerRunnerVolumeMapping>();
+
+            foreach (var volumeYaml in dockerRunnerYaml.Volumes ?? [])
+            {
+                if (volumeYaml == null || string.IsNullOrWhiteSpace(volumeYaml.Source) || string.IsNullOrWhiteSpace(volumeYaml.Destination))
+                {
+                    throw new LeapYamlConversionException($"A Docker image has an invalid volume mapping in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
+                }
+
+                var sourcePath = EnsureAbsolutePath(volumeYaml.Source, leapYaml);
+                if (!File.Exists(sourcePath) && !Directory.Exists(sourcePath))
+                {
+                    throw new LeapYamlConversionException($"A Docker image has an invalid volume mapping source '{volumeYaml.Source}' in the configuration file '{leapYaml.Path}'. The mapping source must be an existing file or directory. The service '{service.Name}' will be ignored.");
+                }
+
+                var destinationPath = volumeYaml.Destination;
+                if (!Path.IsPathRooted(destinationPath))
+                {
+                    throw new LeapYamlConversionException($"A Docker image has an invalid volume mapping destination '{volumeYaml.Destination}' in the configuration file '{leapYaml.Path}'. It must be an absolute path. The service '{service.Name}' will be ignored.");
+                }
+
+                dockerVolumeMappings.Add(new DockerRunnerVolumeMapping(sourcePath, destinationPath));
+            }
+
+            return new DockerRunner
+            {
+                Image = dockerImage,
+                ContainerPort = containerPort.Value,
+                HostPort = dockerRunnerYaml.HostPort,
+                Protocol = dockerRunnerYaml.Protocol,
+                Volumes = [.. dockerVolumeMappings],
+            };
+        }
+
+        private Runner ConvertDotnetRunner(Service service, DotnetRunnerYaml dotnetRunnerYaml)
+        {
+            var projectPath = dotnetRunnerYaml.ProjectPath;
+
+            if (string.IsNullOrWhiteSpace(projectPath))
+            {
+                throw new LeapYamlConversionException($"A .NET project runner is missing a project path in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
+            }
+
+            projectPath = EnsureAbsolutePath(projectPath, leapYaml);
+
+            if (!File.Exists(projectPath))
+            {
+                throw new LeapYamlConversionException($"A .NET project runner references a project that does not exist at '{projectPath}' in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
+            }
+
+            return new DotnetRunner
+            {
+                ProjectPath = projectPath,
+                Port = dotnetRunnerYaml.Port,
+                Protocol = dotnetRunnerYaml.Protocol,
+                Watch = dotnetRunnerYaml.Watch.GetValueOrDefault(true),
+            };
+        }
+
+        private Runner ConvertOpenApiRunner(Service service, OpenApiRunnerYaml openApiRunnerYaml)
+        {
+            var specPathOrUrl = openApiRunnerYaml.Specification;
+
+            if (string.IsNullOrEmpty(specPathOrUrl))
+            {
+                throw new LeapYamlConversionException($"An OpenAPI mock server runner is missing an OpenAPI specification path or URL in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
+            }
+
+            var isUrl = false;
+            if (Uri.TryCreate(specPathOrUrl, UriKind.Absolute, out var specUrl) && SupportedBackendProtocols.Contains(specUrl.Scheme))
+            {
+                var builder = new UriBuilder(specUrl);
+                if (builder.Host.ToLowerInvariant() is "127.0.0.1" or "localhost")
+                {
+                    // Prism OpenAPI mock server is running in a container and can only access the host through host.docker.internal
+                    builder.Host = "host.docker.internal";
+                    specPathOrUrl = builder.Uri.ToString();
+                }
+
+                isUrl = true;
+            }
+            else
+            {
+                specPathOrUrl = EnsureAbsolutePath(specPathOrUrl, leapYaml);
+
+                if (!File.Exists(specPathOrUrl))
+                {
+                    throw new LeapYamlConversionException($"An OpenAPI mock server runner is missing an OpenAPI specification '{specPathOrUrl}' in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
+                }
+            }
+
+            return new OpenApiRunner
+            {
+                Specification = specPathOrUrl,
+                IsUrl = isUrl,
+                Port = openApiRunnerYaml.Port,
+                Protocol = "http",
+            };
+        }
+
+        private Runner ConvertRemoteRunner(Service service, RemoteRunnerYaml remoteRunnerYaml)
+        {
+            if (!Uri.TryCreate(remoteRunnerYaml.Url, UriKind.Absolute, out var url))
+            {
+                throw new LeapYamlConversionException($"A remote runner has an invalid URL '{remoteRunnerYaml.Url}' in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
+            }
+
+            return new RemoteRunner
+            {
+                Url = url.OriginalString,
+                Port = url.Port,
+            };
+        }
+
+        private static string EnsureAbsolutePath(string path, LeapYamlFile leapYaml)
+        {
+            if (!Path.IsPathRooted(path))
+            {
+                path = Path.Combine(Path.GetDirectoryName(leapYaml.Path)!, path);
+            }
+
+            // Fix slashes
+            // Based on: https://github.com/dotnet/aspire/blob/v8.0.0-preview.2.23619.3/src/Aspire.Hosting/Utils/PathNormalizer.cs
+            path = path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+            path = Path.GetFullPath(path);
+
+            return path;
+        }
+    }
+
+    private sealed class LeapYamlConversionException(string message) : Exception(message);
 }
