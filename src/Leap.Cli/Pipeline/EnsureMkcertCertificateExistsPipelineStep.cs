@@ -1,5 +1,6 @@
 ﻿using System.IO.Abstractions;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
 using CliWrap;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
@@ -12,7 +13,6 @@ namespace Leap.Cli.Pipeline;
 // as well as Google: https://web.dev/articles/how-to-use-local-https
 internal sealed class EnsureMkcertCertificateExistsPipelineStep : IPipelineStep
 {
-
     private readonly ICliWrap _cliWrap;
     private readonly IFileSystem _fileSystem;
     private readonly IPlatformHelper _platformHelper;
@@ -32,12 +32,16 @@ internal sealed class EnsureMkcertCertificateExistsPipelineStep : IPipelineStep
 
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
-        var certAlreadyExists = this._fileSystem.File.Exists(Constants.LocalCertificateCrtFilePath) && this._fileSystem.File.Exists(Constants.LocalCertificateKeyFilePath);
-        if (certAlreadyExists)
+        this.DeleteExistingCertificateWhenUpdateIsRequired();
+
+        var certificateAlreadyExists = this._fileSystem.File.Exists(Constants.LocalCertificateCrtFilePath) && this._fileSystem.File.Exists(Constants.LocalCertificateKeyFilePath);
+        if (certificateAlreadyExists)
         {
+            var homeDirectoryShorthand = this._platformHelper.CurrentOS == OSPlatform.Windows ? "%USERPROFILE%" : "~";
+
             this._logger.LogInformation("Local development certificate already exists. Use it for HTTPS in your services:");
-            this._logger.LogInformation(" - Certificate: {CertificateFilePath}", Constants.LocalCertificateCrtFilePath.Replace(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "~"));
-            this._logger.LogInformation(" - Private key: {PrivateKeyFilePath}", Constants.LocalCertificateKeyFilePath.Replace(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "~"));
+            this._logger.LogInformation(" - Certificate: {CertificateFilePath}", Constants.LocalCertificateCrtFilePath.Replace(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), homeDirectoryShorthand));
+            this._logger.LogInformation(" - Private key: {PrivateKeyFilePath}", Constants.LocalCertificateKeyFilePath.Replace(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), homeDirectoryShorthand));
 
             return;
         }
@@ -78,6 +82,66 @@ internal sealed class EnsureMkcertCertificateExistsPipelineStep : IPipelineStep
         }
 
         throw new LeapException("mkcert is required to create a local certificate, but it counldn't be found. Please install it manually: https://github.com/FiloSottile/mkcert");
+    }
+
+    private void DeleteExistingCertificateWhenUpdateIsRequired()
+    {
+        var existingCertificate = LoadExistingCertificate();
+        if (existingCertificate == null)
+        {
+            return;
+        }
+
+        List<string> notSupportedWildcardDomainNames = [];
+
+        foreach (var wildcardDomainName in Constants.SupportedWildcardLocalhostDomainNames)
+        {
+            var exampleDomainName = ConvertWildcardDomainToConcreteExample(wildcardDomainName);
+
+            if (!existingCertificate.MatchesHostname(exampleDomainName))
+            {
+                notSupportedWildcardDomainNames.Add(wildcardDomainName);
+            }
+        }
+
+        if (notSupportedWildcardDomainNames.Count > 0)
+        {
+            this._logger.LogDebug("The existing certificate must be recreated because it doesn't support the following domain names: {NotSupportedWildcardDomainNames}", string.Join(", ", notSupportedWildcardDomainNames));
+
+            try
+            {
+                File.Delete(Constants.LocalCertificateCrtFilePath);
+                File.Delete(Constants.LocalCertificateKeyFilePath);
+            }
+            catch (IOException ex)
+            {
+                throw new LeapException($"An error occured while deleting the existing local development certificate '{Constants.LocalCertificateCrtFilePath}' and its key '{Constants.LocalCertificateKeyFilePath}' in order to recreate it to support more domains: {ex.Message.TrimEnd('.')}. Please try to delete the files manually.", ex);
+            }
+        }
+    }
+
+    private static X509Certificate2? LoadExistingCertificate()
+    {
+        try
+        {
+            return X509Certificate2.CreateFromPemFile(Constants.LocalCertificateCrtFilePath, Constants.LocalCertificateKeyFilePath);
+        }
+        catch (FileNotFoundException)
+        {
+            // Expected when the certificate hasn't been created yet
+        }
+        catch (Exception ex)
+        {
+            throw new LeapException($"An error occured while loading the local development certificate '{Constants.LocalCertificateCrtFilePath}' and its key '{Constants.LocalCertificateKeyFilePath}': {ex.Message}", ex);
+        }
+
+        return null;
+    }
+
+    private static string ConvertWildcardDomainToConcreteExample(string domain)
+    {
+        const string wildcard = "*";
+        return domain.Replace(wildcard, "example");
     }
 
     private async Task<string?> FindMkcertExecutablePathInPathEnv(CancellationToken cancellationToken)

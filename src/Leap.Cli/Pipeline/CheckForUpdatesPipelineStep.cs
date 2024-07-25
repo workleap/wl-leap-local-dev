@@ -59,12 +59,14 @@ internal sealed class CheckForUpdatesPipelineStep(
                    ===============================================================
                    Update available: {currentVersion} -> {latestVersion}
                    Run: dotnet tool update {Constants.AzureDevOps.LeapNuGetPackageName} --global --interactive --add-source "{Constants.AzureDevOps.GSoftFeedUrl}" --verbosity minimal --no-cache
-                   ==============================================================
+                   ===============================================================
                    """;
                 logger.LogWarning("{UpdateInstructions}", updateInstructions.ReplaceLineEndings());
 
+#if !DEBUG
                 var acknowledgmentDelay = TimeSpan.FromSeconds(3);
                 await Task.Delay(acknowledgmentDelay, cancellationToken);
+#endif
             }
             else
             {

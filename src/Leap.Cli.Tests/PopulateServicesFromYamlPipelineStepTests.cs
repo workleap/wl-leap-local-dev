@@ -21,6 +21,11 @@ public class PopulateServicesFromYamlPipelineStepTests
     [InlineData("a-1-a.sharegate.localhost")]
     [InlineData("a-1-a.workleap.localhost")]
     [InlineData("my-super-api.workleap.localhost")]
+    [InlineData("a.officevibe.com")]
+    [InlineData("a.workleap.com")]
+    [InlineData("a.officevibe-dev.com")]
+    [InlineData("a.workleap-dev.com")]
+    [InlineData("a.workleap-local.com")]
     public void Valid_Localhost_Subdomain_Matches_Wildcard_Localhost_Domains_Regex(string host)
     {
         Assert.Matches(PopulateServicesFromYamlPipelineStep.SupportedWildcardLocalhostDomainNamesRegex, host);
@@ -31,9 +36,7 @@ public class PopulateServicesFromYamlPipelineStepTests
     [InlineData("localhost")]
     [InlineData("127.0.0.1")]
     [InlineData("a")]
-    [InlineData("a.officevibe.com")]
     [InlineData("a.sharegate.com")]
-    [InlineData("a.workleap.com")]
     [InlineData("-.officevibe.localhost")]
     [InlineData("-.sharegate.localhost")]
     [InlineData("-.workleap.localhost")]

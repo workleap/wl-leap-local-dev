@@ -30,6 +30,15 @@ internal static class Constants
         "*.officevibe.localhost",
         "*.sharegate.localhost",
         "*.workleap.localhost",
+
+        // The following domain names go against our recommendation to use "*.localhost": https://gsoftdev.atlassian.net/wiki/x/nAHL9w.
+        // We decided to allow them anyway to increase adoption in Officevibe and Workleap platform, as they are currently used in multiple places
+        // in their codebase and cannot easily be migrated to "*.localhost" without breaking their hybrid cloud cookie-based authentication.
+        "*.officevibe.com",
+        "*.workleap.com",
+        "*.officevibe-dev.com",
+        "*.workleap-dev.com",
+        "*.workleap-local.com",
     ];
 
     public static readonly string[] MkcertSupportedDomainNames =
