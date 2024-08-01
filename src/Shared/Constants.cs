@@ -39,6 +39,10 @@ internal static class Constants
         "*.officevibe-dev.com",
         "*.workleap-dev.com",
         "*.workleap-local.com",
+
+        // ShareGate recently adopted a centralized cookie like Officevibe and Workleap, so we need to allow these domains as well
+        // for them to do hybrid local/cloud cookie-based authentication.
+        "*.sharegate-dev.com",
     ];
 
     public static readonly string[] MkcertSupportedDomainNames =
