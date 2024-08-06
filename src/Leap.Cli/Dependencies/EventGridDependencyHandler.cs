@@ -1,4 +1,4 @@
-﻿using Leap.Cli.DockerCompose;
+using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
 using Microsoft.Extensions.Logging;
@@ -57,7 +57,7 @@ internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDe
     {
         var service = new DockerComposeServiceYaml
         {
-            Image = "workleap/eventgridemulator:0.3.0",
+            Image = "workleap/eventgridemulator:0.4.0",
             ContainerName = ContainerName,
             Restart = DockerComposeConstants.Restart.UnlessStopped,
             Ports = { new DockerComposePortMappingYaml(EventGridPort, EventGridPort) },
