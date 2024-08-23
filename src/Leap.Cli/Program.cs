@@ -122,6 +122,7 @@ builder.UseDependencyInjection((services, context) =>
         ServiceDescriptor.Singleton<IPipelineStep, EnsureLeapDirectoriesCreatedPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, BeginAspireDownloadTaskPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, EnsureMkcertCertificateExistsPipelineStep>(),
+        ServiceDescriptor.Singleton<IPipelineStep, CreateCertificateAuthorityBundlePipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, PopulateDependenciesFromYamlPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, PopulateServicesFromYamlPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, UpdateHostsFilePipelineStep>(),

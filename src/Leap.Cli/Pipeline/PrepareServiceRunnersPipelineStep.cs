@@ -118,6 +118,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         this._aspire.Builder
             .AddExecutable(service.Name, exeRunner.Command, exeRunner.WorkingDirectory, exeRunner.Arguments)
             .WithEndpoint(scheme: "http", port: service.Ingress.InternalPort)
+            .WithEnvironment("NODE_EXTRA_CA_CERTS", Constants.LeapCertificateAuthorityFilePath)
             .WithEnvironment(service.EnvironmentVariables)
             .WithOtlpExporter();
     }
@@ -128,7 +129,6 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         // Tag is set to null to prevent Aspire from adding latest (tag is already included in our image property)
         var builder = this._aspire.Builder.AddContainer(service.Name, dockerRunner.Image, tag: string.Empty)
 
-            // TODO tester docker containers avec aspire (networking)
             .WithEndpoint(scheme: "http", port: service.Ingress.InternalPort, targetPort: dockerRunner.ContainerPort)
             .WithEnvironment(service.EnvironmentVariables)
             .WithOtlpExporter();
@@ -137,6 +137,25 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         {
             builder.WithAnnotation(new ContainerMountAnnotation(source, destination, ContainerMountType.BindMount, isReadOnly: false));
         }
+
+        string[] wellKnownLinuxCertificateAuthorityBundlePaths =
+        [
+            // Copied from https://github.com/golang/go/blob/go1.23.0/src/crypto/x509/root_linux.go#L11-L16
+            "/etc/ssl/certs/ca-certificates.crt", // Debian/Ubuntu/Gentoo etc.
+            "/etc/pki/tls/certs/ca-bundle.crt", // Fedora/RHEL 6
+            "/etc/ssl/ca-bundle.pem", // OpenSUSE
+            "/etc/pki/tls/cacert.pem", // OpenELEC
+            "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem", // CentOS/RHEL 7
+            "/etc/ssl/cert.pem", // Alpine Linux
+        ];
+
+        // Replace the default container CA bundle with ours
+        foreach (var path in wellKnownLinuxCertificateAuthorityBundlePaths)
+        {
+            builder.WithAnnotation(new ContainerMountAnnotation(Constants.LeapCertificateAuthorityFilePath, path, ContainerMountType.BindMount, isReadOnly: true));
+        }
+
+        builder.WithEnvironment("NODE_EXTRA_CA_CERTS", wellKnownLinuxCertificateAuthorityBundlePaths[0]);
     }
 
     private void HandleDotnetRunner(Service service, DotnetRunner dotnetRunner)
