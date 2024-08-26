@@ -22,7 +22,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ConsoleExtensions = Leap.Cli.Platform.ConsoleExtensions;
 
-StartupDefaults.ClearConflictingEnvironmentVariables();
+StartupDefaults.SetEnvironmentVariables();
 StartupDefaults.SetInvariantCulture();
 StartupDefaults.SetUtf8Encoding();
 

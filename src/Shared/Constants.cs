@@ -15,8 +15,8 @@ internal static class Constants
     public const string LeapYamlFileName = "leap.yaml";
     public const string SecondaryLeapYamlFileName = "leap.yml";
 
-    private const string LeapCertificateCrtFileName = "workleap-dev-certificate.crt";
-    private const string LeapCertificateKeyFileName = "workleap-dev-certificate.key";
+    public const string LeapCertificateCrtFileName = "workleap-dev-certificate.crt";
+    public const string LeapCertificateKeyFileName = "workleap-dev-certificate.key";
     private const string LeapCertificateAuthorityFileName = "workleap-dev-certificate-ca.crt";
 
     public const string LeapDependencyAspireResourceType = "Leap dependency";

@@ -65,7 +65,11 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
                 "--queueHost", "0.0.0.0", "--queuePort", AzuriteConstants.QueuePort.ToString(),
                 "--tableHost", "0.0.0.0", "--tablePort", AzuriteConstants.TablePort.ToString(),
 
-                // We don't enable HTTPS because other Docker containers couldn't trust our certificate which only works on the host
+                // Enable HTTPS to support Azure SDKs with Azure.Identity (DefaultAzureCredential, etc.)
+                // https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite#https-setup
+                "--oauth", "basic",
+                "--cert", $"/cert/{Constants.LeapCertificateCrtFileName}",
+                "--key", $"/cert/{Constants.LeapCertificateKeyFileName}",
             },
             Restart = DockerComposeConstants.Restart.UnlessStopped,
             Ports =
@@ -101,18 +105,6 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
         // Do we want to add the environment variables after we verified that the instance is ready?
         environmentVariables.AddRange(new EnvironmentVariable[]
         {
-            // For projects using a custom global "Azure" configuration section, with subsections for each service
-            // These can be directly be bound to Azure SDK clients using Microsoft.Extensions.Azure
-            new("Azure__Storage__ConnectionString",        AzuriteConstants.HostConnectionString, EnvironmentVariableScope.Host),
-            new("Azure__Storage__Blob__ConnectionString",  AzuriteConstants.HostConnectionString, EnvironmentVariableScope.Host),
-            new("Azure__Storage__Queue__ConnectionString", AzuriteConstants.HostConnectionString, EnvironmentVariableScope.Host),
-            new("Azure__Storage__Table__ConnectionString", AzuriteConstants.HostConnectionString, EnvironmentVariableScope.Host),
-
-            new("Azure__Storage__ConnectionString",        AzuriteConstants.ContainerConnectionString, EnvironmentVariableScope.Container),
-            new("Azure__Storage__Blob__ConnectionString",  AzuriteConstants.ContainerConnectionString, EnvironmentVariableScope.Container),
-            new("Azure__Storage__Queue__ConnectionString", AzuriteConstants.ContainerConnectionString, EnvironmentVariableScope.Container),
-            new("Azure__Storage__Table__ConnectionString", AzuriteConstants.ContainerConnectionString, EnvironmentVariableScope.Container),
-
             // Alternative for projects using a service URI instead of a connection string, which should be the main way to configure Azure Storage (with managed identity)
             // The value can be replaced in non-local environments with the actual URI of an Azure Storage account resource with token credentials
             // Can also be bound to Azure SDK clients using Microsoft.Extensions.Azure because this lib will look for the "serviceUri" parameter name
@@ -128,11 +120,6 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
 
     private static void ConfigureAppSettingsJson(JsonObject appsettings)
     {
-        appsettings["Azure:Storage:ConnectionString"] = AzuriteConstants.HostConnectionString;
-        appsettings["Azure:Storage:Blob:ConnectionString"] = AzuriteConstants.HostConnectionString;
-        appsettings["Azure:Storage:Queue:ConnectionString"] = AzuriteConstants.HostConnectionString;
-        appsettings["Azure:Storage:Table:ConnectionString"] = AzuriteConstants.HostConnectionString;
-
         appsettings["Azure:Storage:Blob:ServiceUri"] = AzuriteConstants.HostBlobServiceUri;
         appsettings["Azure:Storage:Queue:ServiceUri"] = AzuriteConstants.HostQueueServiceUri;
         appsettings["Azure:Storage:Table:ServiceUri"] = AzuriteConstants.HostTableServiceUri;

@@ -1,109 +1,47 @@
-﻿using System.Globalization;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
-using System.Text;
-using System.Web;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Leap.Cli.Dependencies.Azurite;
 
 internal sealed class AzuriteAuthenticationHandler : DelegatingHandler
 {
+    private readonly string _accessToken;
+
+    public AzuriteAuthenticationHandler()
+    {
+        var utcNow = DateTime.UtcNow;
+
+        // Inspired from Azurite's HTTPS + OAuth tests:
+        // https://github.com/Azure/Azurite/blob/v3.31.0/tests/blob/oauth.test.ts#L57-L65
+        //
+        // > Azurite performs basic authentication, like validating the incoming bearer token, checking the issuer,
+        // > audience, and expiry. Azurite doesn't check the token signature or permissions.
+        // https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite#oauth-configuration
+        //
+        // Thanks to this, we can provide a randomly signed, valid token with a dummy issuer and valid audience.
+        // It replaces the need to use a real Azure identity (DefaultAzureCredential and other TokenCredential primitives).
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            NotBefore = utcNow,
+            IssuedAt = utcNow,
+            Expires = utcNow.AddYears(1),
+            Issuer = "https://sts.windows.net/00000000-0000-0000-0000-000000000000/", // Usually an Azure AD tenant ID
+            Audience = "https://storage.azure.com",
+            SigningCredentials = new SigningCredentials(
+                new SymmetricSecurityKey(RandomNumberGenerator.GetBytes(32)),
+                SecurityAlgorithms.HmacSha256),
+        };
+
+        var jwtSecurityTokenHandler = new JwtSecurityTokenHandler();
+        var token = jwtSecurityTokenHandler.CreateToken(tokenDescriptor);
+        this._accessToken = jwtSecurityTokenHandler.WriteToken(token);
+    }
+
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        Authenticate(request, AzuriteConstants.AccountName, AzuriteConstants.AccountKey);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", this._accessToken);
         return await base.SendAsync(request, cancellationToken);
-    }
-
-    // https://learn.microsoft.com/en-us/rest/api/storageservices/authorize-with-shared-key
-    private static void Authenticate(HttpRequestMessage request, string accountName, string accountKey)
-    {
-        var message = IsTableRequest(request, accountName)
-            ? BuildStringToSignForTableRequest(request, accountName)
-            : BuildStringToSignForBlobOrQueueRequest(request, accountName);
-
-        var messageBytes = Encoding.UTF8.GetBytes(message);
-
-        var signatureBytes = HMACSHA256.HashData(key: Convert.FromBase64String(accountKey), source: messageBytes);
-        var signature = Convert.ToBase64String(signatureBytes);
-
-        request.Headers.Authorization = new AuthenticationHeaderValue("SharedKey", accountName + ":" + signature);
-    }
-
-    private static bool IsTableRequest(HttpRequestMessage request, string accountName)
-    {
-        return request.RequestUri!.AbsolutePath.StartsWith("/" + accountName + "/Tables", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string BuildStringToSignForBlobOrQueueRequest(HttpRequestMessage request, string accountName)
-    {
-        var method = request.Method;
-        var contentEncoding = request.Content?.Headers.ContentEncoding?.ToString() ?? string.Empty;
-        var contentLanguage = request.Content?.Headers.ContentLanguage?.ToString() ?? string.Empty;
-        var contentLength = request.Content?.Headers.ContentLength?.ToString() ?? string.Empty;
-        var contentMd5 = request.Content?.Headers.ContentMD5?.ToString() ?? string.Empty;
-        var contentType = request.Content?.Headers.ContentType?.ToString() ?? string.Empty;
-        var date = request.Headers.Date?.ToString("R", CultureInfo.InvariantCulture) ?? string.Empty;
-        var ifModifiedSince = request.Headers.IfModifiedSince?.ToString() ?? string.Empty;
-        var ifMatch = request.Headers.IfMatch?.ToString() ?? string.Empty;
-        var ifNoneMatch = request.Headers.IfNoneMatch?.ToString() ?? string.Empty;
-        var ifUnmodifiedSince = request.Headers.IfUnmodifiedSince?.ToString() ?? string.Empty;
-        var canonicalizedMsHeaders = string.Empty;
-        var range = request.Headers.Range?.ToString() ?? string.Empty;
-
-        var sb = new StringBuilder();
-
-        sb.Append(method).Append('\n');
-        sb.Append(contentEncoding).Append('\n');
-        sb.Append(contentLanguage).Append('\n');
-        sb.Append(contentLength).Append('\n');
-        sb.Append(contentMd5).Append('\n');
-        sb.Append(contentType).Append('\n');
-        sb.Append(date).Append('\n');
-        sb.Append(ifModifiedSince).Append('\n');
-        sb.Append(ifMatch).Append('\n');
-        sb.Append(ifNoneMatch).Append('\n');
-        sb.Append(ifUnmodifiedSince).Append('\n');
-        sb.Append(range).Append('\n');
-        sb.Append(canonicalizedMsHeaders);
-
-        AppendCanonicalizedResource(sb, request.RequestUri!, accountName);
-
-        return sb.ToString();
-    }
-
-    private static string BuildStringToSignForTableRequest(HttpRequestMessage request, string accountName)
-    {
-        var method = request.Method;
-        var contentMd5 = request.Content?.Headers.ContentMD5?.ToString() ?? string.Empty;
-        var contentType = request.Content?.Headers.ContentType?.ToString() ?? string.Empty;
-        var date = request.Headers.Date?.ToString("R", CultureInfo.InvariantCulture) ?? string.Empty;
-
-        var sb = new StringBuilder();
-
-        sb.Append(method).Append('\n');
-        sb.Append(contentMd5).Append('\n');
-        sb.Append(contentType).Append('\n');
-        sb.Append(date).Append('\n');
-
-        AppendCanonicalizedResource(sb, request.RequestUri!, accountName);
-
-        return sb.ToString();
-    }
-
-    private static void AppendCanonicalizedResource(StringBuilder sb, Uri resource, string accountName)
-    {
-        sb.Append('/');
-        sb.Append(accountName);
-        sb.Append(resource.AbsolutePath.Length > 0 ? resource.AbsolutePath : "/");
-
-        var parameters = HttpUtility.ParseQueryString(resource.Query);
-
-        if (parameters.Count > 0)
-        {
-            foreach (var key in parameters.AllKeys.OrderBy(key => key, StringComparer.Ordinal))
-            {
-                sb.Append('\n').Append(key!.ToLowerInvariant()).Append(':').Append(parameters[key]);
-            }
-        }
     }
 }
