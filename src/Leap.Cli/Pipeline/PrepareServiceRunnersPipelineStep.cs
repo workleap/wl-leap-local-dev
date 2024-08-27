@@ -117,7 +117,8 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         // TODO shall we sanitize the name of the service? Get inspiration from Dapr
         this._aspire.Builder
             .AddExecutable(service.Name, exeRunner.Command, exeRunner.WorkingDirectory, exeRunner.Arguments)
-            .WithEndpoint(scheme: "http", port: service.Ingress.InternalPort)
+            .WithEndpoint(scheme: exeRunner.Protocol, port: service.Ingress.InternalPort, isProxied: false, env: "PORT")
+            .WithEnvironment("ASPNETCORE_URLS", exeRunner.Protocol + "://*:" + service.Ingress.InternalPort)
             .WithEnvironment("NODE_EXTRA_CA_CERTS", Constants.LeapCertificateAuthorityFilePath)
             .WithEnvironment(service.EnvironmentVariables)
             .WithOtlpExporter();
@@ -128,7 +129,6 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         // TODO shall we sanitize the name of the service?
         // Tag is set to null to prevent Aspire from adding latest (tag is already included in our image property)
         var builder = this._aspire.Builder.AddContainer(service.Name, dockerRunner.Image, tag: string.Empty)
-
             .WithEndpoint(scheme: "http", port: service.Ingress.InternalPort, targetPort: dockerRunner.ContainerPort)
             .WithEnvironment(service.EnvironmentVariables)
             .WithOtlpExporter();
@@ -171,7 +171,8 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         // TODO shall we sanitize the name of the service? Get inspiration from Dapr
         this._aspire.Builder
             .AddExecutable(service.Name, "dotnet", workingDirectoryPath!, dotnetRunArgs)
-            .WithEndpoint(scheme: "http", port: service.Ingress.InternalPort)
+            .WithEndpoint(scheme: dotnetRunner.Protocol, port: service.Ingress.InternalPort, isProxied: false, env: "PORT")
+            .WithEnvironment("ASPNETCORE_URLS", dotnetRunner.Protocol + "://*:" + service.Ingress.InternalPort)
             .WithEnvironment(service.EnvironmentVariables)
             .WithOtlpExporter();
     }

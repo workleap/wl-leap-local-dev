@@ -125,7 +125,6 @@ internal sealed class AspireManager : IAspireManager
 
         // TODO do we want to assign a well-known .NET Aspire port (same for the Aspire OTLP exporter port) instead of the default 18888 / 18889?
         // TODO do we want to proxy the Aspire dashboard URL to our YARP reverse proxy in order to have a nicer local domain URL?
-        this.Builder.Services.TryAddLifecycleHook<NetworkingEnvironmentVariablesLifecycleHook>();
         this.Builder.Services.TryAddLifecycleHook<UseLeapCertificateForAspireDashboardLifecycleHook>();
         this.Builder.Services.TryAddLifecycleHook<DetectDotnetBuildRaceConditionErrorLifecycleHook>();
 
