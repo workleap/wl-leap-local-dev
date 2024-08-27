@@ -60,7 +60,6 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         service.EnvironmentVariables.TryAdd("OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY", "in_memory");
         service.EnvironmentVariables.TryAdd("OTEL_DOTNET_EXPERIMENTAL_ASPNETCORE_DISABLE_URL_QUERY_REDACTION", "true");
         service.EnvironmentVariables.TryAdd("OTEL_DOTNET_EXPERIMENTAL_HTTPCLIENT_DISABLE_URL_QUERY_REDACTION", "true");
-        service.EnvironmentVariables.TryAdd("ASPNETCORE_FORWARDEDHEADERS_ENABLED", "true");
 
         // https://github.com/dotnet/aspire/blob/v8.0.1/src/Aspire.Hosting/Dashboard/ConsoleLogsConfigurationExtensions.cs#L19-L23
         service.EnvironmentVariables["DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION"] = "true";

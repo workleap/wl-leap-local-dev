@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Yarp.ReverseProxy.Configuration;
+using Yarp.ReverseProxy.Transforms;
 
 namespace Leap.Cli.Pipeline;
 
@@ -82,7 +83,6 @@ internal sealed class PrepareReverseProxyPipelineStep(IAspireManager aspireManag
                 List<ClusterConfig> clusters = [];
                 HashSet<UrlSnapshot> urls = [];
 
-                // TODO We would need to ensure there's no duplicate, overlapping paths, etc. early on
                 foreach (var (serviceName, service) in yarpResource.State.Services)
                 {
                     if (service.ActiveRunner is RemoteRunner)
@@ -104,7 +104,6 @@ internal sealed class PrepareReverseProxyPipelineStep(IAspireManager aspireManag
                     var routeId = "route_" + serviceName;
                     var clusterId = "cluster_" + serviceName;
 
-                    // TODO do we need as many clusters and routes?
                     var cluster = new ClusterConfig
                     {
                         ClusterId = clusterId,
@@ -123,10 +122,21 @@ internal sealed class PrepareReverseProxyPipelineStep(IAspireManager aspireManag
                         ClusterId = clusterId,
                         Match = new RouteMatch
                         {
-                            Path = "{**catch-all}", // TODO use specified ingress path
-                            Hosts = new[] { service.Ingress.Host! },
-                        },
+                            Path = $"{path.TrimEnd('/')}/{{**catch-all}}",
+                            Hosts = [host],
+                        }
                     };
+
+                    if (path != "/")
+                    {
+                        // Configure YARP to send X-Forwarded headers, including the original path prefix when it isn't the default "/"
+                        // By default, YARP would already send X-Forwarded-Host, X-Forwarded-Proto, and X-Forwarded-For headers
+                        // See: https://khalidabuhakmeh.com/sharing-auth-cookies-with-yarp-identityserver-and-aspnet-core#the-yarp-proxy-project
+                        // See also: https://microsoft.github.io/reverse-proxy/articles/transforms.html
+                        route = route.WithTransformPathRemovePrefix(path);
+                        route = route.WithTransformXForwarded(xPrefix: ForwardedTransformActions.Off);
+                        route = route.WithTransformRequestHeader("X-Forwarded-Prefix", path);
+                    }
 
                     clusters.Add(cluster);
                     routes.Add(route);

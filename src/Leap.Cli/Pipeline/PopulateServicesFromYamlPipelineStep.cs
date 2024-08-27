@@ -12,6 +12,9 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
 {
     private static readonly HashSet<string> SupportedBackendProtocols = new(["http", "https"], StringComparer.OrdinalIgnoreCase);
 
+    // Matches valid paths separated by a single slash with no trailing slashes. Ex: /foo/bar/fizz/buzz
+    private static readonly Regex ValidIngressPathPattern = new("^((/[a-zA-Z][a-zA-Z0-9-_]*)+|/)$");
+
     // Validates that user-defined hosts match one of the supported wildcard domains of our certificate,
     // and only allow 3-parts subdomains (ex: foo.workleap.localhost) as a wildcard (*) does not allow dots.
     internal static readonly Regex SupportedWildcardLocalhostDomainNamesRegex = new(
@@ -81,10 +84,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
             try
             {
                 // TODO validate the service name (format/convention TBD)
-                var service = new Service
-                {
-                    Name = serviceName,
-                };
+                var service = new Service { Name = serviceName, };
 
                 this.ConvertIngress(service);
                 this.ConvertEnvironmentVariables(service);
@@ -142,10 +142,19 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
 
         private void ConvertIngressPath(Service service, IngressYaml ingressYaml)
         {
-            // TODO validate is a valid URL path part
-            if (ingressYaml.Path != null)
+            if (ingressYaml.Path == null)
+            {
+                return;
+            }
+
+            var match = ValidIngressPathPattern.Match(ingressYaml.Path);
+            if (match.Success)
             {
                 service.Ingress.Path = ingressYaml.Path;
+            }
+            else
+            {
+                throw new LeapYamlConversionException($"A service '{service.Name}' has a malformed ingress path: '{ingressYaml.Path}' in the configuration file '{leapYaml.Path}'. The service will be ignored.");
             }
         }
 
@@ -164,7 +173,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
         {
             // TODO for now we only support one runner per service
             var runnerYaml = serviceYaml.Runners?.FirstOrDefault()
-                ?? throw new LeapYamlConversionException($"A service '{service.Name}' is missing a runner in the configuration file '{leapYaml.Path}' and will be ignored.");
+                             ?? throw new LeapYamlConversionException($"A service '{service.Name}' is missing a runner in the configuration file '{leapYaml.Path}' and will be ignored.");
 
             this.ConvertRunnerProtocolAndPort(service, runnerYaml);
 
@@ -233,7 +242,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
             }
 
             var workingDirectory = exeRunnerYaml.WorkingDirectory
-                ?? throw new LeapYamlConversionException($"An executable runner is missing a working directory in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
+                                   ?? throw new LeapYamlConversionException($"An executable runner is missing a working directory in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
 
             workingDirectory = EnsureAbsolutePath(workingDirectory, leapYaml);
 
