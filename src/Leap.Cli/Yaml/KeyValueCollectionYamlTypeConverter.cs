@@ -31,7 +31,7 @@ internal sealed class KeyValueCollectionYamlTypeConverter : IYamlTypeConverter
         return type == typeof(KeyValueCollectionYaml);
     }
 
-    public object ReadYaml(IParser parser, Type type)
+    public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
     {
         if (parser.TryConsume<MappingStart>(out _))
         {
@@ -81,7 +81,7 @@ internal sealed class KeyValueCollectionYamlTypeConverter : IYamlTypeConverter
         return keyValueCollection;
     }
 
-    public void WriteYaml(IEmitter emitter, object? value, Type type)
+    public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer)
     {
         var entries = (KeyValueCollectionYaml)value!;
 

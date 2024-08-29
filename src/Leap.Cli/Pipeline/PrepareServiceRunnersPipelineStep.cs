@@ -128,7 +128,9 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         // TODO shall we sanitize the name of the service?
         // Tag is set to null to prevent Aspire from adding latest (tag is already included in our image property)
         var builder = this._aspire.Builder.AddContainer(service.Name, dockerRunner.Image, tag: string.Empty)
-            .WithEndpoint(scheme: "http", port: service.Ingress.InternalPort, targetPort: dockerRunner.ContainerPort)
+            .WithEndpoint(scheme: dockerRunner.Protocol, port: service.Ingress.InternalPort, targetPort: dockerRunner.ContainerPort)
+            .WithEnvironment("ASPNETCORE_URLS", dockerRunner.Protocol + "://*:" + dockerRunner.ContainerPort)
+            .WithEnvironment("PORT", dockerRunner.ContainerPort.ToString())
             .WithEnvironment(service.EnvironmentVariables)
             .WithOtlpExporter();
 
