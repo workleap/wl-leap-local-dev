@@ -12,13 +12,19 @@ trigger: none
 pool:
   vmImage: ubuntu-latest
 
-steps:
-  - bash: npx renovate --token $(System.AccessToken)
-    env:
-      RENOVATE_CONFIG_FILE: $(Build.SourcesDirectory)/renovate.json
-      LOG_LEVEL: debug
+resources:
+  repositories:
+    - repository: self
+      type: git
+    - repository: templates
+      type: git
+      name: Shared-Assets/Pipeline-Library
+      ref: refs/tags/1.2.7
 
-      # Authenticate against our Azure DevOps private feeds
-      RENOVATE_DETECT_HOST_RULES_FROM_ENV: true
-      NUGET_PKGS_DEV_AZURE_COM_USERNAME: optional
-      NUGET_PKGS_DEV_AZURE_COM_PASSWORD: $(System.AccessToken)
+variables:
+  - group: renovate
+
+steps:
+  - template: steps/renovate/renovate-template.yml@templates
+    parameters:
+      githubToken: $(GITHUB_COM_TOKEN)

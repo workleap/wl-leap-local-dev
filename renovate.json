@@ -1,51 +1,14 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "platform": "azure",
-  "labels": ["renovate"],
-  "extends": [
-    "config:base",
-    ":rebaseStalePrs"
-  ],
-  "enabledManagers": [
-    "azure-pipelines",
-    "nuget",
-    "custom.regex"
-  ],
   "endpoint": "https://dev.azure.com/gsoft",
   "repositories": [
     "Shared-Assets/Leap"
   ],
-  "stabilityDays": 3,
-  "prHourlyLimit": 0,
-  "prConcurrentLimit": 0,
-  "branchConcurrentLimit": 0,
-  "dependencyDashboard": false,
-  "gitAuthor": "Renovate Bot <bot@renovateapp.com>",
-  "packageRules": [
-    {
-      "matchManagers": ["nuget"],
-      "groupName": "NuGet dependencies"
-    },
-    {
-      "matchManagers": ["nuget"],
-      "matchPackagePatterns": [
-        "^Microsoft\\.Extensions\\."
-      ],
-      "groupName": "NuGet .NET runtime libraries dependencies",
-      "description": "These packages are usually bound to a specific major .NET framework version manually managed in the csproj file.",
-      "extends": [":disableMajorUpdates"]
-    },
-    {
-      "matchPackageNames": ["dotnet-sdk"],
-      "groupName": "Dotnet SDK",
-      "description": "Only update patch and minor for the dotnet SDK version within the global.json",
-      "extends": [":disableMajorUpdates"]
-    },
-    {
-      "matchManagers": ["azure-pipelines"],
-      "groupName": "Pipeline dependencies"
-    }
+  "extends": [
+      "github>gsoft-inc/renovate-config"
   ],
+  
   "customManagers": [
     {
       "description": "Workleap Event Grid emulator",
@@ -58,9 +21,5 @@
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"
     }
-  ],
-  "vulnerabilityAlerts": {
-    "enabled": true,
-    "labels": ["security"]
-  }
+  ]
 }
