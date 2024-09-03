@@ -27,13 +27,13 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
     {
         foreach (var service in state.Services.Values)
         {
-            this.PrepareService(service, cancellationToken);
+            this.PrepareService(state, service, cancellationToken);
         }
 
         return Task.CompletedTask;
     }
 
-    private void PrepareService(Service service, CancellationToken cancellationToken)
+    private void PrepareService(ApplicationState state, Service service, CancellationToken cancellationToken)
     {
         var runner = service.ActiveRunner;
 
@@ -70,13 +70,13 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
                 this.HandleExecutableRunner(service, exeRunner);
                 break;
             case DockerRunner dockerRunner:
-                this.HandleDockerRunner(service, dockerRunner);
+                this.HandleDockerRunner(state, service, dockerRunner);
                 break;
             case DotnetRunner dotnetRunner:
                 this.HandleDotnetRunner(service, dotnetRunner);
                 break;
             case OpenApiRunner openApiRunner:
-                this.HandleOpenApiRunner(service, openApiRunner);
+                this.HandleOpenApiRunner(state, service, openApiRunner);
                 break;
         }
 
@@ -114,13 +114,14 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
             .WithOtlpExporter();
     }
 
-    private void HandleDockerRunner(Service service, DockerRunner dockerRunner)
+    private void HandleDockerRunner(ApplicationState state, Service service, DockerRunner dockerRunner)
     {
         // TODO shall we sanitize the name of the service?
         var builder = this._aspire.Builder.AddContainer(service.Name, dockerRunner.ImageAndTag, tag: string.Empty)
             .WithEndpoint(scheme: dockerRunner.Protocol, port: service.Ingress.LocalhostPort, targetPort: dockerRunner.ContainerPort)
             .WithEnvironment("ASPNETCORE_URLS", dockerRunner.Protocol + "://*:" + dockerRunner.ContainerPort)
             .WithEnvironment("PORT", dockerRunner.ContainerPort.ToString())
+            .WithContainerRuntimeArgs([.. GetDockerExtraHostsArgs(state)])
             .WithOtlpExporter();
 
         foreach (var (source, destination) in dockerRunner.Volumes)
@@ -166,6 +167,24 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         builder.WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables());
     }
 
+    private static IEnumerable<string> GetDockerExtraHostsArgs(ApplicationState state)
+    {
+        yield return "--add-host";
+        yield return "host.docker.internal:host-gateway";
+
+        var uniqueCustomHosts = state.Services.Values
+            .Select(x => x.Ingress.Host)
+            .Where(x => !x.IsLocalhost)
+            .Select(x => x.ToString())
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var host in uniqueCustomHosts)
+        {
+            yield return "--add-host";
+            yield return host + ":host-gateway";
+        }
+    }
+
     private void HandleDotnetRunner(Service service, DotnetRunner dotnetRunner)
     {
         var workingDirectoryPath = Path.GetDirectoryName(dotnetRunner.ProjectPath)!;
@@ -193,7 +212,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
             .WithOtlpExporter();
     }
 
-    private void HandleOpenApiRunner(Service service, OpenApiRunner openApiRunner)
+    private void HandleOpenApiRunner(ApplicationState state, Service service, OpenApiRunner openApiRunner)
     {
         // See:
         // https://github.com/stoplightio/prism/blob/v5.5.4/docs/getting-started/01-installation.md#docker
@@ -202,7 +221,8 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
 
         // TODO shall we sanitize the name of the service?
         var builder = this._aspire.Builder.AddContainer(service.Name, "stoplight/prism", tag: "5")
-            .WithEndpoint(scheme: "http", port: service.Ingress.LocalhostPort, targetPort: prismContainerPort);
+            .WithEndpoint(scheme: "http", port: service.Ingress.LocalhostPort, targetPort: prismContainerPort)
+            .WithContainerRuntimeArgs([.. GetDockerExtraHostsArgs(state)]);
 
         if (openApiRunner.IsUrl)
         {
