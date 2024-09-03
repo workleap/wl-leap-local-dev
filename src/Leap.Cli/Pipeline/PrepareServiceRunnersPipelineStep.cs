@@ -119,6 +119,14 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
             .WithEndpoint(scheme: exeRunner.Protocol, port: service.Ingress.InternalPort, isProxied: false, env: "PORT")
             .WithEnvironment("ASPNETCORE_URLS", exeRunner.Protocol + "://*:" + service.Ingress.InternalPort)
             .WithEnvironment("NODE_EXTRA_CA_CERTS", Constants.LeapCertificateAuthorityFilePath)
+            .WithEnvironment(context =>
+            {
+                if ("https".Equals(exeRunner.Protocol, StringComparison.OrdinalIgnoreCase))
+                {
+                    context.EnvironmentVariables["ASPNETCORE_Kestrel__Certificates__Default__Path"] = Constants.LocalCertificateCrtFilePath;
+                    context.EnvironmentVariables["ASPNETCORE_Kestrel__Certificates__Default__KeyPath"] = Constants.LocalCertificateKeyFilePath;
+                }
+            })
             .WithEnvironment(service.EnvironmentVariables)
             .WithOtlpExporter();
     }
@@ -131,7 +139,6 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
             .WithEndpoint(scheme: dockerRunner.Protocol, port: service.Ingress.InternalPort, targetPort: dockerRunner.ContainerPort)
             .WithEnvironment("ASPNETCORE_URLS", dockerRunner.Protocol + "://*:" + dockerRunner.ContainerPort)
             .WithEnvironment("PORT", dockerRunner.ContainerPort.ToString())
-            .WithEnvironment(service.EnvironmentVariables)
             .WithOtlpExporter();
 
         foreach (var (source, destination) in dockerRunner.Volumes)
@@ -157,6 +164,24 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         }
 
         builder.WithEnvironment("NODE_EXTRA_CA_CERTS", wellKnownLinuxCertificateAuthorityBundlePaths[0]);
+
+        if ("https".Equals(dockerRunner.Protocol, StringComparison.OrdinalIgnoreCase))
+        {
+            var randomContainerCrtPath = $"/etc/ssl/leap-{Guid.NewGuid()}.crt";
+            var randomContainerKeyPath = $"/etc/ssl/leap-{Guid.NewGuid()}.key";
+
+            builder.WithAnnotation(new ContainerMountAnnotation(Constants.LocalCertificateCrtFilePath, randomContainerCrtPath, ContainerMountType.BindMount, isReadOnly: true));
+            builder.WithAnnotation(new ContainerMountAnnotation(Constants.LocalCertificateKeyFilePath, randomContainerKeyPath, ContainerMountType.BindMount, isReadOnly: true));
+
+            builder.WithEnvironment(context =>
+            {
+                context.EnvironmentVariables["ASPNETCORE_Kestrel__Certificates__Default__Path"] = randomContainerCrtPath;
+                context.EnvironmentVariables["ASPNETCORE_Kestrel__Certificates__Default__KeyPath"] = randomContainerKeyPath;
+            });
+        }
+
+        // User-defined environment variables are last so they can override ours if required
+        builder.WithEnvironment(service.EnvironmentVariables);
     }
 
     private void HandleDotnetRunner(Service service, DotnetRunner dotnetRunner)
@@ -174,6 +199,14 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
             .AddExecutable(service.Name, "dotnet", workingDirectoryPath!, dotnetRunArgs)
             .WithEndpoint(scheme: dotnetRunner.Protocol, port: service.Ingress.InternalPort, isProxied: false, env: "PORT")
             .WithEnvironment("ASPNETCORE_URLS", dotnetRunner.Protocol + "://*:" + service.Ingress.InternalPort)
+            .WithEnvironment(context =>
+            {
+                if ("https".Equals(dotnetRunner.Protocol, StringComparison.OrdinalIgnoreCase))
+                {
+                    context.EnvironmentVariables["ASPNETCORE_Kestrel__Certificates__Default__Path"] = Constants.LocalCertificateCrtFilePath;
+                    context.EnvironmentVariables["ASPNETCORE_Kestrel__Certificates__Default__KeyPath"] = Constants.LocalCertificateKeyFilePath;
+                }
+            })
             .WithEnvironment(service.EnvironmentVariables)
             .WithOtlpExporter();
     }
