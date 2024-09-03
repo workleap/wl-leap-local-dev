@@ -1,26 +1,26 @@
-# Leap
+# Leap local dev
 
 [![nuget](https://feeds.dev.azure.com/gsoft/_apis/public/Packaging/Feeds/gsoft/Packages/7e26c0cd-3179-49c3-a3a7-e92df061eee5/Badge)](https://dev.azure.com/gsoft/Shared-Assets/_artifacts/feed/gsoft/NuGet/Workleap.Leap)
 [![build](https://dev.azure.com/gsoft/Shared-Assets/_apis/build/status%2FLeap%2FLeap%20Publish?branchName=main)](https://dev.azure.com/gsoft/Shared-Assets/_build/latest?definitionId=219&branchName=main)
 
-## Introduction
+User documentation is [available on Confluence](https://gsoftdev.atlassian.net/wiki/x/dIDh4Q). This README is for developers working on Leap local dev.
 
-Leap, which stands for _Local Environment Application Proxy_, is a custom made command-line which streamline our local development process by introducing service discovery, better dependency management, efficient resource allocation and a standardized configuration.
+## Requirements
 
-## Getting Started
+Install the .NET SDK specified in the `global.json` file.
 
-You first need to install the Leap CLI. This can be done by running the following command in a terminal:
+Leap local dev uses [.NET Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/get-started/aspire-overview) for orchestration and its dashboard. Install the required .NET Aspire workload version with the command below. It matches the [Aspire.Hosting.AppHost](https://www.nuget.org/packages/Aspire.Hosting.AppHost) package version used in the project.
 
-```powershell
-dotnet tool update Workleap.Leap --global --interactive --add-source "https://pkgs.dev.azure.com/gsoft/_packaging/gsoft/nuget/v3/index.json" --verbosity minimal --no-cache
+```bash
+dotnet workload update --from-rollback-file ./rollback.json
 ```
 
-# Build and Test
+We use a [.NET workload rollback file](https://github.com/dotnet/aspire/discussions/2230#discussioncomment-8496035) to ensure the correct version is installed. The `rollback.json` is maintained by Renovate. We do not use [workload sets](https://github.com/dotnet/aspire/issues/5501) as they do not clearly specify the installed .NET Aspire workload version.
 
-The project can be built by running `Build.ps1`, which will produce a NuGet package in the `.output` folder.
+## Build and test
 
-We use [GitVersion](https://gitversion.net/) to determine the version number of the NuGet package. This means that the version number is automatically determined based on the commit history and tags.
+- Run `Build.ps1` to build the project and generate a NuGet package in the `.output` folder. [GitVersion](https://gitversion.net/) determines the NuGet package version based on commit history and tags.
 
-Preview packages are published on the main branch as well as on pull requests. Stable builds can be published by creating a tag with the format `x.y.z` (e.g. `1.0.0`).
+- Run `BuildAndInstall.ps1` to build and install the package locally from your current directory. It will replace any existing version of the tool.
 
-Run `Install.ps1` to install the package locally from your current working directory.
+- Preview packages are published on the main branch ([gsoft feed](https://dev.azure.com/gsoft/Shared-Assets/_artifacts/feed/gsoft/NuGet/Workleap.Leap/)) and pull requests ([gsoftdev feed](https://dev.azure.com/gsoft/Shared-Assets/_artifacts/feed/gsoftdev/NuGet/Workleap.Leap/)). Create a tag in the format `x.y.z` (e.g., `1.0.0`) to publish a stable build.

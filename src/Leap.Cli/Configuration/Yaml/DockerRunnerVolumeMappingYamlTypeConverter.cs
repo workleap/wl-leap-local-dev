@@ -18,7 +18,7 @@ internal sealed partial class DockerRunnerVolumeMappingYamlTypeConverter : IYaml
         return type == typeof(DockerRunnerVolumeMappingYaml);
     }
 
-    public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
+    public object ReadYaml(IParser parser, Type type)
     {
         var scalar = parser.Consume<Scalar>();
 
@@ -34,7 +34,7 @@ internal sealed partial class DockerRunnerVolumeMappingYamlTypeConverter : IYaml
         throw new InvalidOperationException("Invalid volume mapping: " + scalar.Value);
     }
 
-    public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer)
+    public void WriteYaml(IEmitter emitter, object? value, Type type)
     {
         var mapping = (DockerRunnerVolumeMappingYaml)value!;
         emitter.Emit(new Scalar(AnchorName.Empty, TagName.Empty, $"{mapping.Source}:{mapping.Destination}", ScalarStyle.DoubleQuoted, isPlainImplicit: true, isQuotedImplicit: true));

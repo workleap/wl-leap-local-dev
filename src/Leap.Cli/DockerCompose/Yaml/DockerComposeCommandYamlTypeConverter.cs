@@ -17,7 +17,7 @@ internal sealed class DockerComposeCommandYamlTypeConverter : IYamlTypeConverter
         return type == typeof(DockerComposeCommandYaml);
     }
 
-    public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
+    public object ReadYaml(IParser parser, Type type)
     {
         _ = parser.Consume<SequenceStart>();
         var command = new DockerComposeCommandYaml();
@@ -32,7 +32,7 @@ internal sealed class DockerComposeCommandYamlTypeConverter : IYamlTypeConverter
         return command;
     }
 
-    public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer)
+    public void WriteYaml(IEmitter emitter, object? value, Type type)
     {
         var command = (DockerComposeCommandYaml)value!;
 

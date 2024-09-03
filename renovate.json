@@ -8,7 +8,6 @@
   "extends": [
       "github>gsoft-inc/renovate-config"
   ],
-  
   "customManagers": [
     {
       "description": "Workleap Event Grid emulator",
@@ -20,6 +19,25 @@
       ],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"
+    },
+    {
+      "description": ".NET Aspire workload rollback file (https://github.com/dotnet/aspire/discussions/2230)",
+      "customType": "regex",
+      "fileMatch": ["^rollback.json$"],
+      "matchStringsStrategy": "any",
+      "matchStrings": [
+        "\"microsoft.net.sdk.aspire\":\\s*\"(?<currentValue>[^/]+)/[^\"]+\""
+      ],
+      "datasourceTemplate": "nuget",
+      "versioningTemplate": "nuget",
+      "depNameTemplate": "Aspire.Hosting.AppHost"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": ".NET Aspire 8.2.0 introduced a regression (https://github.com/dotnet/aspire/issues/5490)",
+      "matchPackageNames": ["Aspire.Hosting.AppHost"],
+      "allowedVersions": "!/^8\\.2\\.0$/"
     }
   ]
 }

@@ -1,4 +1,6 @@
+#pragma warning disable IDE0130
 namespace Microsoft.Extensions.Hosting;
+#pragma warning restore IDE0130
 
 public static class LeapHostEnvironmentExtensions
 {

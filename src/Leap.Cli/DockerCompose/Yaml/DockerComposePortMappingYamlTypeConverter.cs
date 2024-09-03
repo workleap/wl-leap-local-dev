@@ -27,7 +27,7 @@ internal sealed class DockerComposePortMappingYamlTypeConverter : IYamlTypeConve
         return type == typeof(DockerComposePortMappingYaml);
     }
 
-    public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
+    public object ReadYaml(IParser parser, Type type)
     {
         var scalar = parser.Consume<Scalar>();
 
@@ -48,7 +48,7 @@ internal sealed class DockerComposePortMappingYamlTypeConverter : IYamlTypeConve
         throw new InvalidOperationException("Invalid port mapping: " + scalar.Value);
     }
 
-    public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer)
+    public void WriteYaml(IEmitter emitter, object? value, Type type)
     {
         var mapping = (DockerComposePortMappingYaml)value!;
         var mappingStr = mapping.Host.Length > 0 ? $"{mapping.Host}:{mapping.HostPort}:{mapping.ContainerPort}" : $"{mapping.HostPort}:{mapping.ContainerPort}";
