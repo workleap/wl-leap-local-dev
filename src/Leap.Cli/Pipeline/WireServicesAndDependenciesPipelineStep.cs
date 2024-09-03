@@ -34,7 +34,7 @@ internal sealed class WireServicesAndDependenciesPipelineStep(
         }
 
         // Allow dependencies running in Docker Compose to reach custom services using *.localhost domains
-        var serviceIngressHosts = state.Services.Values.Select(x => x.Ingress.Host).OfType<string>();
+        var serviceIngressHosts = state.Services.Values.Select(x => x.Ingress.Host).Where(x => !x.IsLocalhost);
         var dockerComposeExtraHosts = serviceIngressHosts.Select(host => $"{host}:host-gateway").ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var dockerComposeServiceYaml in configureDockerCompose.Configuration.Services.Values)

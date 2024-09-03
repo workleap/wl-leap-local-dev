@@ -2,11 +2,11 @@
 
 internal sealed class Ingress
 {
-    public string? Host { get; set; }
+    public const string DefaultPath = "/";
 
-    public int? InternalPort { get; set; }
+    public IngressHost Host { get; set; } = IngressHost.Localhost;
 
-    public int? ExternalPort { get; set; }
+    public int LocalhostPort { get; set; }
 
-    public string? Path { get; set; }
+    public string Path { get; set; } = DefaultPath;
 }

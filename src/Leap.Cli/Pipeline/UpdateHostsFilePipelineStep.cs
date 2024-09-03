@@ -29,7 +29,10 @@ internal sealed class UpdateHostsFilePipelineStep : IPipelineStep
             return;
         }
 
-        var requiredHostnames = state.Services.Values.Select(x => x.Ingress.Host).OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var requiredHostnames = state.Services.Values
+            .Where(x => !x.Ingress.Host.IsLocalhost)
+            .Select(x => x.Ingress.Host.ToString())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var missingHostnames = requiredHostnames.Except(existingHostnames, StringComparer.OrdinalIgnoreCase).ToArray();
         if (missingHostnames.Length == 0)

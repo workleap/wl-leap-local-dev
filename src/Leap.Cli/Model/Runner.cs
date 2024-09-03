@@ -2,9 +2,9 @@
 
 internal abstract class Runner
 {
-    public abstract int? Port { get; set; }
+    public int? Port { get; set; }
 
-    public string? Protocol { get; set; }
+    public string Protocol { get; set; } = "http";
 
     public Dictionary<string, string> EnvironmentVariables { get; } = new(StringComparer.OrdinalIgnoreCase);
 

@@ -2,11 +2,9 @@
 
 internal sealed class ExecutableRunner : Runner
 {
-    public string Command { get; set; } = string.Empty;
+    public required string Command { get; init; }
 
-    public string[] Arguments { get; set; } = Array.Empty<string>();
+    public required string[] Arguments { get; init; }
 
-    public string WorkingDirectory { get; set; } = string.Empty;
-
-    public override int? Port { get; set; }
+    public required string WorkingDirectory { get; init; }
 }

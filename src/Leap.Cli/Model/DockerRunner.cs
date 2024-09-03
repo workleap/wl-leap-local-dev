@@ -2,17 +2,9 @@
 
 internal sealed class DockerRunner : Runner
 {
-    public string Image { get; set; } = string.Empty;
+    public required string ImageAndTag { get; init; }
 
-    public int ContainerPort { get; set; }
+    public required int ContainerPort { get; init; }
 
-    public int? HostPort { get; set; }
-
-    public DockerRunnerVolumeMapping[] Volumes { get; set; } = [];
-
-    public override int? Port
-    {
-        get => this.HostPort;
-        set => this.HostPort = value;
-    }
+    public required DockerRunnerVolumeMapping[] Volumes { get; init; }
 }

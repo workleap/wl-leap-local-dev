@@ -2,9 +2,7 @@
 
 internal sealed class DotnetRunner : Runner
 {
-    public string ProjectPath { get; set; } = string.Empty;
+    public required string ProjectPath { get; init; }
 
-    public override int? Port { get; set; }
-
-    public bool Watch { get; set; }
+    public required bool Watch { get; init; }
 }

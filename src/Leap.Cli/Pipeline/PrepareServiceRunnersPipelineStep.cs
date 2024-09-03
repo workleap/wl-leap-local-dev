@@ -35,11 +35,9 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
 
     private void PrepareService(Service service, CancellationToken cancellationToken)
     {
-        // TODO very dirty way of populating networking information, to refactor
-        service.Ingress.Host ??= "127.0.0.1";
-        service.Ingress.ExternalPort ??= Constants.LeapReverseProxyPort;
-        service.Ingress.InternalPort ??= service.ActiveRunner?.Port ?? this._portManager.GetRandomAvailablePort(cancellationToken);
-        service.Ingress.Path ??= "/";
+        var runner = service.ActiveRunner;
+
+        service.Ingress.LocalhostPort = runner.Port ?? this._portManager.GetRandomAvailablePort(cancellationToken);
 
         // .NET specific environment variables. Not harmful for non-.NET services.
         // .NET runners can still override these values in their own service environment variables.
@@ -66,7 +64,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         service.EnvironmentVariables["LOGGING__CONSOLE__FORMATTERNAME"] = "simple";
         service.EnvironmentVariables["LOGGING__CONSOLE__FORMATTEROPTIONS__TIMESTAMPFORMAT"] = "yyyy-MM-ddTHH:mm:ss.fffffff ";
 
-        switch (service.ActiveRunner)
+        switch (runner)
         {
             case ExecutableRunner exeRunner:
                 this.HandleExecutableRunner(service, exeRunner);
@@ -82,33 +80,18 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
                 break;
         }
 
-        var envvarName = "SERVICES__" + service.Name.ToUpperInvariant() + "__BASEURL";
-
-        string hostServiceUrl;
-        string containerServiceUrl;
-
-        if (service.ActiveRunner is RemoteRunner remoteRunner)
-        {
-            hostServiceUrl = containerServiceUrl = remoteRunner.Url;
-        }
-        else
-        {
-            hostServiceUrl = $"https://{service.Ingress.Host}:{service.Ingress.ExternalPort}";
-
-            // TODO won't work with custom domain, consider mapping custom hosts in docker-compose.yaml
-            // TODO wait, if we map custom hosts, we won't be able to trust the certificate from inside the container
-            containerServiceUrl = $"http://host.docker.internal:{service.Ingress.InternalPort}";
-        }
+        var serviceUrlEnvVarName = $"Services__{service.Name}__BaseUrl";
+        var serviceUrl = service.GetUrl();
 
         // Declare the service URL to the other services
         this._environmentVariables.Configure(x =>
         {
-            x.Add(new EnvironmentVariable(envvarName, hostServiceUrl, EnvironmentVariableScope.Host));
-            x.Add(new EnvironmentVariable(envvarName, containerServiceUrl, EnvironmentVariableScope.Container));
+            x.Add(new EnvironmentVariable(serviceUrlEnvVarName, serviceUrl, EnvironmentVariableScope.Host));
+            x.Add(new EnvironmentVariable(serviceUrlEnvVarName, serviceUrl, EnvironmentVariableScope.Container));
         });
 
         // Declare the service URL to the appsettings.json
-        this._appSettingsJson.Configuration["Services:" + service.Name + ":BaseUrl"] = hostServiceUrl;
+        this._appSettingsJson.Configuration[$"Services:{service.Name}:BaseUrl"] = serviceUrl;
     }
 
     private void HandleExecutableRunner(Service service, ExecutableRunner exeRunner)
@@ -116,8 +99,8 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         // TODO shall we sanitize the name of the service? Get inspiration from Dapr
         this._aspire.Builder
             .AddExecutable(service.Name, exeRunner.Command, exeRunner.WorkingDirectory, exeRunner.Arguments)
-            .WithEndpoint(scheme: exeRunner.Protocol, port: service.Ingress.InternalPort, isProxied: false, env: "PORT")
-            .WithEnvironment("ASPNETCORE_URLS", exeRunner.Protocol + "://*:" + service.Ingress.InternalPort)
+            .WithEndpoint(scheme: exeRunner.Protocol, port: service.Ingress.LocalhostPort, isProxied: false, env: "PORT")
+            .WithEnvironment("ASPNETCORE_URLS", exeRunner.Protocol + "://*:" + service.Ingress.LocalhostPort)
             .WithEnvironment("NODE_EXTRA_CA_CERTS", Constants.LeapCertificateAuthorityFilePath)
             .WithEnvironment(context =>
             {
@@ -134,9 +117,8 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
     private void HandleDockerRunner(Service service, DockerRunner dockerRunner)
     {
         // TODO shall we sanitize the name of the service?
-        // Tag is set to null to prevent Aspire from adding latest (tag is already included in our image property)
-        var builder = this._aspire.Builder.AddContainer(service.Name, dockerRunner.Image, tag: string.Empty)
-            .WithEndpoint(scheme: dockerRunner.Protocol, port: service.Ingress.InternalPort, targetPort: dockerRunner.ContainerPort)
+        var builder = this._aspire.Builder.AddContainer(service.Name, dockerRunner.ImageAndTag, tag: string.Empty)
+            .WithEndpoint(scheme: dockerRunner.Protocol, port: service.Ingress.LocalhostPort, targetPort: dockerRunner.ContainerPort)
             .WithEnvironment("ASPNETCORE_URLS", dockerRunner.Protocol + "://*:" + dockerRunner.ContainerPort)
             .WithEnvironment("PORT", dockerRunner.ContainerPort.ToString())
             .WithOtlpExporter();
@@ -186,7 +168,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
 
     private void HandleDotnetRunner(Service service, DotnetRunner dotnetRunner)
     {
-        var workingDirectoryPath = Path.GetDirectoryName(dotnetRunner.ProjectPath);
+        var workingDirectoryPath = Path.GetDirectoryName(dotnetRunner.ProjectPath)!;
 
         // dotnet watch arguments inspired by .NET Aspire:
         // https://github.com/dotnet/aspire/blob/v8.0.1/src/Aspire.Hosting/Dcp/ApplicationExecutor.cs#L1004-L1022
@@ -196,9 +178,9 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
 
         // TODO shall we sanitize the name of the service? Get inspiration from Dapr
         this._aspire.Builder
-            .AddExecutable(service.Name, "dotnet", workingDirectoryPath!, dotnetRunArgs)
-            .WithEndpoint(scheme: dotnetRunner.Protocol, port: service.Ingress.InternalPort, isProxied: false, env: "PORT")
-            .WithEnvironment("ASPNETCORE_URLS", dotnetRunner.Protocol + "://*:" + service.Ingress.InternalPort)
+            .AddExecutable(service.Name, "dotnet", workingDirectoryPath, dotnetRunArgs)
+            .WithEndpoint(scheme: dotnetRunner.Protocol, port: service.Ingress.LocalhostPort, isProxied: false, env: "PORT")
+            .WithEnvironment("ASPNETCORE_URLS", dotnetRunner.Protocol + "://*:" + service.Ingress.LocalhostPort)
             .WithEnvironment(context =>
             {
                 if ("https".Equals(dotnetRunner.Protocol, StringComparison.OrdinalIgnoreCase))
@@ -220,7 +202,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
 
         // TODO shall we sanitize the name of the service?
         var builder = this._aspire.Builder.AddContainer(service.Name, "stoplight/prism", tag: "5")
-            .WithEndpoint(scheme: "http", port: service.Ingress.InternalPort, targetPort: prismContainerPort);
+            .WithEndpoint(scheme: "http", port: service.Ingress.LocalhostPort, targetPort: prismContainerPort);
 
         if (openApiRunner.IsUrl)
         {

@@ -85,21 +85,21 @@ internal sealed class PrepareReverseProxyPipelineStep(IAspireManager aspireManag
 
                 foreach (var (serviceName, service) in yarpResource.State.Services)
                 {
-                    if (service.ActiveRunner is RemoteRunner)
+                    var runner = service.ActiveRunner;
+                    if (runner is RemoteRunner)
                     {
                         continue;
                     }
 
-                    var host = service.Ingress.Host!;
-                    var path = service.Ingress.Path!;
+                    var host = service.Ingress.Host;
+                    var path = service.Ingress.Path;
 
-                    var isHostLocalhost = host == "127.0.0.1" || "localhost".Equals(host, StringComparison.OrdinalIgnoreCase);
-                    if (isHostLocalhost)
+                    if (host.IsLocalhost)
                     {
                         continue;
                     }
 
-                    urls.Add(new UrlSnapshot(serviceName, $"https://{host}:{Constants.LeapReverseProxyPort}{path}", IsInternal: false));
+                    urls.Add(new UrlSnapshot(serviceName, service.GetUrl(), IsInternal: false));
 
                     var routeId = "route_" + serviceName;
                     var clusterId = "cluster_" + serviceName;
@@ -111,7 +111,7 @@ internal sealed class PrepareReverseProxyPipelineStep(IAspireManager aspireManag
                         {
                             [clusterId + "/destination"] = new DestinationConfig
                             {
-                                Address = service.ActiveRunner?.Protocol + "://127.0.0.1:" + service.Ingress.InternalPort,
+                                Address = runner.Protocol + "://127.0.0.1:" + service.Ingress.LocalhostPort,
                             },
                         },
                     };
@@ -127,7 +127,7 @@ internal sealed class PrepareReverseProxyPipelineStep(IAspireManager aspireManag
                         }
                     };
 
-                    if (path != "/")
+                    if (path != Ingress.DefaultPath)
                     {
                         // Configure YARP to send X-Forwarded headers, including the original path prefix when it isn't the default "/"
                         // By default, YARP would already send X-Forwarded-Host, X-Forwarded-Proto, and X-Forwarded-For headers
@@ -169,7 +169,7 @@ internal sealed class PrepareReverseProxyPipelineStep(IAspireManager aspireManag
             }
             catch (Exception ex)
             {
-                yarpLogger.LogError(ex, "An error occured while starting Azure CLI credentials proxy for Docker");
+                yarpLogger.LogError(ex, "An error occured while starting Leap's reverse proxy");
 
                 await notificationService.PublishUpdateAsync(yarpResource, state => state with
                 {
