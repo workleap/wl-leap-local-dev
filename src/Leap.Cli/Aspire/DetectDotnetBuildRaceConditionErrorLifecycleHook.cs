@@ -31,9 +31,9 @@ internal sealed class DetectDotnetBuildRaceConditionErrorLifecycleHook(
         {
             await foreach (var notification in resourceNotificationService.WatchAsync(cancellationToken).ConfigureAwait(false))
             {
-                if (!dotnetResourceTasks.ContainsKey(notification.ResourceId) && notification.Resource is ExecutableResource { Command: "dotnet" })
+                if (!dotnetResourceTasks.ContainsKey(notification.ResourceId) && notification.Resource is ExecutableResource { Command: "dotnet" } resource)
                 {
-                    dotnetResourceTasks[notification.ResourceId] = this.WatchDotnetResourceLogsAsync(notification.ResourceId, notification.Resource.Name, cancellationToken);
+                    dotnetResourceTasks[notification.ResourceId] = this.WatchDotnetResourceLogsAsync(notification.ResourceId, resource, cancellationToken);
                 }
             }
         }
@@ -50,7 +50,7 @@ internal sealed class DetectDotnetBuildRaceConditionErrorLifecycleHook(
         await Task.WhenAll(dotnetResourceTasks.Values).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
     }
 
-    private async Task WatchDotnetResourceLogsAsync(string resourceId, string resourceName, CancellationToken cancellationToken)
+    private async Task WatchDotnetResourceLogsAsync(string resourceId, ExecutableResource resource, CancellationToken cancellationToken)
     {
         try
         {
@@ -60,11 +60,7 @@ internal sealed class DetectDotnetBuildRaceConditionErrorLifecycleHook(
                 {
                     if (logLine.Content.Contains("error CS2012:", StringComparison.OrdinalIgnoreCase))
                     {
-                        // CS2012 docs: https://learn.microsoft.com/en-us/dotnet/csharp/misc/cs2012
-                        // .NET Aspire restart GitHub issue: https://github.com/dotnet/aspire/issues/295
-                        lifecycleHookLogger.LogError(
-                            "Service '{ServiceName}' failed to build, likely due to a CS2012 race condition caused by another service currently being built that uses a same shared class library. Please restart Leap until services can be restarted from the dashboard.",
-                            resourceName);
+                        await this.HandleCs2012BuildRaceCondition(resource, cancellationToken);
                     }
                 }
             }
@@ -75,7 +71,53 @@ internal sealed class DetectDotnetBuildRaceConditionErrorLifecycleHook(
         }
         catch (Exception ex)
         {
-            lifecycleHookLogger.LogError(ex, "An error occurred while reading service '{ServiceName}' logs in order to detect CS2012 race condition compilation errors.", resourceName);
+            lifecycleHookLogger.LogError(ex, "An error occurred while reading service '{ServiceName}' logs in order to detect CS2012 race condition compilation errors.", resource.Name);
+        }
+    }
+
+    private async Task HandleCs2012BuildRaceCondition(ExecutableResource resource, CancellationToken cancellationToken)
+    {
+        // CS2012 docs: https://learn.microsoft.com/en-us/dotnet/csharp/misc/cs2012
+        // .NET Aspire restart GitHub issue: https://github.com/dotnet/aspire/issues/295
+        lifecycleHookLogger.LogError(
+            "Service '{ServiceName}' failed to build, likely due to a CS2012 race condition caused by another service currently being built that uses a same shared class library.",
+            resource.Name);
+
+        var modifiedCsprojToTriggerDotnetWatch = false;
+
+        // Accessing the executable arguments based on:
+        // https://github.com/dotnet/aspire/blob/v8.1.0/src/Aspire.Hosting/Dcp/ApplicationExecutor.cs#L1176-L1184
+        string[] stringArgs = [];
+        if (resource.TryGetAnnotationsOfType<CommandLineArgsCallbackAnnotation>(out var exeArgsCallbacks))
+        {
+            var objectArgs = new List<object>();
+            var commandLineContext = new CommandLineArgsCallbackContext(objectArgs, cancellationToken);
+
+            foreach (var exeArgsCallback in exeArgsCallbacks)
+            {
+                await exeArgsCallback.Callback(commandLineContext);
+            }
+
+            stringArgs = objectArgs.OfType<string>().ToArray();
+        }
+
+        if (stringArgs is ["watch", "--project", { } csprojPath, ..])
+        {
+            try
+            {
+                File.SetLastWriteTimeUtc(csprojPath, DateTime.UtcNow);
+                modifiedCsprojToTriggerDotnetWatch = true;
+                lifecycleHookLogger.LogInformation("Modified '{CsprojPath}' to force 'dotnet watch' to restart the compilation.", csprojPath);
+            }
+            catch (IOException)
+            {
+                // That's OK. Maybe an IDE is holding a lock on it. Users can manually restart Leap.
+            }
+        }
+
+        if (!modifiedCsprojToTriggerDotnetWatch)
+        {
+            lifecycleHookLogger.LogError("Please restart Leap until failed services can be manually restarted from the dashboard.");
         }
     }
 
