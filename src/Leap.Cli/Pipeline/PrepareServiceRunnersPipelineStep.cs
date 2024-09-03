@@ -127,7 +127,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
                     context.EnvironmentVariables["ASPNETCORE_Kestrel__Certificates__Default__KeyPath"] = Constants.LocalCertificateKeyFilePath;
                 }
             })
-            .WithEnvironment(service.EnvironmentVariables)
+            .WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables())
             .WithOtlpExporter();
     }
 
@@ -181,7 +181,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         }
 
         // User-defined environment variables are last so they can override ours if required
-        builder.WithEnvironment(service.EnvironmentVariables);
+        builder.WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables());
     }
 
     private void HandleDotnetRunner(Service service, DotnetRunner dotnetRunner)
@@ -207,7 +207,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
                     context.EnvironmentVariables["ASPNETCORE_Kestrel__Certificates__Default__KeyPath"] = Constants.LocalCertificateKeyFilePath;
                 }
             })
-            .WithEnvironment(service.EnvironmentVariables)
+            .WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables())
             .WithOtlpExporter();
     }
 

@@ -1,3 +1,10 @@
-﻿namespace Leap.Cli.Configuration.Yaml;
+﻿using Leap.Cli.Yaml;
+using YamlDotNet.Serialization;
 
-internal abstract class RunnerYaml;
+namespace Leap.Cli.Configuration.Yaml;
+
+internal abstract class RunnerYaml
+{
+    [YamlMember(Alias = "env", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
+    public KeyValueCollectionYaml? EnvironmentVariables { get; set; }
+}

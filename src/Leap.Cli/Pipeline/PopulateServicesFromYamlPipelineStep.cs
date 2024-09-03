@@ -4,6 +4,7 @@ using Leap.Cli.Configuration.Yaml;
 using Leap.Cli.Model;
 using Leap.Cli.Model.Traits;
 using Leap.Cli.Platform;
+using Leap.Cli.Yaml;
 using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Pipeline;
@@ -160,11 +161,21 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
 
         private void ConvertEnvironmentVariables(Service service)
         {
-            if (serviceYaml.EnvironmentVariables != null)
+            CopyEnvironmentVariables(serviceYaml.EnvironmentVariables, service.EnvironmentVariables);
+        }
+
+        private static void ConvertEnvironmentVariables(Runner runner, RunnerYaml runnerYaml)
+        {
+            CopyEnvironmentVariables(runnerYaml.EnvironmentVariables, runner.EnvironmentVariables);
+        }
+
+        private static void CopyEnvironmentVariables(KeyValueCollectionYaml? source, Dictionary<string, string> destination)
+        {
+            if (source != null)
             {
-                foreach (var (key, value) in serviceYaml.EnvironmentVariables)
+                foreach (var (key, value) in source)
                 {
-                    service.EnvironmentVariables[key] = value;
+                    destination[key] = value;
                 }
             }
         }
@@ -186,6 +197,8 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                 RemoteRunnerYaml remoteRunnerYaml => this.ConvertRemoteRunner(service, remoteRunnerYaml),
                 _ => throw new LeapYamlConversionException($"A service '{service.Name}' has an unknown runner type in the configuration file '{leapYaml.Path}'. The service will be ignored.")
             };
+
+            ConvertEnvironmentVariables(runner, runnerYaml);
 
             service.Runners.Add(runner);
 
