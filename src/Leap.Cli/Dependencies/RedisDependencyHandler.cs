@@ -84,11 +84,11 @@ internal sealed class RedisDependencyHandler : DependencyHandler<RedisDependency
     private static void ConfigureEnvironmentVariables(List<EnvironmentVariable> environmentVariables)
     {
         // Do we want to add the environment variables after we verified that the instance is ready?
-        environmentVariables.AddRange(new[]
-        {
-            new EnvironmentVariable("CONNECTIONSTRINGS__REDIS", HostConnectionString, EnvironmentVariableScope.Host),
-            new EnvironmentVariable("CONNECTIONSTRINGS__REDIS", ContainerConnectionString, EnvironmentVariableScope.Container),
-        });
+        environmentVariables.AddRange(
+        [
+            new EnvironmentVariable("ConnectionStrings__Redis", HostConnectionString, EnvironmentVariableScope.Host),
+            new EnvironmentVariable("ConnectionStrings__Redis", ContainerConnectionString, EnvironmentVariableScope.Container)
+        ]);
     }
 
     private static void ConfigureAppSettingsJson(JsonObject appsettings)

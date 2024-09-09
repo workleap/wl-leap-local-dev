@@ -96,3 +96,35 @@ function Assert-DockerContainer {
     throw "Docker container $containerName is not running."
   }
 }
+
+function Assert-FileContains {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$path,
+    [Parameter(Mandatory = $true)]
+    [string]$expectedContent
+  )
+
+  $fileContent = Get-Content -Path $path -Raw
+  if ($fileContent -notmatch $expectedContent) {
+    throw "File '$path' does not contain the expected content '$expectedContent'."
+  }
+
+  Write-Host "File '$path' contains the expected content '$expectedContent'."
+}
+
+function Assert-FileDoesNotContain {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$path,
+    [Parameter(Mandatory = $true)]
+    [string]$unexpectedContent
+  )
+
+  $fileContent = Get-Content -Path $path -Raw
+  if ($fileContent -match $unexpectedContent) {
+    throw "File '$path' contains the unexpected content '$unexpectedContent'."
+  }
+
+  Write-Host "File '$path' does not contain the unexpected content."
+}

@@ -90,11 +90,11 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
     private static void ConfigureEnvironmentVariables(List<EnvironmentVariable> environmentVariables)
     {
         // Do we want to add the environment variables after we verified that the instance is ready?
-        environmentVariables.AddRange(new[]
-        {
-            new EnvironmentVariable("CONNECTIONSTRINGS__MONGO", HostConnectionString, EnvironmentVariableScope.Host),
-            new EnvironmentVariable("CONNECTIONSTRINGS__MONGO", ContainerConnectionString, EnvironmentVariableScope.Container),
-        });
+        environmentVariables.AddRange(
+        [
+            new EnvironmentVariable("ConnectionStrings__Mongo", HostConnectionString, EnvironmentVariableScope.Host),
+            new EnvironmentVariable("ConnectionStrings__Mongo", ContainerConnectionString, EnvironmentVariableScope.Container)
+        ]);
     }
 
     private static void ConfigureAppSettingsJson(JsonObject appsettings)

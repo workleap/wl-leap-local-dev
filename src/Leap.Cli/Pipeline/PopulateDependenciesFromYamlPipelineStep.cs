@@ -1,63 +1,52 @@
 ﻿using Leap.Cli.Configuration;
 using Leap.Cli.Configuration.Yaml;
 using Leap.Cli.Dependencies;
+using Leap.Cli.Dependencies.Azurite;
 using Leap.Cli.Model;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Leap.Cli.Pipeline;
 
 internal sealed class PopulateDependenciesFromYamlPipelineStep : IPipelineStep
 {
     private readonly ILeapYamlAccessor _leapYamlAccessor;
-    private readonly IEnumerable<IDependencyYamlHandler> _dependencyYamlHandlers;
+    private readonly IServiceProvider _serviceProvider;
 
-    public PopulateDependenciesFromYamlPipelineStep(ILeapYamlAccessor leapYamlAccessor, IEnumerable<IDependencyYamlHandler> dependencyYamlHandlers)
+    public PopulateDependenciesFromYamlPipelineStep(ILeapYamlAccessor leapYamlAccessor, IServiceProvider serviceProvider)
     {
         this._leapYamlAccessor = leapYamlAccessor;
-        this._dependencyYamlHandlers = dependencyYamlHandlers;
+        this._serviceProvider = serviceProvider;
     }
 
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
         var leapConfigs = await this._leapYamlAccessor.GetAllAsync(cancellationToken);
 
-        var dependenciesYaml = leapConfigs.SelectMany(x => x.Content.Dependencies?.OfType<DependencyYaml>() ?? Enumerable.Empty<DependencyYaml>()).GroupBy(x => x.Type);
+        var allDependenciesYaml = leapConfigs.SelectMany(x => x.Content.Dependencies?.OfType<DependencyYaml>() ?? []).ToArray();
 
-        foreach (var dependencyGroup in dependenciesYaml)
-        {
-            var dependencyHandler = this._dependencyYamlHandlers.FirstOrDefault(handler => handler.CanHandle(dependencyGroup.Key));
-
-            if (dependencyHandler == null)
-            {
-                throw new InvalidOperationException($"No yaml dependency handler found for dependency type {dependencyGroup.Key}");
-            }
-
-            var dependencyYaml = dependencyGroup.Aggregate(new DependencyYaml(), dependencyHandler.Merge);
-            var dependency = dependencyHandler.ToDependencyModel(dependencyYaml);
-
-            if (!state.Dependencies.Contains(dependency))
-            {
-                state.Dependencies.Add(dependency);
-            }
-
-            this.PopulateDependencies(dependency, state);
-        }
+        this.PopulateDependencies<AzuriteDependencyYaml>(state, allDependenciesYaml);
+        this.PopulateDependencies<EventGridDependencyYaml>(state, allDependenciesYaml);
+        this.PopulateDependencies<MongoDependencyYaml>(state, allDependenciesYaml);
+        this.PopulateDependencies<PostgresDependencyYaml>(state, allDependenciesYaml);
+        this.PopulateDependencies<RedisDependencyYaml>(state, allDependenciesYaml);
+        this.PopulateDependencies<SqlServerDependencyYaml>(state, allDependenciesYaml);
     }
 
-    private void PopulateDependencies(Dependency dependency, ApplicationState state)
+    private void PopulateDependencies<TYaml>(ApplicationState state, IEnumerable<DependencyYaml> allDependenciesYaml)
+        where TYaml : DependencyYaml, new()
     {
-        foreach (var childDependency in dependency.Dependencies)
+        var typedDependenciesYaml = allDependenciesYaml.OfType<TYaml>().ToArray();
+        if (typedDependenciesYaml.Length == 0)
         {
-            // TODO:
-            // This will probably cause problems when it comes to actually merging dependencies that have settings like azurite.
-            // Currently, these merges are performed by the yaml handlers, but dependencies not declared by yaml, but rather
-            // parent dependencies don't rely on this merge process before being constructed.
-            if (!state.Dependencies.Contains(childDependency))
-            {
-                state.Dependencies.Add(childDependency);
-                // Only process children the first time this is added to avoid infinite recursion
-                this.PopulateDependencies(childDependency, state);
-            }
+            return;
         }
+
+        var dependencyHandler = this._serviceProvider.GetRequiredService<IDependencyYamlHandler<TYaml>>();
+
+        var aggregatedDependencyYaml = typedDependenciesYaml.Aggregate(new TYaml(), dependencyHandler.Merge);
+        var dependency = dependencyHandler.ToDependencyModel(aggregatedDependencyYaml);
+
+        state.Dependencies.Add(dependency);
     }
 
     public Task StopAsync(ApplicationState state, CancellationToken cancellationToken)

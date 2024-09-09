@@ -1,21 +1,15 @@
-using Leap.Cli.Configuration.Yaml;
 using Leap.Cli.Model;
 
 namespace Leap.Cli.Dependencies;
 
-internal sealed class MongoDependencyYamlHandler : IDependencyYamlHandler
+internal sealed class MongoDependencyYamlHandler : IDependencyYamlHandler<MongoDependencyYaml>
 {
-    public bool CanHandle(string dependencyType)
-    {
-        return MongoDependency.DependencyType.Equals(dependencyType, StringComparison.OrdinalIgnoreCase);
-    }
-
-    public DependencyYaml Merge(DependencyYaml leftYaml, DependencyYaml rightYaml)
+    public MongoDependencyYaml Merge(MongoDependencyYaml leftYaml, MongoDependencyYaml rightYaml)
     {
         return leftYaml;
     }
 
-    public Dependency ToDependencyModel(DependencyYaml yaml)
+    public Dependency ToDependencyModel(MongoDependencyYaml yaml)
     {
         return new MongoDependency();
     }

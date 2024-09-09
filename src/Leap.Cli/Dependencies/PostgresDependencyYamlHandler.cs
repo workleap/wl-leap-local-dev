@@ -1,21 +1,15 @@
-﻿using Leap.Cli.Configuration.Yaml;
-using Leap.Cli.Model;
+﻿using Leap.Cli.Model;
 
 namespace Leap.Cli.Dependencies;
 
-internal sealed class PostgresDependencyYamlHandler : IDependencyYamlHandler
+internal sealed class PostgresDependencyYamlHandler : IDependencyYamlHandler<PostgresDependencyYaml>
 {
-    public bool CanHandle(string dependencyType)
-    {
-        return PostgresDependency.DependencyType.Equals(dependencyType, StringComparison.OrdinalIgnoreCase);
-    }
-
-    public DependencyYaml Merge(DependencyYaml leftYaml, DependencyYaml rightYaml)
+    public PostgresDependencyYaml Merge(PostgresDependencyYaml leftYaml, PostgresDependencyYaml rightYaml)
     {
         return leftYaml;
     }
 
-    public Dependency ToDependencyModel(DependencyYaml yaml)
+    public Dependency ToDependencyModel(PostgresDependencyYaml yaml)
     {
         return new PostgresDependency();
     }

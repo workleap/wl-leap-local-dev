@@ -2,21 +2,15 @@ using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
 using Microsoft.Extensions.Logging;
-using System.IO.Abstractions;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Leap.Cli.Platform.Telemetry;
 
 namespace Leap.Cli.Dependencies;
 
-internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDependency>
+internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDependency>, IDisposable
 {
     private const int EventGridPort = 6500;
-    private readonly IConfigureDockerCompose _dockerCompose;
-    private readonly IConfigureEnvironmentVariables _environmentVariables;
-    private readonly IConfigureAppSettingsJson _appSettingsJson;
-    private readonly IFileSystem _fileSystem;
-    private readonly ILogger<EventGridDependencyHandler> _logger;
 
     private const string ServiceName = "eventgrid";
     private const string ContainerName = "leap-eventgrid";
@@ -24,32 +18,185 @@ internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDe
     private static readonly string EventGridHostUrl = $"http://127.0.0.1:{EventGridPort}";
     private static readonly string EventGridContainerUrl = $"host.docker.internal:{EventGridPort}";
 
+    private readonly IConfigureDockerCompose _dockerCompose;
+    private readonly IConfigureEnvironmentVariables _environmentVariables;
+    private readonly IConfigureAppSettingsJson _appSettingsJson;
+    private readonly ILogger<EventGridDependencyHandler> _logger;
+    private readonly SemaphoreSlim _generatedEventGridSettingsFileWriteLock = new SemaphoreSlim(initialCount: 1, maxCount: 1);
+
+    private FileSystemWatcher? _userEventGridSettingsFileWatcher;
+
     public EventGridDependencyHandler(
         IConfigureDockerCompose dockerCompose,
         IConfigureEnvironmentVariables environmentVariables,
         IConfigureAppSettingsJson appSettingsJson,
-        IFileSystem fileSystem,
         ILogger<EventGridDependencyHandler> logger)
     {
         this._dockerCompose = dockerCompose;
         this._environmentVariables = environmentVariables;
         this._appSettingsJson = appSettingsJson;
-        this._fileSystem = fileSystem;
         this._logger = logger;
     }
 
     protected override async Task BeforeStartAsync(EventGridDependency dependency, CancellationToken cancellationToken)
     {
         TelemetryMeters.TrackEventGridStart();
-        await this.EnsureEventGridSettingsFileExists(cancellationToken);
+        await this.EnsureEventGridSettingsFilesExists(dependency, cancellationToken);
+        this.StartWatchingUserEventGridSettings(dependency, cancellationToken);
         ConfigureDockerCompose(this._dockerCompose.Configuration);
         this._environmentVariables.Configure(ConfigureEnvironmentVariables);
         ConfigureAppSettingsJson(this._appSettingsJson.Configuration);
     }
 
+    private async Task EnsureEventGridSettingsFilesExists(EventGridDependency dependency, CancellationToken cancellationToken)
+    {
+        // When mounting a file that does not exists, Docker creates an empty directory on the host. Make sure to delete it if this ever happens.
+        EnsureFileIsNotDirectory(Constants.UserEventGridSettingsFilePath);
+        EnsureFileIsNotDirectory(Constants.GeneratedEventGridSettingsFilePath);
+
+        if (!File.Exists(Constants.UserEventGridSettingsFilePath))
+        {
+            try
+            {
+                await using var stream = new FileStream(Constants.UserEventGridSettingsFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                await JsonSerializer.SerializeAsync(stream, new EventGridSettings(), EventGridSettingsSourceGenerationContext.Default.EventGridSettings, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                this._logger.LogWarning(
+                    "An error occured while writing an empty Event Grid settings file at {EventGridSettingsFilePath}. You may create it yourself by following our documentation: https://github.com/gsoft-inc/wl-eventgrid-emulator. {ExceptionMessage}",
+                    Constants.UserEventGridSettingsFilePath, ex.Message);
+            }
+        }
+
+        await this.SyncGeneratedEventGridSettingsAsync(dependency, cancellationToken);
+    }
+
+    private static void EnsureFileIsNotDirectory(string filePath)
+    {
+        try
+        {
+            Directory.Delete(filePath, recursive: true);
+        }
+        catch
+        {
+            // Happens in the happy path when we already created the file and it is not a directory
+        }
+    }
+
+    private void StartWatchingUserEventGridSettings(EventGridDependency dependency, CancellationToken cancellationToken)
+    {
+        this._userEventGridSettingsFileWatcher = new FileSystemWatcher(Constants.RootDirectoryPath, Constants.EventGridSettingsFileName)
+        {
+            EnableRaisingEvents = true,
+        };
+
+        // FileSystemWatcher is known to fire multiple events for a single file change dependending on the text editor used.
+        // Debounce the event to avoid unnecessary file reads and writes.
+        // https://stackoverflow.com/a/1764809/1210053
+        var debouncedSyncOnFileChanged = Debounce(() => this.SyncGeneratedEventGridSettingsAsync(dependency, cancellationToken));
+
+        this._userEventGridSettingsFileWatcher.Changed += (_, _) => debouncedSyncOnFileChanged();
+        this._userEventGridSettingsFileWatcher.Created += (_, _) => debouncedSyncOnFileChanged();
+        this._userEventGridSettingsFileWatcher.Deleted += (_, _) => debouncedSyncOnFileChanged();
+        this._userEventGridSettingsFileWatcher.Renamed += (_, _) => debouncedSyncOnFileChanged();
+    }
+
+    private static Action Debounce(Func<Task> func)
+    {
+        // https://stackoverflow.com/a/29491927/825695
+        CancellationTokenSource? cancellationTokenSource = null;
+
+        return () =>
+        {
+            cancellationTokenSource?.Cancel();
+            cancellationTokenSource = new CancellationTokenSource();
+
+            var reasonableFileEventDebounceDelay = TimeSpan.FromMilliseconds(100);
+            Task.Delay(reasonableFileEventDebounceDelay, cancellationTokenSource.Token)
+                .ContinueWith(async task =>
+                {
+                    if (task.IsCompletedSuccessfully)
+                    {
+                        try
+                        {
+                            await func();
+                        }
+                        catch
+                        {
+                            // ignored
+                        }
+                    }
+                }, TaskScheduler.Default);
+        };
+    }
+
+    private async Task SyncGeneratedEventGridSettingsAsync(EventGridDependency dependency, CancellationToken cancellationToken)
+    {
+        await this._generatedEventGridSettingsFileWriteLock.WaitAsync(cancellationToken);
+
+        try
+        {
+            // Merges the user-managed Event Grid settings with the topics declared in leap.yaml and create or overwrite the generated Event Grid settings file.
+            var userEventGridSettings = await this.ReadUserEventGridSettingsAsync(cancellationToken);
+
+            var generatedTopics = dependency.Topics.DeepClone();
+            generatedTopics.Merge(userEventGridSettings?.Topics);
+            var generatedEventGridSettings = new EventGridSettings(generatedTopics);
+
+            await this.WriteGeneratedEventGridSettingsAsync(generatedEventGridSettings, cancellationToken);
+        }
+        finally
+        {
+            this._generatedEventGridSettingsFileWriteLock.Release();
+        }
+    }
+
+    private async Task<EventGridSettings?> ReadUserEventGridSettingsAsync(CancellationToken cancellationToken)
+    {
+        EventGridSettings? userEventGridSettings = null;
+
+        try
+        {
+            await using var stream = File.OpenRead(Constants.UserEventGridSettingsFilePath);
+            userEventGridSettings = await JsonSerializer.DeserializeAsync(stream, EventGridSettingsSourceGenerationContext.Default.EventGridSettings, cancellationToken);
+        }
+        catch (FileNotFoundException)
+        {
+            // The user might have deleted the file, we will recreate it the next time Leap starts
+        }
+        catch (JsonException)
+        {
+            this._logger.LogWarning(
+                "Failed to deserialize user-managed Event Grid configuration at {UserEventGridSettingsFilePath}, the file might be malformed.",
+                Constants.UserEventGridSettingsFilePath);
+        }
+        catch (Exception ex)
+        {
+            this._logger.LogWarning(
+                "An unexpected error occurred while reading user-managed Event Grid configuration at {EventGridSettingsFilePath}: {ExceptionMessage}",
+                Constants.UserEventGridSettingsFilePath, ex.Message);
+        }
+
+        return userEventGridSettings;
+    }
+
+    private async Task WriteGeneratedEventGridSettingsAsync(EventGridSettings eventGridSettings, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var stream = new FileStream(Constants.GeneratedEventGridSettingsFilePath, FileMode.Create, FileAccess.Write, FileShare.None);
+            await JsonSerializer.SerializeAsync(stream, eventGridSettings, EventGridSettingsSourceGenerationContext.Default.EventGridSettings, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            this._logger.LogError(ex, "An unexpected error occurred while writing the generated Event Grid settings at {EventGridSettingsFilePath}", Constants.GeneratedEventGridSettingsFilePath);
+        }
+    }
+
     protected override Task AfterStartAsync(EventGridDependency dependency, CancellationToken cancellationToken)
     {
-        this._logger.LogInformation("Event Grid emulator is up and running, you can edit your topic registrations at {FilePath}", Constants.LeapEventGridSettingsFilePath);
+        this._logger.LogInformation("Event Grid emulator is up and running, you can edit your topic subscriptions at {FilePath}", Constants.UserEventGridSettingsFilePath);
         return Task.CompletedTask;
     }
 
@@ -63,7 +210,7 @@ internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDe
             Ports = { new DockerComposePortMappingYaml(EventGridPort, EventGridPort) },
             Volumes =
             {
-                new DockerComposeVolumeMappingYaml(Constants.LeapEventGridSettingsFilePath, "/app/appsettings.json",  DockerComposeConstants.Volume.ReadOnly)
+                new DockerComposeVolumeMappingYaml(Constants.GeneratedEventGridSettingsFilePath, "/app/appsettings.json",  DockerComposeConstants.Volume.ReadOnly)
             },
         };
 
@@ -72,11 +219,11 @@ internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDe
 
     private static void ConfigureEnvironmentVariables(List<EnvironmentVariable> environmentVariables)
     {
-        environmentVariables.AddRange(new[]
-        {
-            new EnvironmentVariable("AZURE__EVENTGRID__ENDPOINT", EventGridHostUrl, EnvironmentVariableScope.Host),
-            new EnvironmentVariable("AZURE__EVENTGRID__ENDPOINT", EventGridContainerUrl, EnvironmentVariableScope.Container),
-        });
+        environmentVariables.AddRange(
+        [
+            new EnvironmentVariable("Azure__EventGrid__Endpoint", EventGridHostUrl, EnvironmentVariableScope.Host),
+            new EnvironmentVariable("Azure__EventGrid__Endpoint", EventGridContainerUrl, EnvironmentVariableScope.Container)
+        ]);
     }
 
     private static void ConfigureAppSettingsJson(JsonObject appsettings)
@@ -84,12 +231,9 @@ internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDe
         appsettings["Azure:EventGrid:Endpoint"] = EventGridHostUrl;
     }
 
-    private async Task EnsureEventGridSettingsFileExists(CancellationToken cancellationToken)
+    public void Dispose()
     {
-        if (!this._fileSystem.File.Exists(Constants.LeapEventGridSettingsFilePath))
-        {
-            await using var stream = this._fileSystem.File.OpenWrite(Constants.LeapEventGridSettingsFilePath);
-            await JsonSerializer.SerializeAsync(stream, new EventGridSettings(), EventGridSettingsSourceGenerationContext.Default.EventGridSettings, cancellationToken);
-        }
+        this._userEventGridSettingsFileWatcher?.Dispose();
+        this._generatedEventGridSettingsFileWriteLock.Dispose();
     }
 }

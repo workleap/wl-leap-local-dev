@@ -85,11 +85,11 @@ internal sealed class PostgresDependencyHandler : DependencyHandler<PostgresDepe
     private static void ConfigureEnvironmentVariables(List<EnvironmentVariable> environmentVariables)
     {
         // Do we want to add the environment variables after we verified that the instance is ready?
-        environmentVariables.AddRange(new[]
-        {
-            new EnvironmentVariable("CONNECTIONSTRINGS__POSTGRESQL", HostConnectionString, EnvironmentVariableScope.Host),
-            new EnvironmentVariable("CONNECTIONSTRINGS__POSTGRESQL", ContainerConnectionString, EnvironmentVariableScope.Container),
-        });
+        environmentVariables.AddRange(
+        [
+            new EnvironmentVariable("ConnectionStrings__PostgreSQL", HostConnectionString, EnvironmentVariableScope.Host),
+            new EnvironmentVariable("ConnectionStrings__PostgreSQL", ContainerConnectionString, EnvironmentVariableScope.Container)
+        ]);
     }
 
     private static void ConfigureAppSettingsJson(JsonObject appsettings)

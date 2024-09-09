@@ -9,7 +9,7 @@ Process {
 
   Reset-AspNetCoreWebApiSample
 
-  @"
+@"
   services:
     aspnetcorewebapi:
       ingress:
@@ -17,6 +17,7 @@ Process {
       runners:
         - type: dotnet
           project: ./aspnetcorewebapi/aspnetcorewebapi.csproj
+          protocol: https
 
     containerapp:
       ingress:
@@ -25,6 +26,7 @@ Process {
         - type: docker
           image: mcr.microsoft.com/dotnet/samples:aspnetapp
           containerPort: 8080
+          protocol: https
 
   dependencies:
     - type: mongo
@@ -32,6 +34,9 @@ Process {
     - type: postgres
     - type: sqlserver
     - type: eventgrid
+      topics:
+        orders:
+          - https://aspnetcorewebapi.workleap.localhost:1347/eventgrid/domainevents
     - type: azurite
       containers:
         - mycontainer
@@ -55,6 +60,28 @@ Process {
     Assert-DockerContainer -containerName "leap-sqlserver"
     Assert-DockerContainer -containerName "leap-eventgrid"
     Assert-DockerContainer -containerName "leap-azurite"
+
+    # Assert Event Grid settings generation from leap.yaml file and user settings
+    $userEventGridSettingsFilePath = Join-Path "~" ".leap" "eventgridsettings.json"
+    $generatedEventGridSettingsFilePath = Join-Path "~" ".leap" "generated" "eventgridsettings.json"
+
+    Assert-FileContains -path $generatedEventGridSettingsFilePath "https://aspnetcorewebapi.workleap.localhost:1347/eventgrid/domainevents"
+    Assert-FileDoesNotContain -path $generatedEventGridSettingsFilePath "https://somethingnew.workleap.localhost:1347/eventgrid/domainevents"
+
+@"
+{
+  "Topics": {
+    "orders": ["https://somethingnew.workleap.localhost:1347/eventgrid/domainevents"]
+  }
+}
+"@ | Set-Content -Path $userEventGridSettingsFilePath -Force
+
+    # Wait for leap to merge the user settings into the generated settings
+    Start-Sleep -Seconds 1
+
+    Assert-FileContains -path $generatedEventGridSettingsFilePath "https://aspnetcorewebapi.workleap.localhost:1347/eventgrid/domainevents"
+    Assert-FileContains -path $generatedEventGridSettingsFilePath "https://somethingnew.workleap.localhost:1347/eventgrid/domainevents"
+
   }
   finally {
     Stop-Job -Job $job

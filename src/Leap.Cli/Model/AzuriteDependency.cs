@@ -2,10 +2,7 @@ namespace Leap.Cli.Model;
 
 internal sealed class AzuriteDependency : Dependency
 {
-    public const string DependencyType = "azurite";
-
     public AzuriteDependency(IReadOnlyCollection<string> containers, IReadOnlyCollection<string> tables, IReadOnlyCollection<string> queues)
-        : base(DependencyType)
     {
         this.Containers = containers;
         this.Tables = tables;

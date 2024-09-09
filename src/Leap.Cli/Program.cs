@@ -75,15 +75,13 @@ builder.UseDependencyInjection((services, context) =>
     services.AddSingleton<IDependencyHandler, SqlServerDependencyHandler>();
     services.AddSingleton<IDependencyHandler, PostgresDependencyHandler>();
     services.AddSingleton<IDependencyHandler, EventGridDependencyHandler>();
-    services.AddSingleton<IDependencyHandler, FusionAuthDependencyHandler>();
 
-    services.AddSingleton<IDependencyYamlHandler, MongoDependencyYamlHandler>();
-    services.AddSingleton<IDependencyYamlHandler, RedisDependencyYamlHandler>();
-    services.AddSingleton<IDependencyYamlHandler, AzuriteDependencyYamlHandler>();
-    services.AddSingleton<IDependencyYamlHandler, SqlServerDependencyYamlHandler>();
-    services.AddSingleton<IDependencyYamlHandler, PostgresDependencyYamlHandler>();
-    services.AddSingleton<IDependencyYamlHandler, EventGridDependencyYamlHandler>();
-    services.AddSingleton<IDependencyYamlHandler, FusionAuthDependencyYamlHandler>();
+    services.AddSingleton<IDependencyYamlHandler<MongoDependencyYaml>, MongoDependencyYamlHandler>();
+    services.AddSingleton<IDependencyYamlHandler<RedisDependencyYaml>, RedisDependencyYamlHandler>();
+    services.AddSingleton<IDependencyYamlHandler<AzuriteDependencyYaml>, AzuriteDependencyYamlHandler>();
+    services.AddSingleton<IDependencyYamlHandler<SqlServerDependencyYaml>, SqlServerDependencyYamlHandler>();
+    services.AddSingleton<IDependencyYamlHandler<PostgresDependencyYaml>, PostgresDependencyYamlHandler>();
+    services.AddSingleton<IDependencyYamlHandler<EventGridDependencyYaml>, EventGridDependencyYamlHandler>();
 
     services.AddSingleton<DockerComposeManager>();
     services.AddSingleton<IConfigureDockerCompose>(x => x.GetRequiredService<DockerComposeManager>());

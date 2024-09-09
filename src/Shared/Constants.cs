@@ -9,8 +9,7 @@ internal static class Constants
     private const string LeapNuGetPackagesDirectoryName = "nuget-packages";
 
     private const string AppSettingsFileName = "appsettings.json";
-    private const string EventGridSettingsFileName = "eventgridsettings.json";
-    public const string FusionAuthKickstartFileName = "kickstart-local.json";
+    public const string EventGridSettingsFileName = "eventgridsettings.json";
 
     public const string LeapYamlFileName = "leap.yaml";
     public const string SecondaryLeapYamlFileName = "leap.yml";
@@ -62,13 +61,13 @@ internal static class Constants
     public static readonly string RootDirectoryPath = Path.Combine(UserProfileDirectoryPath, LeapRootConfigDirectoryName);
 
     /// <summary>User-managed event grid configuration file path</summary>
-    public static readonly string LeapEventGridSettingsFilePath = Path.Combine(RootDirectoryPath, EventGridSettingsFileName);
+    public static readonly string UserEventGridSettingsFilePath = Path.Combine(RootDirectoryPath, EventGridSettingsFileName);
 
     /// <summary>The directory that contains auto-generated Leap files</summary>
     public static readonly string GeneratedDirectoryPath = Path.Combine(RootDirectoryPath, LeapGeneratedDirectoryName);
 
-    /// <summary>Leap generated FusionAuth kickstart file path</summary>
-    public static readonly string FusionAuthKickstartFilePath = Path.Combine(GeneratedDirectoryPath, FusionAuthKickstartFileName);
+    /// <summary>Generated event grid configuration file path, resulting from the merge of the user-managed and leap.yaml files</summary>
+    public static readonly string GeneratedEventGridSettingsFilePath = Path.Combine(GeneratedDirectoryPath, EventGridSettingsFileName);
 
     /// <summary>Leap generated appsettings.json file path</summary>
     public static readonly string LeapAppSettingsFilePath = Path.Combine(GeneratedDirectoryPath, AppSettingsFileName);

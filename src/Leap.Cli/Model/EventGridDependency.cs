@@ -1,6 +1,6 @@
 ﻿namespace Leap.Cli.Model;
 
-internal sealed class EventGridDependency() : Dependency(DependencyType)
+internal sealed class EventGridDependency(EventGridTopics topics) : Dependency
 {
-    public const string DependencyType = "eventgrid";
+    public EventGridTopics Topics { get; } = topics;
 }

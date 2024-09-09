@@ -1,51 +1,24 @@
-using Leap.Cli.Configuration.Yaml;
 using Leap.Cli.Model;
 using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Dependencies.Azurite;
 
-internal sealed class AzuriteDependencyYamlHandler : IDependencyYamlHandler
+internal sealed class AzuriteDependencyYamlHandler(ILogger<AzuriteDependencyYamlHandler> logger)
+    : IDependencyYamlHandler<AzuriteDependencyYaml>
 {
-    private const string ContainersKey = "containers";
-    private const string TablesKey = "tables";
-    private const string QueuesKey = "queues";
-
-    private readonly ILogger _logger;
-
-    public AzuriteDependencyYamlHandler(ILogger<AzuriteDependencyYamlHandler> logger)
+    public AzuriteDependencyYaml Merge(AzuriteDependencyYaml leftYaml, AzuriteDependencyYaml rightYaml) => new()
     {
-        this._logger = logger;
-    }
-
-    public bool CanHandle(string dependencyType)
-    {
-        return AzuriteDependency.DependencyType.Equals(dependencyType, StringComparison.OrdinalIgnoreCase);
-    }
-
-    public DependencyYaml Merge(DependencyYaml leftYaml, DependencyYaml rightYaml) => new DependencyYaml
-    {
-        Type = AzuriteDependency.DependencyType,
-        [ContainersKey] = new List<string>(GetContainers(leftYaml).Concat(GetContainers(rightYaml))),
-        [TablesKey] = new List<string>(GetTables(leftYaml).Concat(GetTables(rightYaml))),
-        [QueuesKey] = new List<string>(GetQueues(leftYaml).Concat(GetQueues(rightYaml))),
+        Type = AzuriteDependencyYaml.YamlDiscriminator,
+        Containers = [.. leftYaml.Containers ?? [], .. rightYaml.Containers ?? []],
+        Tables = [.. leftYaml.Tables ?? [], .. rightYaml.Tables ?? []],
+        Queues = [.. leftYaml.Queues ?? [], .. rightYaml.Queues ?? []]
     };
 
-    private static IEnumerable<string> GetContainers(DynamicObjectYaml yaml) => GetNonNullStringSequence(yaml, ContainersKey);
-
-    private static IEnumerable<string> GetTables(DynamicObjectYaml yaml) => GetNonNullStringSequence(yaml, TablesKey);
-
-    private static IEnumerable<string> GetQueues(DynamicObjectYaml yaml) => GetNonNullStringSequence(yaml, QueuesKey);
-
-    private static IEnumerable<string> GetNonNullStringSequence(DynamicObjectYaml yaml, string key)
+    public Dependency ToDependencyModel(AzuriteDependencyYaml yaml)
     {
-        return (yaml.GetSequence(key) ?? Enumerable.Empty<object?>()).OfType<string>();
-    }
-
-    public Dependency ToDependencyModel(DependencyYaml yaml)
-    {
-        var containers = GetContainers(yaml).Distinct(StringComparer.OrdinalIgnoreCase).Where(this.ValidateContainerName).ToArray();
-        var tables = GetTables(yaml).Distinct(StringComparer.OrdinalIgnoreCase).Where(this.ValidateTableName).ToArray();
-        var queues = GetQueues(yaml).Distinct(StringComparer.OrdinalIgnoreCase).Where(this.ValidateQueueName).ToArray();
+        var containers = yaml.Containers?.OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).Where(this.ValidateContainerName).ToArray() ?? [];
+        var tables = yaml.Tables?.OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).Where(this.ValidateTableName).ToArray() ?? [];
+        var queues = yaml.Queues?.OfType<string>().Distinct(StringComparer.OrdinalIgnoreCase).Where(this.ValidateQueueName).ToArray() ?? [];
 
         return new AzuriteDependency(containers, tables, queues);
     }
@@ -65,7 +38,7 @@ internal sealed class AzuriteDependencyYamlHandler : IDependencyYamlHandler
         }
         catch (ArgumentException ex)
         {
-            this._logger.LogWarning("{Warning}", ex.Message);
+            logger.LogWarning("{Warning}", ex.Message);
             return false;
         }
     }

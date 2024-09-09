@@ -1,10 +1,9 @@
-﻿namespace Leap.Cli.Configuration.Yaml;
+﻿using YamlDotNet.Serialization;
 
-internal sealed class DependencyYaml : DynamicObjectYaml
+namespace Leap.Cli.Configuration.Yaml;
+
+internal abstract class DependencyYaml
 {
-    public string Type
-    {
-        get => base.GetScalar("type") ?? string.Empty;
-        set => base["type"] = value;
-    }
+    [YamlMember(Alias = "type", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
+    public string? Type { get; set; }
 }

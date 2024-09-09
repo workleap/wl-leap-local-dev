@@ -1,4 +1,6 @@
 ﻿using Leap.Cli.Configuration.Yaml;
+using Leap.Cli.Dependencies;
+using Leap.Cli.Dependencies.Azurite;
 using Leap.Cli.Yaml;
 using YamlDotNet.Serialization;
 
@@ -21,6 +23,16 @@ internal static class LeapYamlSerializer
                 [DotnetRunnerYaml.YamlDiscriminator] = typeof(DotnetRunnerYaml),
                 [OpenApiRunnerYaml.YamlDiscriminator] = typeof(OpenApiRunnerYaml),
                 [RemoteRunnerYaml.YamlDiscriminator] = typeof(RemoteRunnerYaml),
+            });
+
+            options.AddKeyValueTypeDiscriminator<DependencyYaml>("type", new Dictionary<string, Type>
+            {
+                [AzuriteDependencyYaml.YamlDiscriminator] = typeof(AzuriteDependencyYaml),
+                [EventGridDependencyYaml.YamlDiscriminator] = typeof(EventGridDependencyYaml),
+                [MongoDependencyYaml.YamlDiscriminator] = typeof(MongoDependencyYaml),
+                [PostgresDependencyYaml.YamlDiscriminator] = typeof(PostgresDependencyYaml),
+                [RedisDependencyYaml.YamlDiscriminator] = typeof(RedisDependencyYaml),
+                [SqlServerDependencyYaml.YamlDiscriminator] = typeof(SqlServerDependencyYaml),
             });
         })
         .Build();

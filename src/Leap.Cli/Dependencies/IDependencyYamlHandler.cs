@@ -3,11 +3,10 @@ using Leap.Cli.Model;
 
 namespace Leap.Cli.Dependencies;
 
-internal interface IDependencyYamlHandler
+internal interface IDependencyYamlHandler<TYaml>
+    where TYaml : DependencyYaml, new()
 {
-    bool CanHandle(string dependencyType);
+    TYaml Merge(TYaml leftYaml, TYaml rightYaml);
 
-    DependencyYaml Merge(DependencyYaml leftYaml, DependencyYaml rightYaml);
-
-    Dependency ToDependencyModel(DependencyYaml yaml);
+    Dependency ToDependencyModel(TYaml yaml);
 }

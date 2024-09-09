@@ -95,11 +95,11 @@ internal sealed class SqlServerDependencyHandler : DependencyHandler<SqlServerDe
     private static void ConfigureEnvironmentVariables(List<EnvironmentVariable> environmentVariables)
     {
         // Do we want to add the environment variables after we verified that the instance is ready?
-        environmentVariables.AddRange(new[]
-        {
-            new EnvironmentVariable("CONNECTIONSTRINGS__SQLSERVER", HostConnectionString, EnvironmentVariableScope.Host),
-            new EnvironmentVariable("CONNECTIONSTRINGS__SQLSERVER", ContainerConnectionString, EnvironmentVariableScope.Container),
-        });
+        environmentVariables.AddRange(
+        [
+            new EnvironmentVariable("ConnectionStrings__SqlServer", HostConnectionString, EnvironmentVariableScope.Host),
+            new EnvironmentVariable("ConnectionStrings__SqlServer", ContainerConnectionString, EnvironmentVariableScope.Container)
+        ]);
     }
 
     private static void ConfigureAppSettingsJson(JsonObject appsettings)
