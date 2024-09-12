@@ -3,6 +3,7 @@ using System.Net.Mime;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Leap.Cli.Aspire;
 using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
@@ -22,19 +23,22 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
     private readonly IConfigureAppSettingsJson _appSettingsJson;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger _logger;
+    private readonly IAspireManager _aspire;
 
     public AzuriteDependencyHandler(
         IConfigureDockerCompose dockerCompose,
         IConfigureEnvironmentVariables environmentVariables,
         IConfigureAppSettingsJson appSettingsJson,
         IHttpClientFactory httpClientFactory,
-        ILogger<AzuriteDependencyHandler> logger)
+        ILogger<AzuriteDependencyHandler> logger,
+        IAspireManager aspire)
     {
         this._dockerCompose = dockerCompose;
         this._environmentVariables = environmentVariables;
         this._appSettingsJson = appSettingsJson;
         this._httpClientFactory = httpClientFactory;
         this._logger = logger;
+        this._aspire = aspire;
     }
 
     protected override Task BeforeStartAsync(AzuriteDependency dependency, CancellationToken cancellationToken)
@@ -43,6 +47,12 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
         ConfigureDockerCompose(this._dockerCompose.Configuration);
         this._environmentVariables.Configure(ConfigureEnvironmentVariables);
         ConfigureAppSettingsJson(this._appSettingsJson.Configuration);
+
+        this._aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
+        {
+            ResourceType = Constants.LeapDependencyAspireResourceType,
+            Urls = [AzuriteConstants.HostBlobServiceUri, AzuriteConstants.HostQueueServiceUri, AzuriteConstants.HostTableServiceUri]
+        });
 
         return Task.CompletedTask;
     }

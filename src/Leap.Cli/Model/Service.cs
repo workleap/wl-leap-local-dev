@@ -1,10 +1,25 @@
-﻿namespace Leap.Cli.Model;
+﻿using System.Security.Cryptography;
+using System.Text;
+using Leap.Cli.Configuration;
+
+namespace Leap.Cli.Model;
 
 internal sealed class Service
 {
     private Runner? _activeRunner;
 
-    public required string Name { get; init; }
+    public Service(string name, LeapYamlFile leapYaml)
+    {
+        this.Name = name;
+
+        var filePathHash = SHA256.HashData(Encoding.UTF8.GetBytes(leapYaml.Path));
+        var containerNameSuffix = Convert.ToHexString(filePathHash).ToLowerInvariant()[..8];
+        this.ContainerName = $"{this.Name.ToLowerInvariant()}-{containerNameSuffix}";
+    }
+
+    public string Name { get; }
+
+    public string ContainerName { get; }
 
     public List<Runner> Runners { get; } = [];
 
@@ -20,6 +35,10 @@ internal sealed class Service
     public Dictionary<string, string> EnvironmentVariables { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     public Ingress Ingress { get; } = new();
+
+    public string ReverseProxyUrl => $"https://{this.Ingress.Host}:{Constants.LeapReverseProxyPort}{this.Ingress.Path.TrimEnd('/')}";
+
+    public string LocalhostUrl => $"{this.ActiveRunner.Protocol}://localhost:{this.Ingress.LocalhostPort}";
 
     public Dictionary<string, string> GetServiceAndRunnerEnvironmentVariables()
     {
@@ -40,15 +59,13 @@ internal sealed class Service
         return environmentVariables;
     }
 
-    public string GetUrl()
+    public string GetPrimaryUrl()
     {
         if (this.ActiveRunner is RemoteRunner remoteRunner)
         {
             return remoteRunner.Url;
         }
 
-        return this.Ingress.Host.IsLocalhost
-            ? $"{this.ActiveRunner.Protocol}://localhost:{this.Ingress.LocalhostPort}"
-            : $"https://{this.Ingress.Host}:{Constants.LeapReverseProxyPort}{this.Ingress.Path.TrimEnd('/')}";
+        return this.Ingress.Host.IsLocalhost ? this.LocalhostUrl : this.ReverseProxyUrl;
     }
 }

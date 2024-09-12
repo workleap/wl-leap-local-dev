@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CliWrap;
+using Leap.Cli.Aspire;
 using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
@@ -29,19 +30,22 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
     private readonly IConfigureAppSettingsJson _appSettingsJson;
     private readonly ICliWrap _cliWrap;
     private readonly ILogger _logger;
+    private readonly IAspireManager _aspire;
 
     public MongoDependencyHandler(
         IConfigureDockerCompose dockerCompose,
         IConfigureEnvironmentVariables environmentVariables,
         IConfigureAppSettingsJson appSettingsJson,
         ICliWrap cliWrap,
-        ILogger<MongoDependencyHandler> logger)
+        ILogger<MongoDependencyHandler> logger,
+        IAspireManager aspire)
     {
         this._dockerCompose = dockerCompose;
         this._environmentVariables = environmentVariables;
         this._appSettingsJson = appSettingsJson;
         this._cliWrap = cliWrap;
         this._logger = logger;
+        this._aspire = aspire;
     }
 
     protected override Task BeforeStartAsync(MongoDependency dependency, CancellationToken cancellationToken)
@@ -50,6 +54,12 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
         ConfigureDockerCompose(this._dockerCompose.Configuration);
         this._environmentVariables.Configure(ConfigureEnvironmentVariables);
         ConfigureAppSettingsJson(this._appSettingsJson.Configuration);
+
+        this._aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
+        {
+            ResourceType = Constants.LeapDependencyAspireResourceType,
+            Urls = [HostConnectionString]
+        });
 
         return Task.CompletedTask;
     }

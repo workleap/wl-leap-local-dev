@@ -16,6 +16,7 @@ internal sealed class AspireManager : IAspireManager
     public const string AspireDashboardOtlpUrlDefaultValue = "https://localhost:18889";
     public const string AspireDashboardUrlDefaultValue = "https://localhost:18888";
     public const string AspireResourceServiceEndpointUrl = "https://localhost:18887";
+    public const string AspireOtlpDefaultApiKey = "leap";
 
     private readonly ILogger _logger;
     private readonly INuGetPackageDownloader _nuGetPackageDownloader;

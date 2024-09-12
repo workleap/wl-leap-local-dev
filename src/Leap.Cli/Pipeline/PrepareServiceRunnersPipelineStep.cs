@@ -1,6 +1,9 @@
 using Leap.Cli.Aspire;
+using Leap.Cli.DockerCompose;
+using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
+using Leap.Cli.Yaml;
 
 namespace Leap.Cli.Pipeline;
 
@@ -10,17 +13,20 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
     private readonly IConfigureEnvironmentVariables _environmentVariables;
     private readonly IPortManager _portManager;
     private readonly IConfigureAppSettingsJson _appSettingsJson;
+    private readonly IConfigureDockerCompose _dockerCompose;
 
     public PrepareServiceRunnersPipelineStep(
         IAspireManager aspire,
         IConfigureEnvironmentVariables environmentVariables,
         IPortManager portManager,
-        IConfigureAppSettingsJson appSettingsJson)
+        IConfigureAppSettingsJson appSettingsJson,
+        IConfigureDockerCompose dockerCompose)
     {
         this._aspire = aspire;
         this._environmentVariables = environmentVariables;
         this._portManager = portManager;
         this._appSettingsJson = appSettingsJson;
+        this._dockerCompose = dockerCompose;
     }
 
     public Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
@@ -70,7 +76,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
                 this.HandleExecutableRunner(service, exeRunner);
                 break;
             case DockerRunner dockerRunner:
-                this.HandleDockerRunner(state, service, dockerRunner);
+                this.HandleDockerRunner(service, dockerRunner);
                 break;
             case DotnetRunner dotnetRunner:
                 this.HandleDotnetRunner(service, dotnetRunner);
@@ -81,7 +87,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         }
 
         var serviceUrlEnvVarName = $"Services__{service.Name}__BaseUrl";
-        var serviceUrl = service.GetUrl();
+        var serviceUrl = service.GetPrimaryUrl();
 
         // Declare the service URL to the other services
         this._environmentVariables.Configure(x =>
@@ -114,19 +120,43 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
             .WithOtlpExporter();
     }
 
-    private void HandleDockerRunner(ApplicationState state, Service service, DockerRunner dockerRunner)
+    private void HandleDockerRunner(Service service, DockerRunner dockerRunner)
     {
-        // TODO shall we sanitize the name of the service?
-        var builder = this._aspire.Builder.AddContainer(service.Name, dockerRunner.ImageAndTag, tag: string.Empty)
-            .WithEndpoint(scheme: dockerRunner.Protocol, port: service.Ingress.LocalhostPort, targetPort: dockerRunner.ContainerPort)
-            .WithEnvironment("ASPNETCORE_URLS", dockerRunner.Protocol + "://*:" + dockerRunner.ContainerPort)
-            .WithEnvironment("PORT", dockerRunner.ContainerPort.ToString())
-            .WithContainerRuntimeArgs([.. GetDockerExtraHostsArgs(state)])
-            .WithOtlpExporter();
+        // .NET Aspire has shown to be unstable with a large number of containers at startup, so we use Docker Compose for now
+        // It provides long-running (persistant) containers, which is useful for services that need to be up all the time
+        var dockerComposeServiceYaml = new DockerComposeServiceYaml
+        {
+            Image = dockerRunner.ImageAndTag,
+            ContainerName = service.ContainerName,
+            Ports = [new DockerComposePortMappingYaml(service.Ingress.LocalhostPort, dockerRunner.ContainerPort)],
+            Restart = DockerComposeConstants.Restart.No,
+
+            PullPolicy = dockerRunner.ImageAndTag.Contains("azurecr.io/")
+                ? DockerComposeConstants.PullPolicy.Always // Developers are expecting to use their latest images
+                : DockerComposeConstants.PullPolicy.Missing,
+
+            Environment = new KeyValueCollectionYaml
+            {
+                ["ASPNETCORE_URLS"] = dockerRunner.Protocol + "://*:" + dockerRunner.ContainerPort,
+                ["PORT"] = dockerRunner.ContainerPort.ToString(),
+
+                // Hack-ish: manually provide OpenTelemetry environment variables as we can't rely on .NET Aspire to do it at runtime
+                // https://github.com/dotnet/aspire/blob/v8.1.0/src/Aspire.Hosting/OtlpConfigurationExtensions.cs#L28
+                ["OTEL_SERVICE_NAME"] = service.Name,
+                ["OTEL_EXPORTER_OTLP_PROTOCOL"] = "grpc",
+                ["OTEL_EXPORTER_OTLP_ENDPOINT"] = AspireManager.AspireDashboardOtlpUrlDefaultValue,
+                ["OTEL_EXPORTER_OTLP_HEADERS"] = $"x-otlp-api-key={AspireManager.AspireOtlpDefaultApiKey}",
+                ["OTEL_BLRP_SCHEDULE_DELAY"] = "1000",
+                ["OTEL_BSP_SCHEDULE_DELAY"] = "1000",
+                ["OTEL_METRIC_EXPORT_INTERVAL"] = "1000",
+                ["OTEL_TRACES_SAMPLER"] = "always_on",
+                ["OTEL_METRICS_EXEMPLAR_FILTER"] = "trace_based",
+            },
+        };
 
         foreach (var (source, destination) in dockerRunner.Volumes)
         {
-            builder.WithAnnotation(new ContainerMountAnnotation(source, destination, ContainerMountType.BindMount, isReadOnly: false));
+            dockerComposeServiceYaml.Volumes.Add(new DockerComposeVolumeMappingYaml(source, destination, DockerComposeConstants.Volume.ReadOnly));
         }
 
         string[] wellKnownLinuxCertificateAuthorityBundlePaths =
@@ -143,31 +173,37 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         // Replace the default container CA bundle with ours
         foreach (var path in wellKnownLinuxCertificateAuthorityBundlePaths)
         {
-            builder.WithAnnotation(new ContainerMountAnnotation(Constants.LeapCertificateAuthorityFilePath, path, ContainerMountType.BindMount, isReadOnly: true));
+            dockerComposeServiceYaml.Volumes.Add(new DockerComposeVolumeMappingYaml(Constants.LeapCertificateAuthorityFilePath, path, DockerComposeConstants.Volume.ReadOnly));
         }
 
-        builder.WithEnvironment("NODE_EXTRA_CA_CERTS", wellKnownLinuxCertificateAuthorityBundlePaths[0]);
+        dockerComposeServiceYaml.Environment["NODE_EXTRA_CA_CERTS"] = wellKnownLinuxCertificateAuthorityBundlePaths[0];
 
         if ("https".Equals(dockerRunner.Protocol, StringComparison.OrdinalIgnoreCase))
         {
             var randomContainerCrtPath = $"/etc/ssl/leap-{Guid.NewGuid()}.crt";
             var randomContainerKeyPath = $"/etc/ssl/leap-{Guid.NewGuid()}.key";
 
-            builder.WithAnnotation(new ContainerMountAnnotation(Constants.LocalCertificateCrtFilePath, randomContainerCrtPath, ContainerMountType.BindMount, isReadOnly: true));
-            builder.WithAnnotation(new ContainerMountAnnotation(Constants.LocalCertificateKeyFilePath, randomContainerKeyPath, ContainerMountType.BindMount, isReadOnly: true));
+            dockerComposeServiceYaml.Volumes.Add(new DockerComposeVolumeMappingYaml(Constants.LocalCertificateCrtFilePath, randomContainerCrtPath, DockerComposeConstants.Volume.ReadOnly));
+            dockerComposeServiceYaml.Volumes.Add(new DockerComposeVolumeMappingYaml(Constants.LocalCertificateKeyFilePath, randomContainerKeyPath, DockerComposeConstants.Volume.ReadOnly));
 
-            builder.WithEnvironment(context =>
-            {
-                context.EnvironmentVariables["ASPNETCORE_Kestrel__Certificates__Default__Path"] = randomContainerCrtPath;
-                context.EnvironmentVariables["ASPNETCORE_Kestrel__Certificates__Default__KeyPath"] = randomContainerKeyPath;
-            });
+            dockerComposeServiceYaml.Environment["ASPNETCORE_Kestrel__Certificates__Default__Path"] = randomContainerCrtPath;
+            dockerComposeServiceYaml.Environment["ASPNETCORE_Kestrel__Certificates__Default__KeyPath"] = randomContainerKeyPath;
         }
 
-        // User-defined environment variables are last so they can override ours if required
-        builder.WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables());
+        foreach (var (name, value) in service.GetServiceAndRunnerEnvironmentVariables())
+        {
+            dockerComposeServiceYaml.Environment[name] = value;
+        }
+
+        this._dockerCompose.Configuration.Services[service.ContainerName] = dockerComposeServiceYaml;
+
+        this._aspire.Builder.AddExternalContainer(new ExternalContainerResource(service.Name, service.ContainerName)
+        {
+            Urls = [service.LocalhostUrl]
+        });
     }
 
-    private static IEnumerable<string> GetDockerExtraHostsArgs(ApplicationState state)
+    private static IEnumerable<string> GetDockerExtraHostsRuntimeArgs(ApplicationState state)
     {
         yield return "--add-host";
         yield return "host.docker.internal:host-gateway";
@@ -222,7 +258,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         // TODO shall we sanitize the name of the service?
         var builder = this._aspire.Builder.AddContainer(service.Name, "stoplight/prism", tag: "5")
             .WithEndpoint(scheme: "http", port: service.Ingress.LocalhostPort, targetPort: prismContainerPort)
-            .WithContainerRuntimeArgs([.. GetDockerExtraHostsArgs(state)]);
+            .WithContainerRuntimeArgs([.. GetDockerExtraHostsRuntimeArgs(state)]);
 
         if (openApiRunner.IsUrl)
         {

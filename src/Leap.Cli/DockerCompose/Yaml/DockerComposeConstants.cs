@@ -26,4 +26,10 @@ internal static class DockerComposeConstants
         public const string Bridge = "bridge";
         public const string Local = "local";
     }
+
+    public static class PullPolicy
+    {
+        public const string Always = "always";
+        public const string Missing = "missing";
+    }
 }

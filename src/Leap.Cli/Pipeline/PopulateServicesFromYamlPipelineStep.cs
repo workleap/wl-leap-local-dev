@@ -85,7 +85,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
             try
             {
                 // TODO validate the service name (format/convention TBD)
-                var service = new Service { Name = serviceName, };
+                var service = new Service(serviceName, leapYaml);
 
                 this.ConvertIngress(service);
                 this.ConvertEnvironmentVariables(service);

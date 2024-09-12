@@ -1,5 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 using System.Text.Json.Nodes;
+using Leap.Cli.Aspire;
 using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
@@ -27,19 +28,22 @@ internal sealed class SqlServerDependencyHandler : DependencyHandler<SqlServerDe
     private readonly IConfigureAppSettingsJson _appSettingsJson;
     private readonly IPlatformHelper _platformHelper;
     private readonly ILogger _logger;
+    private readonly IAspireManager _aspire;
 
     public SqlServerDependencyHandler(
         IConfigureDockerCompose dockerCompose,
         IConfigureEnvironmentVariables environmentVariables,
         IConfigureAppSettingsJson appSettingsJson,
         IPlatformHelper platformHelper,
-        ILogger<SqlServerDependencyHandler> logger)
+        ILogger<SqlServerDependencyHandler> logger,
+        IAspireManager aspire)
     {
         this._environmentVariables = environmentVariables;
         this._dockerCompose = dockerCompose;
         this._appSettingsJson = appSettingsJson;
         this._platformHelper = platformHelper;
         this._logger = logger;
+        this._aspire = aspire;
     }
 
     protected override Task BeforeStartAsync(SqlServerDependency dependency, CancellationToken cancellationToken)
@@ -48,6 +52,11 @@ internal sealed class SqlServerDependencyHandler : DependencyHandler<SqlServerDe
         this.ConfigureDockerCompose(this._dockerCompose.Configuration);
         this._environmentVariables.Configure(ConfigureEnvironmentVariables);
         ConfigureAppSettingsJson(this._appSettingsJson.Configuration);
+
+        this._aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
+        {
+            ResourceType = Constants.LeapDependencyAspireResourceType,
+        });
 
         return Task.CompletedTask;
     }

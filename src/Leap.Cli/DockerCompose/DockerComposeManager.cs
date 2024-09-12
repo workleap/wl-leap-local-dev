@@ -60,7 +60,7 @@ internal sealed class DockerComposeManager : IDockerComposeManager
         var command = new Command("docker")
             .WithValidation(CommandResultValidation.None)
             .WithWorkingDirectory(Constants.DockerComposeDirectoryPath)
-            .WithArguments(["compose", "up", "--pull", "missing", "--remove-orphans", "--wait"])
+            .WithArguments(["compose", "up", "--remove-orphans", "--wait"])
             .WithStandardOutputPipe(PipeTarget.ToDelegate(x => this._logger.LogDebug("{StandardOutput}", x?.Trim())))
             .WithStandardErrorPipe(PipeTarget.ToDelegate(x => this._logger.LogDebug("{StandardError}", x?.Trim())));
 

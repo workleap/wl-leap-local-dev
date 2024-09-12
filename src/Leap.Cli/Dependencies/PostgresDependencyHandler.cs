@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Nodes;
+using Leap.Cli.Aspire;
 using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
@@ -24,17 +25,20 @@ internal sealed class PostgresDependencyHandler : DependencyHandler<PostgresDepe
     private readonly IConfigureEnvironmentVariables _environmentVariables;
     private readonly IConfigureAppSettingsJson _appSettingsJson;
     private readonly ILogger _logger;
+    private readonly IAspireManager _aspire;
 
     public PostgresDependencyHandler(
         IConfigureDockerCompose dockerCompose,
         IConfigureEnvironmentVariables environmentVariables,
         IConfigureAppSettingsJson appSettingsJson,
-        ILogger<PostgresDependencyHandler> logger)
+        ILogger<PostgresDependencyHandler> logger,
+        IAspireManager aspire)
     {
         this._environmentVariables = environmentVariables;
         this._dockerCompose = dockerCompose;
         this._appSettingsJson = appSettingsJson;
         this._logger = logger;
+        this._aspire = aspire;
     }
 
     protected override Task BeforeStartAsync(PostgresDependency dependency, CancellationToken cancellationToken)
@@ -43,6 +47,12 @@ internal sealed class PostgresDependencyHandler : DependencyHandler<PostgresDepe
         ConfigureDockerCompose(this._dockerCompose.Configuration);
         this._environmentVariables.Configure(ConfigureEnvironmentVariables);
         ConfigureAppSettingsJson(this._appSettingsJson.Configuration);
+
+        this._aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
+        {
+            ResourceType = Constants.LeapDependencyAspireResourceType,
+            Urls = [HostConnectionString]
+        });
 
         return Task.CompletedTask;
     }

@@ -99,7 +99,7 @@ internal sealed class PrepareReverseProxyPipelineStep(IAspireManager aspireManag
                         continue;
                     }
 
-                    urls.Add(new UrlSnapshot(serviceName, service.GetUrl(), IsInternal: false));
+                    urls.Add(new UrlSnapshot(serviceName, service.GetPrimaryUrl(), IsInternal: false));
 
                     var routeId = "route_" + serviceName;
                     var clusterId = "cluster_" + serviceName;

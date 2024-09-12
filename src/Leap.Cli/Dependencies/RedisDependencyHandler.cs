@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Nodes;
+using Leap.Cli.Aspire;
 using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
@@ -22,17 +23,20 @@ internal sealed class RedisDependencyHandler : DependencyHandler<RedisDependency
     private readonly IConfigureEnvironmentVariables _environmentVariables;
     private readonly IConfigureAppSettingsJson _appSettingsJson;
     private readonly ILogger _logger;
+    private readonly IAspireManager _aspire;
 
     public RedisDependencyHandler(
         IConfigureDockerCompose dockerCompose,
         IConfigureEnvironmentVariables environmentVariables,
         IConfigureAppSettingsJson appSettingsJson,
-        ILogger<RedisDependencyHandler> logger)
+        ILogger<RedisDependencyHandler> logger,
+        IAspireManager aspire)
     {
         this._dockerCompose = dockerCompose;
         this._environmentVariables = environmentVariables;
         this._appSettingsJson = appSettingsJson;
         this._logger = logger;
+        this._aspire = aspire;
     }
 
     protected override Task BeforeStartAsync(RedisDependency dependency, CancellationToken cancellationToken)
@@ -41,6 +45,11 @@ internal sealed class RedisDependencyHandler : DependencyHandler<RedisDependency
         ConfigureDockerCompose(this._dockerCompose.Configuration);
         this._environmentVariables.Configure(ConfigureEnvironmentVariables);
         ConfigureAppSettingsJson(this._appSettingsJson.Configuration);
+
+        this._aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
+        {
+            ResourceType = Constants.LeapDependencyAspireResourceType,
+        });
 
         return Task.CompletedTask;
     }

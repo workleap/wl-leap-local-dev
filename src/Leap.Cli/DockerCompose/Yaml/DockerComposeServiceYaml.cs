@@ -38,6 +38,9 @@ internal sealed class DockerComposeServiceYaml
     [YamlMember(Alias = "restart")]
     public string Restart { get; set; } = DockerComposeConstants.Restart.UnlessStopped;
 
+    [YamlMember(Alias = "pull_policy")]
+    public string PullPolicy { get; set; } = DockerComposeConstants.PullPolicy.Missing;
+
     [YamlMember(Alias = "networks", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
     public List<string> Networks { get; set; } = new();
 

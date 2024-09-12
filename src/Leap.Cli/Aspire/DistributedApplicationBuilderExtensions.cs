@@ -50,6 +50,10 @@ internal static class DistributedApplicationBuilderExtensions
 
             // Disable authentication on the Dashboard
             ["AppHost:BrowserToken"] = "",
+
+            // Hardcoded OTLP API key to prevent Aspire from generating a random one at each run
+            // We can use it when manually configuring containers with Docker Compose prior to starting the dashboard
+            ["AppHost:OtlpApiKey"] = AspireManager.AspireOtlpDefaultApiKey,
         });
 
         return builder;

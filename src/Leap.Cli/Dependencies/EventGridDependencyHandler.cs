@@ -4,6 +4,7 @@ using Leap.Cli.Model;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Leap.Cli.Aspire;
 using Leap.Cli.Platform.Telemetry;
 
 namespace Leap.Cli.Dependencies;
@@ -16,12 +17,13 @@ internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDe
     private const string ContainerName = "leap-eventgrid";
 
     private static readonly string EventGridHostUrl = $"http://127.0.0.1:{EventGridPort}";
-    private static readonly string EventGridContainerUrl = $"host.docker.internal:{EventGridPort}";
+    private static readonly string EventGridContainerUrl = $"http://host.docker.internal:{EventGridPort}";
 
     private readonly IConfigureDockerCompose _dockerCompose;
     private readonly IConfigureEnvironmentVariables _environmentVariables;
     private readonly IConfigureAppSettingsJson _appSettingsJson;
     private readonly ILogger<EventGridDependencyHandler> _logger;
+    private readonly IAspireManager _aspire;
     private readonly SemaphoreSlim _generatedEventGridSettingsFileWriteLock = new SemaphoreSlim(initialCount: 1, maxCount: 1);
 
     private FileSystemWatcher? _userEventGridSettingsFileWatcher;
@@ -30,12 +32,14 @@ internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDe
         IConfigureDockerCompose dockerCompose,
         IConfigureEnvironmentVariables environmentVariables,
         IConfigureAppSettingsJson appSettingsJson,
-        ILogger<EventGridDependencyHandler> logger)
+        ILogger<EventGridDependencyHandler> logger,
+        IAspireManager aspire)
     {
         this._dockerCompose = dockerCompose;
         this._environmentVariables = environmentVariables;
         this._appSettingsJson = appSettingsJson;
         this._logger = logger;
+        this._aspire = aspire;
     }
 
     protected override async Task BeforeStartAsync(EventGridDependency dependency, CancellationToken cancellationToken)
@@ -46,6 +50,12 @@ internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDe
         ConfigureDockerCompose(this._dockerCompose.Configuration);
         this._environmentVariables.Configure(ConfigureEnvironmentVariables);
         ConfigureAppSettingsJson(this._appSettingsJson.Configuration);
+
+        this._aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
+        {
+            ResourceType = Constants.LeapDependencyAspireResourceType,
+            Urls = [EventGridHostUrl]
+        });
     }
 
     private async Task EnsureEventGridSettingsFilesExists(EventGridDependency dependency, CancellationToken cancellationToken)

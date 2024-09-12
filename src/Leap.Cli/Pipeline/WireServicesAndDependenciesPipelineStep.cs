@@ -31,6 +31,14 @@ internal sealed class WireServicesAndDependenciesPipelineStep(
                     container.Annotations.Add(envCallbackAnnotation);
                 }
             }
+
+            foreach (var service in state.Services.Values)
+            {
+                if (scope == EnvironmentVariableScope.Container && configureDockerCompose.Configuration.Services.TryGetValue(service.ContainerName, out var dockerComposeServiceYaml))
+                {
+                    dockerComposeServiceYaml.Environment.TryAdd(envvarName, envvarValue);
+                }
+            }
         }
 
         // Allow dependencies running in Docker Compose to reach custom services using *.localhost domains
