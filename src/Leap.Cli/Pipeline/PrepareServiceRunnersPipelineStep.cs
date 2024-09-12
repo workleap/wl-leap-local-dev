@@ -144,7 +144,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
                 // https://github.com/dotnet/aspire/blob/v8.1.0/src/Aspire.Hosting/OtlpConfigurationExtensions.cs#L28
                 ["OTEL_SERVICE_NAME"] = service.Name,
                 ["OTEL_EXPORTER_OTLP_PROTOCOL"] = "grpc",
-                ["OTEL_EXPORTER_OTLP_ENDPOINT"] = AspireManager.AspireDashboardOtlpUrlDefaultValue,
+                ["OTEL_EXPORTER_OTLP_ENDPOINT"] = HostNameResolver.ReplaceLocalhostWithContainerHost(AspireManager.AspireDashboardOtlpUrlDefaultValue),
                 ["OTEL_EXPORTER_OTLP_HEADERS"] = $"x-otlp-api-key={AspireManager.AspireOtlpDefaultApiKey}",
                 ["OTEL_BLRP_SCHEDULE_DELAY"] = "1000",
                 ["OTEL_BSP_SCHEDULE_DELAY"] = "1000",
