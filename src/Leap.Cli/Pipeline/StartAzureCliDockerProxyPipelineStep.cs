@@ -56,12 +56,6 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
             throw new LeapException("Azure CLI is installed but not logged in. Please run `az login` to login.");
         }
 
-        var hasAtLeastOneDockerRunner = state.Services.Values.Any(x => x.ActiveRunner is DockerRunner);
-        if (!hasAtLeastOneDockerRunner)
-        {
-            return;
-        }
-
         // Docker containers cannot access the host's Azure CLI credentials, because they don't ship with the Azure CLI.
         // It's the same concept that we used here: https://github.com/gsoft-inc/azure-cli-credentials-proxy
         this.RunAzureCliCredentialsProxyInAspireAsync(cancellationToken);
@@ -114,8 +108,14 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
 
         this._environmentVariables.Configure(x =>
         {
-            x.Add(new EnvironmentVariable("IDENTITY_ENDPOINT", $"http://host.docker.internal:{proxyPort}/token", EnvironmentVariableScope.Container));
-            x.Add(new EnvironmentVariable("IMDS_ENDPOINT", "dummy_required_value", EnvironmentVariableScope.Container));
+            var proxyTokenEndpointUrl = $"http://127.0.0.1:{proxyPort}/token";
+            const string dummyIdmsEndpoint = "dummy_required_value";
+
+            x.Add(new EnvironmentVariable("IDENTITY_ENDPOINT", proxyTokenEndpointUrl, EnvironmentVariableScope.Host));
+            x.Add(new EnvironmentVariable("IMDS_ENDPOINT", dummyIdmsEndpoint, EnvironmentVariableScope.Host));
+
+            x.Add(new EnvironmentVariable("IDENTITY_ENDPOINT", HostNameResolver.ReplaceLocalhostWithContainerHost(proxyTokenEndpointUrl), EnvironmentVariableScope.Container));
+            x.Add(new EnvironmentVariable("IMDS_ENDPOINT", dummyIdmsEndpoint, EnvironmentVariableScope.Container));
         });
     }
 
