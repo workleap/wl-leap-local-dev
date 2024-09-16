@@ -16,8 +16,8 @@ internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDe
     private const string ServiceName = "eventgrid";
     private const string ContainerName = "leap-eventgrid";
 
-    private static readonly string EventGridHostUrl = $"http://127.0.0.1:{EventGridPort}";
-    private static readonly string EventGridContainerUrl = $"http://host.docker.internal:{EventGridPort}";
+    private static readonly string EventGridHostUrl = $"https://127.0.0.1:{EventGridPort}";
+    private static readonly string EventGridContainerUrl = $"https://host.docker.internal:{EventGridPort}";
 
     private readonly IConfigureDockerCompose _dockerCompose;
     private readonly IConfigureEnvironmentVariables _environmentVariables;
@@ -220,8 +220,15 @@ internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDe
             Ports = { new DockerComposePortMappingYaml(EventGridPort, EventGridPort) },
             Volumes =
             {
-                new DockerComposeVolumeMappingYaml(Constants.GeneratedEventGridSettingsFilePath, "/app/appsettings.json",  DockerComposeConstants.Volume.ReadOnly)
+                new DockerComposeVolumeMappingYaml(Constants.GeneratedEventGridSettingsFilePath, "/app/appsettings.json",  DockerComposeConstants.Volume.ReadOnly),
+                new DockerComposeVolumeMappingYaml(Constants.CertificatesDirectoryPath, "/cert", DockerComposeConstants.Volume.ReadOnly),
             },
+            Environment =
+            {
+                ["Kestrel__Certificates__Default__Path"] = $"/cert/{Constants.LeapCertificateCrtFileName}",
+                ["Kestrel__Certificates__Default__KeyPath"] = $"/cert/{Constants.LeapCertificateKeyFileName}",
+                ["ASPNETCORE_URLS"] = $"https://*:{EventGridPort}",
+            }
         };
 
         dockerComposeYaml.Services[ServiceName] = service;
