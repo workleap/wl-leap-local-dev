@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
 namespace Leap.Cli.Aspire;
@@ -92,10 +93,9 @@ internal sealed class ExternalContainerResourceLifecycleHook(ILogger<ExternalCon
                 // TODO We noticed that the ordering of logs is somehow not guaranteed, we might want to address this in the future.
                 await client.Containers.GetContainerLogsAsync(resource.ContainerNameOrId, logParameters, cancellationToken, new Progress<string>(line =>
                 {
-                    // Trimming Docker logs leading control characters to improve readability in dashboard (SOH followed by 6 NULs and a final character)
-                    if (line is ['\u0001', '\u0000', '\u0000', '\u0000', '\u0000', '\u0000', '\u0000', { }, .. var rest])
+                    if (TryRemoveNonPrintableMultiplexedDockerLogHeader(line, out var remainder))
                     {
-                        line = rest;
+                        line = remainder;
                     }
 
                     resourceLogger.LogInformation("{StdOut}", line);
@@ -127,6 +127,21 @@ internal sealed class ExternalContainerResourceLifecycleHook(ILogger<ExternalCon
                 // Application is shutting down
             }
         }
+    }
+
+    private static bool TryRemoveNonPrintableMultiplexedDockerLogHeader(string line, [NotNullWhen(true)] out string? remainder)
+    {
+        // Docker logs for non-TTY containers have a non-printable 8-byte header to distinguish the originating stream (stdin, stdout, stderr):
+        // 1 byte stream type, 3 bytes padding, 4 bytes payload size. See:
+        // https://docs.docker.com/reference/api/engine/version/v1.26/#tag/Container/operation/ContainerAttach
+        if (line is ['\u0000' or '\u0001' or '\u0002', '\u0000', '\u0000', '\u0000', _, _, _, _, .. var rest])
+        {
+            remainder = rest;
+            return true;
+        }
+
+        remainder = null;
+        return false;
     }
 
     public async ValueTask DisposeAsync()
