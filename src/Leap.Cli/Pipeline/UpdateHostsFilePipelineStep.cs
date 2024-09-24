@@ -23,7 +23,7 @@ internal sealed class UpdateHostsFilePipelineStep : IPipelineStep
 
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
-        var existingHostnames = await this._hostsFileManager.GetHostnamesAsync(cancellationToken);
+        var existingHostnames = await this._hostsFileManager.GetLeapManagedHostnamesAsync(cancellationToken);
         if (existingHostnames == null)
         {
             return;
@@ -46,7 +46,7 @@ internal sealed class UpdateHostsFilePipelineStep : IPipelineStep
 
         if (this._platformHelper.IsCurrentProcessElevated)
         {
-            await this._hostsFileManager.UpdateHostnamesAsync(finalUniqueHostnames, cancellationToken);
+            await this._hostsFileManager.UpdateLeapManagedHostnamesAsync(finalUniqueHostnames, cancellationToken);
         }
         else
         {

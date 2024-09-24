@@ -14,6 +14,11 @@ internal sealed class HostsFileManager : IHostsFileManager
     // Leap hosts file line entry regex
     private static readonly Regex HostsFileLineRegex = new Regex(@"^127.0.0.1\s+(?<hostname>[a-z0-9\-\.]+)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+    private static readonly HashSet<string> WellKnownNonCustomHostnames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "host.docker.internal", "gateway.docker.internal", "kubernetes.docker.internal", "localhost",
+    };
+
     private readonly IFileSystem _fileSystem;
     private readonly ILogger _logger;
     private readonly string _hostsFilePath;
@@ -27,16 +32,35 @@ internal sealed class HostsFileManager : IHostsFileManager
             : "/etc/hosts";
     }
 
-    public async Task<ISet<string>?> GetHostnamesAsync(CancellationToken cancellationToken)
+    public async Task<ISet<string>?> GetAllCustomHostnamesAsync(CancellationToken cancellationToken)
     {
-        string[] lines;
-        try
+        var lines = await this.GetHostsFileLines(cancellationToken);
+        if (lines == null)
         {
-            lines = await this._fileSystem.File.ReadAllLinesAsync(this._hostsFilePath, cancellationToken);
+            return null;
         }
-        catch (IOException ex)
+
+        var hostnames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var line in lines)
         {
-            this._logger.LogWarning("Hosts file '{HostsFilePath}' could not be read: {Reason}", this._hostsFilePath, ex.Message);
+            if (HostsFileLineRegex.Match(line) is { Success: true } match)
+            {
+                if (!WellKnownNonCustomHostnames.Contains(match.Groups["hostname"].Value))
+                {
+                    hostnames.Add(match.Groups["hostname"].Value);
+                }
+            }
+        }
+
+        return hostnames;
+    }
+
+    public async Task<ISet<string>?> GetLeapManagedHostnamesAsync(CancellationToken cancellationToken)
+    {
+        var lines = await this.GetHostsFileLines(cancellationToken);
+        if (lines == null)
+        {
             return null;
         }
 
@@ -70,16 +94,11 @@ internal sealed class HostsFileManager : IHostsFileManager
         return uniqueHostnames;
     }
 
-    public async Task UpdateHostnamesAsync(IEnumerable<string> hosts, CancellationToken cancellationToken)
+    public async Task UpdateLeapManagedHostnamesAsync(IEnumerable<string> hosts, CancellationToken cancellationToken)
     {
-        string[] lines;
-        try
+        var lines = await this.GetHostsFileLines(cancellationToken);
+        if (lines == null)
         {
-            lines = await this._fileSystem.File.ReadAllLinesAsync(this._hostsFilePath, cancellationToken);
-        }
-        catch (IOException ex)
-        {
-            this._logger.LogWarning("Hosts file '{HostsFilePath}' could not be read: {Reason}", this._hostsFilePath, ex.Message);
             return;
         }
 
@@ -123,6 +142,19 @@ internal sealed class HostsFileManager : IHostsFileManager
         catch (IOException ex)
         {
             this._logger.LogWarning("Hosts file '{HostsFilePath}' could not be written: {Reason}", this._hostsFilePath, ex.Message);
+        }
+    }
+
+    private async Task<string[]?> GetHostsFileLines(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await this._fileSystem.File.ReadAllLinesAsync(this._hostsFilePath, cancellationToken);
+        }
+        catch (IOException ex)
+        {
+            this._logger.LogWarning("Hosts file '{HostsFilePath}' could not be read: {Reason}", this._hostsFilePath, ex.Message);
+            return null;
         }
     }
 }

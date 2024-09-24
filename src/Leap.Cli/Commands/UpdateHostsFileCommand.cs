@@ -41,7 +41,7 @@ internal sealed class UpdateHostsFileCommandHandler(IPlatformHelper platformHelp
 
         var hosts = options.Hosts.Split(UpdateHostsFileCommand.HostSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        await hostsFileManager.UpdateHostnamesAsync(hosts, cancellationToken);
+        await hostsFileManager.UpdateLeapManagedHostnamesAsync(hosts, cancellationToken);
 
         // Consider signaling the other process through a named pipe?
         return 0;

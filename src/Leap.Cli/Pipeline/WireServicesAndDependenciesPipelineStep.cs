@@ -1,15 +1,17 @@
 using Leap.Cli.Aspire;
 using Leap.Cli.DockerCompose;
 using Leap.Cli.Model;
+using Leap.Cli.Platform;
 
 namespace Leap.Cli.Pipeline;
 
 internal sealed class WireServicesAndDependenciesPipelineStep(
     IEnvironmentVariableManager environmentVariables,
     IConfigureDockerCompose configureDockerCompose,
+    IHostsFileManager hostsFileManager,
     IAspireManager aspire) : IPipelineStep
 {
-    public Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
+    public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
         var orderedEnvironmentVariables = environmentVariables.EnvironmentVariables.OrderBy(x => x.Name, StringComparer.Ordinal);
 
@@ -42,15 +44,16 @@ internal sealed class WireServicesAndDependenciesPipelineStep(
         }
 
         // Allow dependencies running in Docker Compose to reach custom services using *.localhost domains
-        var serviceIngressHosts = state.Services.Values.Select(x => x.Ingress.Host).Where(x => !x.IsLocalhost);
-        var dockerComposeExtraHosts = serviceIngressHosts.Select(host => $"{host}:host-gateway").ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var dockerComposeServiceYaml in configureDockerCompose.Configuration.Services.Values)
+        var hosts = await hostsFileManager.GetAllCustomHostnamesAsync(cancellationToken);
+        if (hosts != null)
         {
-            dockerComposeServiceYaml.ExtraHosts.AddRange(dockerComposeExtraHosts);
-        }
+            var dockerComposeExtraHosts = hosts.Select(host => $"{host}:host-gateway").ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        return Task.CompletedTask;
+            foreach (var dockerComposeServiceYaml in configureDockerCompose.Configuration.Services.Values)
+            {
+                dockerComposeServiceYaml.ExtraHosts.AddRange(dockerComposeExtraHosts);
+            }
+        }
     }
 
     public Task StopAsync(ApplicationState state, CancellationToken cancellationToken)

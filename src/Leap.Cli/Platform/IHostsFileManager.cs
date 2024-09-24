@@ -2,7 +2,9 @@ namespace Leap.Cli.Platform;
 
 internal interface IHostsFileManager
 {
-    Task<ISet<string>?> GetHostnamesAsync(CancellationToken cancellationToken);
+    Task<ISet<string>?> GetLeapManagedHostnamesAsync(CancellationToken cancellationToken);
 
-    Task UpdateHostnamesAsync(IEnumerable<string> hosts, CancellationToken cancellationToken);
+    Task UpdateLeapManagedHostnamesAsync(IEnumerable<string> hosts, CancellationToken cancellationToken);
+
+    Task<ISet<string>?> GetAllCustomHostnamesAsync(CancellationToken cancellationToken);
 }
