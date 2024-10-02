@@ -59,6 +59,10 @@ internal sealed class PostgresDependencyHandler : DependencyHandler<PostgresDepe
 
     private static void ConfigureDockerCompose(DockerComposeYaml dockerComposeYaml)
     {
+        const string dbName = "postgres";
+        const string pgUser = "postgres";
+        const string pgPassword = "localpassword";
+
         var service = new DockerComposeServiceYaml
         {
             Image = "postgres:16",
@@ -66,9 +70,9 @@ internal sealed class PostgresDependencyHandler : DependencyHandler<PostgresDepe
             Restart = DockerComposeConstants.Restart.UnlessStopped,
             Environment = new KeyValueCollectionYaml
             {
-                ["POSTGRES_DB"] = "postgres",
-                ["POSTGRES_USER"] = "postgres",
-                ["POSTGRES_PASSWORD"] = "localpassword",
+                ["POSTGRES_DB"] = dbName,
+                ["POSTGRES_USER"] = pgUser,
+                ["POSTGRES_PASSWORD"] = pgPassword,
             },
             Ports = { new DockerComposePortMappingYaml(HostPostgresPort, ContainerPostgresPort) },
             Volumes =
@@ -86,6 +90,13 @@ internal sealed class PostgresDependencyHandler : DependencyHandler<PostgresDepe
                     },
                 },
             },
+            Healthcheck = new DockerComposeHealthcheckYaml
+            {
+                // Inspired by https://github.com/search?q=path%3Adocker-compose.yml+pg_isready&type=code
+                Test = ["CMD", "pg_isready", "-U", pgUser, "-d", dbName, "-p", ContainerPostgresPort.ToString()],
+                Interval = "1s",
+                Retries = 30,
+            }
         };
 
         dockerComposeYaml.Services[ServiceName] = service;

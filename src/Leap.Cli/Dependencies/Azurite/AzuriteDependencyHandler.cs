@@ -63,8 +63,8 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
         {
             Image = "mcr.microsoft.com/azure-storage/azurite:latest",
             ContainerName = ContainerName,
-            Command = new DockerComposeCommandYaml
-            {
+            Command =
+            [
                 "azurite",
                 "--skipApiVersionCheck", // Don't throw if Azurite is more recent than the SDKs used to communicate with it
                 "--loose", // Don't throw on invalid request headers or parameters
@@ -80,7 +80,7 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
                 "--oauth", "basic",
                 "--cert", $"/cert/{Constants.LeapCertificateCrtFileName}",
                 "--key", $"/cert/{Constants.LeapCertificateKeyFileName}",
-            },
+            ],
             Restart = DockerComposeConstants.Restart.UnlessStopped,
             Ports =
             {
@@ -104,6 +104,13 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
                     },
                 },
             },
+            Healthcheck = new DockerComposeHealthcheckYaml
+            {
+                // https://github.com/Azure/Azurite/issues/1666
+                Test = ["CMD-SHELL", $"nc 127.0.0.1 {AzuriteConstants.BlobPort} -z && nc 127.0.0.1 {AzuriteConstants.QueuePort} -z && nc 127.0.0.1 {AzuriteConstants.TablePort} -z"],
+                Interval = "1s",
+                Retries = 30,
+            }
         };
 
         dockerComposeYaml.Services[ServiceName] = service;

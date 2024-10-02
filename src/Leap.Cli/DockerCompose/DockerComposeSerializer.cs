@@ -12,7 +12,7 @@ internal static class DockerComposeSerializer
         .WithTypeConverter(DockerComposePortMappingYamlTypeConverter.Instance)
         .WithTypeConverter(KeyValueCollectionYamlTypeConverter.MapWriter)
         .WithTypeConverter(DockerComposeVolumeMappingYamlTypeConverter.Instance)
-        .WithTypeConverter(DockerComposeCommandYamlTypeConverter.Instance)
+        .WithTypeConverter(InlinedQuotedStringCollectionYamlTypeConverter.Instance)
         .IgnoreUnmatchedProperties() // don't throw an exception if there are unknown properties
         .Build();
 
@@ -20,7 +20,7 @@ internal static class DockerComposeSerializer
         .WithTypeConverter(DockerComposePortMappingYamlTypeConverter.Instance)
         .WithTypeConverter(KeyValueCollectionYamlTypeConverter.MapWriter)
         .WithTypeConverter(DockerComposeVolumeMappingYamlTypeConverter.Instance)
-        .WithTypeConverter(DockerComposeCommandYamlTypeConverter.Instance)
+        .WithTypeConverter(InlinedQuotedStringCollectionYamlTypeConverter.Instance)
         .WithNewLine(UnixLineEnding) // keep compatibility with Linux and macOS
         .DisableAliases() // don't use anchors and aliases (references to identical objects)
         .Build();

@@ -1,46 +1,47 @@
-﻿using YamlDotNet.Core;
+﻿using Leap.Cli.Yaml;
+using YamlDotNet.Core;
 using YamlDotNet.Core.Events;
 using YamlDotNet.Serialization;
 
 namespace Leap.Cli.DockerCompose.Yaml;
 
-internal sealed class DockerComposeCommandYamlTypeConverter : IYamlTypeConverter
+internal sealed class InlinedQuotedStringCollectionYamlTypeConverter : IYamlTypeConverter
 {
-    public static readonly DockerComposeCommandYamlTypeConverter Instance = new();
+    public static readonly InlinedQuotedStringCollectionYamlTypeConverter Instance = new();
 
-    private DockerComposeCommandYamlTypeConverter()
+    private InlinedQuotedStringCollectionYamlTypeConverter()
     {
     }
 
     public bool Accepts(Type type)
     {
-        return type == typeof(DockerComposeCommandYaml);
+        return type == typeof(InlinedQuotedStringCollectionYaml);
     }
 
     public object ReadYaml(IParser parser, Type type, ObjectDeserializer rootDeserializer)
     {
         _ = parser.Consume<SequenceStart>();
-        var command = new DockerComposeCommandYaml();
+        var items = new InlinedQuotedStringCollectionYaml();
 
         while (!parser.Accept<SequenceEnd>(out _))
         {
             var scalar = parser.Consume<Scalar>();
-            command.Add(scalar.Value);
+            items.Add(scalar.Value);
         }
 
         parser.MoveNext();
-        return command;
+        return items;
     }
 
     public void WriteYaml(IEmitter emitter, object? value, Type type, ObjectSerializer serializer)
     {
-        var command = (DockerComposeCommandYaml)value!;
+        var items = (InlinedQuotedStringCollectionYaml)value!;
 
         emitter.Emit(new SequenceStart(AnchorName.Empty, TagName.Empty, isImplicit: true, SequenceStyle.Flow));
 
-        foreach (var argument in command)
+        foreach (var item in items)
         {
-            emitter.Emit(new Scalar(AnchorName.Empty, TagName.Empty, argument, ScalarStyle.DoubleQuoted, isPlainImplicit: false, isQuotedImplicit: true));
+            emitter.Emit(new Scalar(AnchorName.Empty, TagName.Empty, item, ScalarStyle.DoubleQuoted, isPlainImplicit: false, isQuotedImplicit: true));
         }
 
         emitter.Emit(new SequenceEnd());

@@ -6,11 +6,18 @@ internal sealed class MongoDependencyYamlHandler : IDependencyYamlHandler<MongoD
 {
     public MongoDependencyYaml Merge(MongoDependencyYaml leftYaml, MongoDependencyYaml rightYaml)
     {
-        return leftYaml;
+        return new MongoDependencyYaml
+        {
+            Type = MongoDependencyYaml.YamlDiscriminator,
+            UseReplicaSet = leftYaml.UseReplicaSet.GetValueOrDefault() || rightYaml.UseReplicaSet.GetValueOrDefault(),
+        };
     }
 
     public Dependency ToDependencyModel(MongoDependencyYaml yaml)
     {
-        return new MongoDependency();
+        return new MongoDependency
+        {
+            UseReplicaSet = yaml.UseReplicaSet.GetValueOrDefault()
+        };
     }
 }

@@ -8,6 +8,7 @@ using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
 using Leap.Cli.Platform.Telemetry;
+using Leap.Cli.Yaml;
 using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Dependencies;
@@ -22,8 +23,8 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
     private const string ConfigVolumeName = "leapmongo_config";
     private const string ReplicaSetName = "rs0";
 
-    private static readonly string HostConnectionString = $"mongodb://127.0.0.1:{MongoPort}/?replicaSet={ReplicaSetName}";
-    private static readonly string ContainerConnectionString = $"mongodb://host.docker.internal:{MongoPort}/?replicaSet={ReplicaSetName}";
+    private static readonly string NonReplicaSetConnectionString = $"mongodb://127.0.0.1:{MongoPort}";
+    private static readonly string ReplicaSetConnectionString = $"{NonReplicaSetConnectionString}/?replicaSet={ReplicaSetName}";
 
     private readonly IConfigureDockerCompose _dockerCompose;
     private readonly IConfigureEnvironmentVariables _environmentVariables;
@@ -51,26 +52,30 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
     protected override Task BeforeStartAsync(MongoDependency dependency, CancellationToken cancellationToken)
     {
         TelemetryMeters.TrackMongodbStart();
-        ConfigureDockerCompose(this._dockerCompose.Configuration);
-        this._environmentVariables.Configure(ConfigureEnvironmentVariables);
-        ConfigureAppSettingsJson(this._appSettingsJson.Configuration);
+        ConfigureDockerCompose(dependency, this._dockerCompose.Configuration);
+        this._environmentVariables.Configure(envVars => ConfigureEnvironmentVariables(dependency, envVars));
+        ConfigureAppSettingsJson(dependency, this._appSettingsJson.Configuration);
 
         this._aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
         {
             ResourceType = Constants.LeapDependencyAspireResourceType,
-            Urls = [HostConnectionString]
+            Urls = [dependency.UseReplicaSet ? ReplicaSetConnectionString : NonReplicaSetConnectionString],
         });
 
         return Task.CompletedTask;
     }
 
-    private static void ConfigureDockerCompose(DockerComposeYaml dockerComposeYaml)
+    private static void ConfigureDockerCompose(MongoDependency dependency, DockerComposeYaml dockerComposeYaml)
     {
+        InlinedQuotedStringCollectionYaml command = dependency.UseReplicaSet
+            ? ["--bind_ip_all", "--port", MongoPort.ToString(), "--replSet", ReplicaSetName]
+            : ["--bind_ip_all", "--port", MongoPort.ToString()];
+
         var service = new DockerComposeServiceYaml
         {
             Image = "mongo:7.0",
             ContainerName = ContainerName,
-            Command = new DockerComposeCommandYaml { "--replSet", ReplicaSetName, "--bind_ip_all", "--port", MongoPort.ToString() },
+            Command = command,
             Restart = DockerComposeConstants.Restart.UnlessStopped,
             Ports = { new DockerComposePortMappingYaml(MongoPort, MongoPort) },
             Volumes =
@@ -89,6 +94,13 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
                     },
                 },
             },
+            Healthcheck = new DockerComposeHealthcheckYaml
+            {
+                // https://stackoverflow.com/a/74709736/825695
+                Test = ["CMD", "mongosh", "--port", MongoPort.ToString(), "--quiet", "--eval", "db.adminCommand('ping')"],
+                Interval = "1s",
+                Retries = 30,
+            }
         };
 
         dockerComposeYaml.Services[ServiceName] = service;
@@ -97,33 +109,41 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
         dockerComposeYaml.Volumes[ConfigVolumeName] = null;
     }
 
-    private static void ConfigureEnvironmentVariables(List<EnvironmentVariable> environmentVariables)
+    private static void ConfigureEnvironmentVariables(MongoDependency dependency, List<EnvironmentVariable> environmentVariables)
     {
+        var connectionString = dependency.UseReplicaSet ? ReplicaSetConnectionString : NonReplicaSetConnectionString;
+
         // Do we want to add the environment variables after we verified that the instance is ready?
         environmentVariables.AddRange(
         [
-            new EnvironmentVariable("ConnectionStrings__Mongo", HostConnectionString, EnvironmentVariableScope.Host),
-            new EnvironmentVariable("ConnectionStrings__Mongo", ContainerConnectionString, EnvironmentVariableScope.Container)
+            new EnvironmentVariable("ConnectionStrings__Mongo", connectionString, EnvironmentVariableScope.Host),
+            new EnvironmentVariable("ConnectionStrings__Mongo", HostNameResolver.ReplaceLocalhostWithContainerHost(connectionString), EnvironmentVariableScope.Container)
         ]);
     }
 
-    private static void ConfigureAppSettingsJson(JsonObject appsettings)
+    private static void ConfigureAppSettingsJson(MongoDependency dependency, JsonObject appsettings)
     {
-        appsettings["ConnectionStrings:Mongo"] = HostConnectionString;
+        appsettings["ConnectionStrings:Mongo"] = dependency.UseReplicaSet ? ReplicaSetConnectionString : NonReplicaSetConnectionString;
     }
 
     protected override async Task AfterStartAsync(MongoDependency dependency, CancellationToken cancellationToken)
     {
-        // Nice to have optimization
-        // TODO even if the replica set is already initialized, this can be a little slow (like, 2-5 seconds)
-        // TODO we could have a cache layer in leap for arbitrary data, and store the container ID of the mongo container
-        // TODO then we could check if the container ID is the same as the one in the cache, and if so, we can skip this step
-        this._logger.LogInformation("Starting MongoDB replica set '{ReplicaSet}'...", ReplicaSetName);
+        if (dependency.UseReplicaSet)
+        {
+            // TODO even if the replica set is already initialized, this can be a little slow (like, 2-5 seconds)
+            // TODO we could have a cache layer in leap for arbitrary data, and store the container ID of the mongo container
+            // TODO then we could check if the container ID is the same as the one in the cache, and if so, we can skip this step
+            this._logger.LogInformation("Starting MongoDB replica set '{ReplicaSet}'...", ReplicaSetName);
 
-        await this.EnsureReplicaSetReadyAsync(cancellationToken);
+            await this.EnsureReplicaSetReadyAsync(cancellationToken);
 
-        // TODO that might not be true, improve the error handling
-        this._logger.LogInformation("MongoDB replica set is ready");
+            // TODO that might not be true, improve the error handling
+            this._logger.LogInformation("MongoDB replica set is ready");
+        }
+        else
+        {
+            this._logger.LogInformation("MongoDB is ready");
+        }
     }
 
     private async Task EnsureReplicaSetReadyAsync(CancellationToken cancellationToken)

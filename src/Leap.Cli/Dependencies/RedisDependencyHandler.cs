@@ -60,13 +60,13 @@ internal sealed class RedisDependencyHandler : DependencyHandler<RedisDependency
         {
             Image = "redis:7-alpine",
             ContainerName = ContainerName,
-            Command = new DockerComposeCommandYaml
-            {
+            Command =
+            [
                 // https://redis.io/docs/management/persistence/
                 "--appendonly", "yes", // Use AOF (Append Only File) for incremental persistence
                 "--save", "60", "1", // Write increment to disk if at least 1 key changed in the last 60 seconds
                 "--port", RedisPort.ToString(),
-            },
+            ],
             Restart = DockerComposeConstants.Restart.UnlessStopped,
             Ports = { new DockerComposePortMappingYaml(RedisPort, RedisPort) },
             Volumes =
@@ -84,6 +84,13 @@ internal sealed class RedisDependencyHandler : DependencyHandler<RedisDependency
                     },
                 },
             },
+            Healthcheck = new DockerComposeHealthcheckYaml
+            {
+                // https://stackoverflow.com/a/71504657/825695
+                Test = ["CMD-SHELL", $"redis-cli -p {RedisPort} ping | grep PONG"],
+                Interval = "1s",
+                Retries = 30,
+            }
         };
 
         dockerComposeYaml.Services[ServiceName] = service;
