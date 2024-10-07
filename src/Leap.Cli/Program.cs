@@ -30,6 +30,7 @@ var rootCommand = new RootCommand("Workleap's Local Environment Application Prox
 {
     new RunCommand(),
     new UpdateHostsFileCommand(),
+    new AddCertificateAuthorityToComputerRootStoreCommand(),
 };
 
 rootCommand.AddGlobalOption(LeapGlobalOptions.VerbosityOption);
@@ -97,6 +98,7 @@ builder.UseDependencyInjection((services, context) =>
 
     services.AddSingleton<IAspireManager, AspireManager>();
     services.AddSingleton<INuGetPackageDownloader, NuGetPackageDownloader>();
+    services.AddSingleton<MkcertCertificateManager>();
 
     services.AddSingleton<AzureDevOpsAuthenticator>();
     services.AddTransient<AzureDevOpsAuthenticationHandler>();
