@@ -18,7 +18,8 @@ internal sealed class PrepareReverseProxyPipelineStep(IAspireManager aspireManag
 {
     public Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
-        if (state.Services.Count == 0)
+        var hasNoServiceToRun = state.Services.Count == 0;
+        if (hasNoServiceToRun)
         {
             return Task.CompletedTask;
         }

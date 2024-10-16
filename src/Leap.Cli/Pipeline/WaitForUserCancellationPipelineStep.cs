@@ -4,30 +4,15 @@ using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Pipeline;
 
-internal sealed class WaitForUserCancellationPipelineStep : IPipelineStep
+internal sealed class WaitForUserCancellationPipelineStep(
+    ITelemetryHelper telemetryHelper,
+    ILogger<WaitForUserCancellationPipelineStep> logger) : IPipelineStep
 {
-    private readonly ITelemetryHelper _telemetryHelper;
-    private readonly ILogger _logger;
-
-    public WaitForUserCancellationPipelineStep(
-        ITelemetryHelper telemetryHelper,
-        ILogger<WaitForUserCancellationPipelineStep> logger)
-    {
-        this._telemetryHelper = telemetryHelper;
-        this._logger = logger;
-    }
-
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
-        this._telemetryHelper.StopRootActivity();
+        telemetryHelper.StopRootActivity();
 
-        // There's no need to wait for user cancellation if there's no service to run
-        if (state.Services.Count == 0)
-        {
-            return;
-        }
-
-        this._logger.LogInformation("Press Ctrl+C to stop Leap");
+        logger.LogInformation("Press Ctrl+C to stop Leap");
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         await using var cancellationRegistration = cancellationToken.Register(tcs.SetResult);

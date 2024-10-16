@@ -9,12 +9,6 @@ internal sealed class StartAspirePipelineStep(IAspireManager aspireManager) : IP
 
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
-        // No need to start aspire if there are no services to run
-        if (state.Services.Count == 0)
-        {
-            return;
-        }
-
         this._app = await aspireManager.StartAppHostAsync(cancellationToken);
     }
 

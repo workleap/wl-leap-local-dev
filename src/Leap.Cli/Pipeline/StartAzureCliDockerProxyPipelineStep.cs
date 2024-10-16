@@ -56,6 +56,12 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
             throw new LeapException("Azure CLI is installed but not logged in. Please run `az login` to login.");
         }
 
+        var hasNoServiceToRun = state.Services.Count == 0;
+        if (hasNoServiceToRun)
+        {
+            return;
+        }
+
         // Docker containers cannot access the host's Azure CLI credentials, because they don't ship with the Azure CLI.
         // It's the same concept that we used here: https://github.com/gsoft-inc/azure-cli-credentials-proxy
         this.RunAzureCliCredentialsProxyInAspireAsync(cancellationToken);
