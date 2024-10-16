@@ -38,6 +38,15 @@
       "description": ".NET Aspire 8.2.0 introduced a regression (https://github.com/dotnet/aspire/issues/5490)",
       "matchPackageNames": ["Aspire.Hosting.AppHost"],
       "allowedVersions": "!/^8\\.2\\.0$/"
+    },
+    {
+      "matchManagers": ["nuget"],
+      "matchPackagePatterns": [
+        "^Microsoft\\.Extensions\\."
+      ],
+      "groupName": "NuGet .NET runtime libraries dependencies",
+      "description": "These packages are usually bound to a specific major .NET framework version manually managed in the csproj file.",
+      "extends": [":disableMajorUpdates"]
     }
   ]
 }
