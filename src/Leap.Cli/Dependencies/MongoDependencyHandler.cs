@@ -68,8 +68,8 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
     private static void ConfigureDockerCompose(MongoDependency dependency, DockerComposeYaml dockerComposeYaml)
     {
         InlinedQuotedStringCollectionYaml command = dependency.UseReplicaSet
-            ? ["--bind_ip_all", "--port", MongoPort.ToString(), "--replSet", ReplicaSetName]
-            : ["--bind_ip_all", "--port", MongoPort.ToString()];
+            ? ["--quiet", "--bind_ip_all", "--port", MongoPort.ToString(), "--replSet", ReplicaSetName]
+            : ["--quiet", "--bind_ip_all", "--port", MongoPort.ToString()];
 
         var service = new DockerComposeServiceYaml
         {
@@ -98,7 +98,7 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
             {
                 // https://stackoverflow.com/a/74709736/825695
                 Test = ["CMD", "mongosh", "--port", MongoPort.ToString(), "--quiet", "--eval", "db.adminCommand('ping')"],
-                Interval = "1s",
+                Interval = "2s",
                 Retries = 30,
             }
         };
