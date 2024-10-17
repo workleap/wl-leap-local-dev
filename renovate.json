@@ -6,13 +6,15 @@
     "Shared-Assets/Leap"
   ],
   "extends": [
-      "github>gsoft-inc/renovate-config"
+    "github>gsoft-inc/renovate-config"
   ],
   "customManagers": [
     {
       "description": "Workleap Event Grid emulator",
       "customType": "regex",
-      "fileMatch": ["\\.cs$"],
+      "fileMatch": [
+        "\\.cs$"
+      ],
       "matchStringsStrategy": "any",
       "matchStrings": [
         "\"(?<depName>workleap/eventgridemulator):(?<currentValue>[^\"]+)\""
@@ -23,7 +25,9 @@
     {
       "description": ".NET Aspire workload rollback file (https://github.com/dotnet/aspire/discussions/2230)",
       "customType": "regex",
-      "fileMatch": ["^rollback.json$"],
+      "fileMatch": [
+        "^rollback.json$"
+      ],
       "matchStringsStrategy": "any",
       "matchStrings": [
         "\"microsoft.net.sdk.aspire\":\\s*\"(?<currentValue>[^/]+)/[^\"]+\""
@@ -36,17 +40,23 @@
   "packageRules": [
     {
       "description": ".NET Aspire 8.2.0 introduced a regression (https://github.com/dotnet/aspire/issues/5490)",
-      "matchPackageNames": ["Aspire.Hosting.AppHost"],
+      "matchPackageNames": [
+        "Aspire.Hosting.AppHost"
+      ],
       "allowedVersions": "!/^8\\.2\\.0$/"
     },
     {
-      "matchManagers": ["nuget"],
-      "matchPackagePatterns": [
-        "^Microsoft\\.Extensions\\."
+      "matchManagers": [
+        "nuget"
       ],
       "groupName": "NuGet .NET runtime libraries dependencies",
       "description": "These packages are usually bound to a specific major .NET framework version manually managed in the csproj file.",
-      "extends": [":disableMajorUpdates"]
+      "extends": [
+        ":disableMajorUpdates"
+      ],
+      "matchPackageNames": [
+        "/^Microsoft\\.Extensions\\./"
+      ]
     }
   ]
 }
