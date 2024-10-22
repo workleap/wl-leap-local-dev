@@ -16,13 +16,6 @@ jobs:
           packageType: "sdk"
           useGlobalJson: true
 
-      - task: DotNetCoreCLI@2
-        displayName: "Install Aspire workload"
-        inputs:
-          command: "custom"
-          custom: "workload"
-          arguments: "install aspire --from-rollback-file ./rollback.json"
-
       - pwsh: "./Build.ps1"
         displayName: "Build"
 

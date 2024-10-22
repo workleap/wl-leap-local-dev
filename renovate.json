@@ -21,20 +21,6 @@
       ],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"
-    },
-    {
-      "description": ".NET Aspire workload rollback file (https://github.com/dotnet/aspire/discussions/2230)",
-      "customType": "regex",
-      "fileMatch": [
-        "^rollback.json$"
-      ],
-      "matchStringsStrategy": "any",
-      "matchStrings": [
-        "\"microsoft.net.sdk.aspire\":\\s*\"(?<currentValue>[^/]+)/[^\"]+\""
-      ],
-      "datasourceTemplate": "nuget",
-      "versioningTemplate": "nuget",
-      "depNameTemplate": "Aspire.Hosting.AppHost"
     }
   ],
   "packageRules": [

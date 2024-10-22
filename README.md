@@ -9,14 +9,6 @@ User documentation is [available on Confluence](https://gsoftdev.atlassian.net/w
 
 Install the .NET SDK specified in the `global.json` file.
 
-Leap local dev uses [.NET Aspire](https://learn.microsoft.com/en-us/dotnet/aspire/get-started/aspire-overview) for orchestration and its dashboard. Install the required .NET Aspire workload version with the command below. It matches the [Aspire.Hosting.AppHost](https://www.nuget.org/packages/Aspire.Hosting.AppHost) package version used in the project.
-
-```bash
-dotnet workload update --from-rollback-file ./rollback.json
-```
-
-We use a [.NET workload rollback file](https://github.com/dotnet/aspire/discussions/2230#discussioncomment-8496035) to ensure the correct version is installed. The `rollback.json` is maintained by Renovate. We do not use [workload sets](https://github.com/dotnet/aspire/issues/5501) as they do not clearly specify the installed .NET Aspire workload version.
-
 ## Build and test
 
 - Run `Build.ps1` to build the project and generate a NuGet package in the `.output` folder. [GitVersion](https://gitversion.net/) determines the NuGet package version based on commit history and tags.
