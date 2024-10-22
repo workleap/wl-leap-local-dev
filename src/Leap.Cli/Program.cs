@@ -37,6 +37,7 @@ rootCommand.AddGlobalOption(LeapGlobalOptions.VerbosityOption);
 rootCommand.AddGlobalOption(LeapGlobalOptions.FeatureFlagsOption);
 rootCommand.AddGlobalOption(LeapGlobalOptions.EnableDiagnosticOption);
 rootCommand.AddGlobalOption(LeapGlobalOptions.SkipVersionCheckOption);
+rootCommand.AddGlobalOption(LeapGlobalOptions.ProfilesOption);
 
 rootCommand.Name = "leap";
 
@@ -51,6 +52,7 @@ builder.UseDependencyInjection((services, context) =>
         options.FeatureFlags = context.ParseResult.GetValueForOption(LeapGlobalOptions.FeatureFlagsOption) ?? [];
         options.EnableDiagnostic = context.ParseResult.GetValueForOption(LeapGlobalOptions.EnableDiagnosticOption);
         options.SkipVersionCheck = context.ParseResult.GetValueForOption(LeapGlobalOptions.SkipVersionCheckOption);
+        options.Profiles = context.ParseResult.GetValueForOption(LeapGlobalOptions.ProfilesOption) ?? [];
     });
 
     services.AddLogging(x => x.AddColoredConsoleLogger(LoggingSource.Leap));

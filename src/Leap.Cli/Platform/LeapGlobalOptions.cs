@@ -54,6 +54,13 @@ internal sealed class LeapGlobalOptions
         Arity = ArgumentArity.ZeroOrOne,
     };
 
+    public static readonly Option<string[]> ProfilesOption = new(["--profiles", "-p"])
+    {
+        AllowMultipleArgumentsPerToken = true,
+        Description = "Run Leap with one or more service profiles.",
+        Arity = ArgumentArity.ZeroOrMore,
+    };
+
     public LoggerVerbosity Verbosity { get; set; }
 
     public string[] FeatureFlags { get; set; } = [];
@@ -61,4 +68,6 @@ internal sealed class LeapGlobalOptions
     public bool EnableDiagnostic { get; set; }
 
     public bool SkipVersionCheck { get; set; }
+
+    public string[] Profiles { get; set; } = [];
 }

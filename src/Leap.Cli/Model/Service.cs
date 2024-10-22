@@ -23,6 +23,8 @@ internal sealed class Service
 
     public List<Runner> Runners { get; } = [];
 
+    public HashSet<string> Profiles { get; } = new(StringComparer.OrdinalIgnoreCase);
+
     public Runner ActiveRunner
     {
         get => this._activeRunner

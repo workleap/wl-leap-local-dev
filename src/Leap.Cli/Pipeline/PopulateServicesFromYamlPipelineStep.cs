@@ -6,6 +6,7 @@ using Leap.Cli.Model.Traits;
 using Leap.Cli.Platform;
 using Leap.Cli.Yaml;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Leap.Cli.Pipeline;
 
@@ -25,14 +26,17 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
     private readonly ILeapYamlAccessor _leapYamlAccessor;
     private readonly IPortManager _portManager;
     private readonly ILogger _logger;
+    private readonly IOptions<LeapGlobalOptions> _options;
 
     public PopulateServicesFromYamlPipelineStep(
         ILeapYamlAccessor leapYamlAccessor,
         IPortManager portManager,
+        IOptions<LeapGlobalOptions> options,
         ILogger<PopulateServicesFromYamlPipelineStep> logger)
     {
         this._leapYamlAccessor = leapYamlAccessor;
         this._portManager = portManager;
+        this._options = options;
         this._logger = logger;
     }
 
@@ -65,12 +69,25 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
 
                 var service = new ServiceYamlConverter(this._logger, this._portManager, leapYaml, serviceYaml).Convert(serviceName);
 
-                if (service != null && !state.Services.TryAdd(service.Name, service))
+                if (service != null && this.ShouldStartService(service))
                 {
-                    this._logger.LogWarning("A service with the name '{Service}' is defined multiple times in the configuration file '{Path}'. Only the first definition will be used.", service.Name, leapYaml.Path);
+                    if (!state.Services.TryAdd(service.Name, service))
+                    {
+                        this._logger.LogWarning("A service with the name '{Service}' is defined multiple times in the configuration file '{Path}'. Only the first definition will be used.", service.Name, leapYaml.Path);
+                    }
                 }
             }
         }
+    }
+
+    private bool ShouldStartService(Service service)
+    {
+        if (service.Profiles.Count == 0 || this._options.Value.Profiles.Length == 0)
+        {
+            return true;
+        }
+
+        return service.Profiles.Overlaps(this._options.Value.Profiles);
     }
 
     public Task StopAsync(ApplicationState state, CancellationToken cancellationToken)
@@ -90,6 +107,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                 this.ConvertIngress(service);
                 this.ConvertEnvironmentVariables(service);
                 this.ConvertRunners(service);
+                this.ConvertProfiles(service);
 
                 return service;
             }
@@ -99,6 +117,22 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
             }
 
             return null;
+        }
+
+        private void ConvertProfiles(Service service)
+        {
+            if (serviceYaml.Profiles == null)
+            {
+                return;
+            }
+
+            foreach (var profile in serviceYaml.Profiles)
+            {
+                if (!string.IsNullOrWhiteSpace(profile))
+                {
+                    service.Profiles.Add(profile);
+                }
+            }
         }
 
         private void ConvertIngress(Service service)

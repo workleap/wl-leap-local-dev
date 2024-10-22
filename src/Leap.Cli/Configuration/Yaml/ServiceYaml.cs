@@ -13,4 +13,7 @@ internal sealed class ServiceYaml
 
     [YamlMember(Alias = "env", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
     public KeyValueCollectionYaml? EnvironmentVariables { get; set; }
+
+    [YamlMember(Alias = "profiles", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
+    public string?[]? Profiles { get; set; }
 }
