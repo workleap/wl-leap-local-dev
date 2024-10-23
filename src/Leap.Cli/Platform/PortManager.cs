@@ -16,6 +16,7 @@ internal sealed class PortManager : IPortManager
 
         // Leap internals
         Constants.LeapReverseProxyPort,
+        Constants.LeapAzureCliProxyPort,
 
         // Third-party dependencies
         MongoDependencyHandler.MongoPort,

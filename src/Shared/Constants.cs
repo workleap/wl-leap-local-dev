@@ -19,6 +19,7 @@ internal static class Constants
     private const string LeapCertificateAuthorityFileName = "workleap-dev-certificate-ca.crt";
 
     public const string LeapDependencyAspireResourceType = "Leap dependency";
+    public const string LeapAzureCliProxyResourceName = "azure-cli-credentials-proxy";
 
     // ".localhost" is a top-level domain (TLD) reserved by the Internet Engineering Task Force (IETF)
     // that is free to use localhost names as they would any other, without the risk of someone else owning it (like .com).
@@ -54,6 +55,8 @@ internal static class Constants
 
     // "1347" means "leap" in leetspeak (https://en.wikipedia.org/wiki/Leet)
     public const int LeapReverseProxyPort = 1347;
+
+    public const int LeapAzureCliProxyPort = 6501;
 
     private static readonly string UserProfileDirectoryPath = Path.GetFullPath(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 

@@ -117,7 +117,8 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
                 }
             })
             .WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables())
-            .WithOtlpExporter();
+            .WithOtlpExporter()
+            .WaitFor(Constants.LeapAzureCliProxyResourceName);
     }
 
     private void HandleDockerRunner(Service service, DockerRunner dockerRunner)
@@ -245,7 +246,8 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
                 }
             })
             .WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables())
-            .WithOtlpExporter();
+            .WithOtlpExporter()
+            .WaitFor(Constants.LeapAzureCliProxyResourceName);
     }
 
     private void HandleOpenApiRunner(ApplicationState state, Service service, OpenApiRunner openApiRunner)

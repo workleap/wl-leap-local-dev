@@ -20,21 +20,18 @@ namespace Leap.Cli.Pipeline;
 internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
 {
     private readonly ICliWrap _cliWrap;
-    private readonly IPortManager _portManager;
     private readonly IAspireManager _aspireManager;
     private readonly IConfigureEnvironmentVariables _environmentVariables;
     private readonly ILogger _logger;
 
     public StartAzureCliDockerProxyPipelineStep(
         ICliWrap cliWrap,
-        IPortManager portManager,
         IAspireManager aspireManager,
         IConfigureEnvironmentVariables environmentVariables,
         ILogger<StartAzureCliDockerProxyPipelineStep> logger)
     {
         this._aspireManager = aspireManager;
         this._cliWrap = cliWrap;
-        this._portManager = portManager;
         this._environmentVariables = environmentVariables;
         this._logger = logger;
     }
@@ -98,23 +95,21 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
 
     private void RunAzureCliCredentialsProxyInAspireAsync(CancellationToken cancellationToken)
     {
-        var proxyPort = this._portManager.GetRandomAvailablePort(cancellationToken);
-
         this._aspireManager.Builder.Services.TryAddLifecycleHook<HostAzureCliDockerProxyInAspireLifecycleHook>();
         this._aspireManager.Builder.Services.TryAddSingleton(this._cliWrap);
 
-        this._aspireManager.Builder.AddResource(new AzureCliDockerProxyResource(proxyPort))
+        this._aspireManager.Builder.AddResource(new AzureCliDockerProxyResource(Constants.LeapAzureCliProxyPort))
             .WithInitialState(new CustomResourceSnapshot
             {
                 ResourceType = Constants.LeapDependencyAspireResourceType,
-                State = "Starting",
+                State = KnownResourceStates.Starting,
                 Properties = [new ResourcePropertySnapshot(CustomResourceKnownProperties.Source, "leap")]
             })
             .ExcludeFromManifest();
 
         this._environmentVariables.Configure(x =>
         {
-            var proxyTokenEndpointUrl = $"http://127.0.0.1:{proxyPort}/token";
+            var proxyTokenEndpointUrl = $"http://127.0.0.1:{Constants.LeapAzureCliProxyPort}/token";
             const string dummyIdmsEndpoint = "dummy_required_value";
 
             x.Add(new EnvironmentVariable("IDENTITY_ENDPOINT", proxyTokenEndpointUrl, EnvironmentVariableScope.Host));
@@ -130,27 +125,30 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
         return Task.CompletedTask;
     }
 
-    private sealed class AzureCliDockerProxyResource(int port) : Resource("azure-cli-credentials-proxy")
+    private sealed class AzureCliDockerProxyResource(int port) : Resource(Constants.LeapAzureCliProxyResourceName)
     {
         public int Port { get; } = port;
     }
 
-    private sealed class HostAzureCliDockerProxyInAspireLifecycleHook(ICliWrap cliWrap, ResourceNotificationService notificationService, ResourceLoggerService loggerService)
+    private sealed class HostAzureCliDockerProxyInAspireLifecycleHook(ILogger<HostAzureCliDockerProxyInAspireLifecycleHook> logger, ICliWrap cliWrap, ResourceNotificationService notificationService, ResourceLoggerService loggerService)
         : IDistributedApplicationLifecycleHook, IAsyncDisposable
     {
         private WebApplication? _app;
+        private Task? _trackTask;
 
-        public async Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
+        public Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
+        {
+            this._trackTask = this.TrackAzureCliProxyResource(appModel, cancellationToken);
+            return Task.CompletedTask;
+        }
+
+        private async Task TrackAzureCliProxyResource(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
         {
             var proxyResource = appModel.Resources.OfType<AzureCliDockerProxyResource>().Single();
             var resourceLogger = loggerService.GetLogger(proxyResource);
-
             try
             {
-                var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions
-                {
-                    EnvironmentName = Environments.Production,
-                });
+                var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions { EnvironmentName = Environments.Production, });
 
                 builder.WebHost.UseUrls("http://+:" + proxyResource.Port);
 
@@ -161,10 +159,7 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
                 builder.Logging.ClearProviders();
                 builder.Logging.AddResourceLogger(resourceLogger);
 
-                builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["Logging:LogLevel:Default"] = "Information",
-                });
+                builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["Logging:LogLevel:Default"] = "Information", });
 
                 this._app = builder.Build();
 
@@ -191,19 +186,19 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
 
                 await this._app.StartAsync(cancellationToken);
 
-                await notificationService.PublishUpdateAsync(proxyResource, state => state with
-                {
-                    State = "Running",
-                    Urls = [new UrlSnapshot(Name: "http", Url: "http://127.0.0.1:" + proxyResource.Port, IsInternal: false)],
-                });
+                await notificationService.PublishUpdateAsync(proxyResource, state => state with { State = KnownResourceStates.Running, Urls = [new UrlSnapshot(Name: "http", Url: "http://127.0.0.1:" + proxyResource.Port, IsInternal: false)], });
+            }
+            catch (OperationCanceledException)
+            {
+                // swallowing OperationCanceledExceptions given that the application is shutting down at this point
             }
             catch (Exception ex)
             {
-                resourceLogger.LogError(ex, "An error occured while starting Azure CLI credentials proxy for Docker");
+                logger.LogError(ex, "An error occured while starting Azure CLI credentials proxy for Docker");
 
                 await notificationService.PublishUpdateAsync(proxyResource, state => state with
                 {
-                    State = "Finished"
+                    State = KnownResourceStates.Finished
                 });
             }
         }
@@ -244,6 +239,22 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
             if (this._app != null)
             {
                 await this._app.DisposeAsync();
+            }
+
+            if (this._trackTask != null)
+            {
+                try
+                {
+                    await this._trackTask;
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected when the application is shutting down.
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "An error occurred while tracking external containers.");
+                }
             }
         }
     }
