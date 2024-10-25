@@ -3,22 +3,26 @@ using Leap.Cli.Model;
 
 namespace Leap.Cli.Pipeline;
 
-internal sealed class EnsureLeapDirectoriesCreatedPipelineStep : IPipelineStep
+internal sealed class EnsureLeapDirectoriesCreatedPipelineStep(IFileSystem fileSystem) : IPipelineStep
 {
-    private readonly IFileSystem _fileSystem;
-
-    public EnsureLeapDirectoriesCreatedPipelineStep(IFileSystem fileSystem)
-    {
-        this._fileSystem = fileSystem;
-    }
-
     public Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
-        this._fileSystem.Directory.CreateDirectory(Constants.RootDirectoryPath);
-        this._fileSystem.Directory.CreateDirectory(Constants.GeneratedDirectoryPath);
-        this._fileSystem.Directory.CreateDirectory(Constants.DockerComposeDirectoryPath);
-        this._fileSystem.Directory.CreateDirectory(Constants.CertificatesDirectoryPath);
-        this._fileSystem.Directory.CreateDirectory(Constants.NuGetPackagesDirectoryPath);
+        fileSystem.Directory.CreateDirectory(Constants.RootDirectoryPath);
+        fileSystem.Directory.CreateDirectory(Constants.GeneratedDirectoryPath);
+        fileSystem.Directory.CreateDirectory(Constants.DockerComposeDirectoryPath);
+        fileSystem.Directory.CreateDirectory(Constants.CertificatesDirectoryPath);
+        fileSystem.Directory.CreateDirectory(Constants.NuGetPackagesDirectoryPath);
+
+        try
+        {
+            fileSystem.Directory.Delete(Constants.DotnetExecutableDebuggingDirectoryPath, true);
+        }
+        catch (DirectoryNotFoundException)
+        {
+            // Ignored given it is expected if creating for the first time
+        }
+
+        fileSystem.Directory.CreateDirectory(Constants.DotnetExecutableDebuggingDirectoryPath);
 
         return Task.CompletedTask;
     }

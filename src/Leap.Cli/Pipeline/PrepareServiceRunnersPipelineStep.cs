@@ -226,15 +226,9 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
     {
         var workingDirectoryPath = Path.GetDirectoryName(dotnetRunner.ProjectPath)!;
 
-        // dotnet watch arguments inspired by .NET Aspire:
-        // https://github.com/dotnet/aspire/blob/v8.0.1/src/Aspire.Hosting/Dcp/ApplicationExecutor.cs#L1004-L1022
-        string[] dotnetRunArgs = dotnetRunner.Watch
-            ? ["watch", "--project", dotnetRunner.ProjectPath, "--no-launch-profile", "--non-interactive", "--no-hot-reload"]
-            : ["run", "--project", dotnetRunner.ProjectPath, "--no-launch-profile"];
-
         // TODO shall we sanitize the name of the service? Get inspiration from Dapr
         this._aspire.Builder
-            .AddExecutable(service.Name, "dotnet", workingDirectoryPath, dotnetRunArgs)
+            .AddDotnetExecutable(service.Name, workingDirectoryPath, dotnetRunner.ProjectPath, dotnetRunner.Watch)
             .WithEndpoint(scheme: dotnetRunner.Protocol, port: service.Ingress.LocalhostPort, isProxied: false, env: "PORT")
             .WithEnvironment("ASPNETCORE_URLS", dotnetRunner.Protocol + "://*:" + service.Ingress.LocalhostPort)
             .WithEnvironment(context =>
@@ -247,6 +241,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
             })
             .WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables())
             .WithOtlpExporter()
+            .WithRestartAndWaitForDebuggerCommand()
             .WaitFor(Constants.LeapAzureCliProxyResourceName);
     }
 

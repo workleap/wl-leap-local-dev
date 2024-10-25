@@ -4,6 +4,7 @@ internal static class Constants
 {
     private const string LeapRootConfigDirectoryName = ".leap";
     private const string LeapGeneratedDirectoryName = "generated";
+    private const string DotnetDebuggingStateDirectoryName = "debugger-signals";
     private const string LeapDockerComposeDirectoryName = "docker-compose";
     private const string LeapCertificatesDirectoryName = "certificates";
     private const string LeapNuGetPackagesDirectoryName = "nuget-packages";
@@ -92,6 +93,9 @@ internal static class Constants
 
     /// <summary>The directory that contains NuGet packages that we download at runtime</summary>
     public static readonly string NuGetPackagesDirectoryPath = Path.Combine(GeneratedDirectoryPath, LeapNuGetPackagesDirectoryName);
+
+    /// <summary>The path of the directory that contains the debugging signals file</summary>
+    public static readonly string DotnetExecutableDebuggingDirectoryPath = Path.Combine(GeneratedDirectoryPath, DotnetDebuggingStateDirectoryName);
 
     /// <summary>
     /// Constants for MSAL (Microsoft Authentication Library).
