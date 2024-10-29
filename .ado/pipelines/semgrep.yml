@@ -1,4 +1,7 @@
-trigger: none
+trigger:
+  branches:
+    include:
+      - renovate/*
 
 schedules:
   - cron: "32 10 * * 6"
