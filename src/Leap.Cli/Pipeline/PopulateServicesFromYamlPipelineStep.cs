@@ -10,7 +10,13 @@ using Microsoft.Extensions.Options;
 
 namespace Leap.Cli.Pipeline;
 
-internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
+internal sealed class PopulateServicesFromYamlPipelineStep(
+    ILeapYamlAccessor leapYamlAccessor,
+    IPortManager portManager,
+    PreferencesSettingsManager preferencesManager,
+    IOptions<LeapGlobalOptions> options,
+    ILogger<PopulateServicesFromYamlPipelineStep> logger)
+    : IPipelineStep
 {
     private static readonly HashSet<string> SupportedBackendProtocols = new(["http", "https"], StringComparer.OrdinalIgnoreCase);
 
@@ -23,28 +29,21 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
         string.Join('|', Constants.SupportedWildcardLocalhostDomainNames.Select(ConvertWildcardDomainToPattern)),
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-    private readonly ILeapYamlAccessor _leapYamlAccessor;
-    private readonly IPortManager _portManager;
-    private readonly ILogger _logger;
-    private readonly IOptions<LeapGlobalOptions> _options;
-
-    public PopulateServicesFromYamlPipelineStep(
-        ILeapYamlAccessor leapYamlAccessor,
-        IPortManager portManager,
-        IOptions<LeapGlobalOptions> options,
-        ILogger<PopulateServicesFromYamlPipelineStep> logger)
+    private static readonly Dictionary<string, Type> RunnerTypepMapping = new(StringComparer.OrdinalIgnoreCase)
     {
-        this._leapYamlAccessor = leapYamlAccessor;
-        this._portManager = portManager;
-        this._options = options;
-        this._logger = logger;
-    }
+        [ExecutableRunnerYaml.YamlDiscriminator] = typeof(ExecutableRunnerYaml),
+        [DockerRunnerYaml.YamlDiscriminator] = typeof(DockerRunnerYaml),
+        [DotnetRunnerYaml.YamlDiscriminator] = typeof(DotnetRunnerYaml),
+        [OpenApiRunnerYaml.YamlDiscriminator] = typeof(OpenApiRunnerYaml),
+        [RemoteRunnerYaml.YamlDiscriminator] = typeof(RemoteRunnerYaml),
+    };
 
     private static string ConvertWildcardDomainToPattern(string domain) => $"^{Regex.Escape(domain).Replace("\\*", "[a-z0-9]+(-[a-z0-9]+)*")}$";
 
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
-        var leapYamls = await this._leapYamlAccessor.GetAllAsync(cancellationToken);
+        var leapYamls = await leapYamlAccessor.GetAllAsync(cancellationToken);
+        var preferences = await preferencesManager.GetUserLeapPreferencesAsync(cancellationToken);
 
         foreach (var leapYaml in leapYamls)
         {
@@ -57,23 +56,29 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
             {
                 if (string.IsNullOrWhiteSpace(serviceName))
                 {
-                    this._logger.LogWarning("A service is missing a name in the configuration file '{Path}' and will be ignored.", leapYaml.Path);
+                    logger.LogWarning("A service is missing a name in the configuration file '{Path}' and will be ignored.", leapYaml.Path);
+                    continue;
+                }
+
+                if (!ServiceNameValidator.IsValid(serviceName, out var message))
+                {
+                    logger.LogWarning("A service name in the configuration file '{Path}' and is invalid and be ignored. Reason: {ErrorMessage}", leapYaml.Path, message);
                     continue;
                 }
 
                 if (serviceYaml == null)
                 {
-                    this._logger.LogWarning("A service '{Service}' does not have a definition in the configuration file '{Path}' and will be ignored.", serviceName, leapYaml.Path);
+                    logger.LogWarning("A service '{Service}' does not have a definition in the configuration file '{Path}' and will be ignored.", serviceName, leapYaml.Path);
                     continue;
                 }
 
-                var service = new ServiceYamlConverter(this._logger, this._portManager, leapYaml, serviceYaml).Convert(serviceName);
+                var service = new ServiceYamlConverter(logger, portManager, preferences, leapYaml, serviceYaml).Convert(serviceName);
 
                 if (service != null && this.ShouldStartService(service))
                 {
                     if (!state.Services.TryAdd(service.Name, service))
                     {
-                        this._logger.LogWarning("A service with the name '{Service}' is defined multiple times in the configuration file '{Path}'. Only the first definition will be used.", service.Name, leapYaml.Path);
+                        logger.LogWarning("A service with the name '{Service}' is defined multiple times in the configuration file '{Path}'. Only the first definition will be used.", service.Name, leapYaml.Path);
                     }
                 }
             }
@@ -82,12 +87,12 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
 
     private bool ShouldStartService(Service service)
     {
-        if (service.Profiles.Count == 0 || this._options.Value.Profiles.Length == 0)
+        if (service.Profiles.Count == 0 || options.Value.Profiles.Length == 0)
         {
             return true;
         }
 
-        return service.Profiles.Overlaps(this._options.Value.Profiles);
+        return service.Profiles.Overlaps(options.Value.Profiles);
     }
 
     public Task StopAsync(ApplicationState state, CancellationToken cancellationToken)
@@ -95,7 +100,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
         return Task.CompletedTask;
     }
 
-    private sealed class ServiceYamlConverter(ILogger logger, IPortManager portManager, LeapYamlFile leapYaml, ServiceYaml serviceYaml)
+    private sealed class ServiceYamlConverter(ILogger logger, IPortManager portManager, PreferencesSettings preferences, LeapYamlFile leapYaml, ServiceYaml serviceYaml)
     {
         public Service? Convert(string serviceName)
         {
@@ -200,9 +205,46 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
 
         private void ConvertRunners(Service service)
         {
-            // TODO for now we only support one runner per service
-            var runnerYaml = serviceYaml.Runners?.FirstOrDefault()
-                             ?? throw new LeapYamlConversionException($"A service '{service.Name}' is missing a runner in the configuration file '{leapYaml.Path}' and will be ignored.");
+            if (serviceYaml.Runners == null || serviceYaml.Runners.Length == 0)
+            {
+                throw new LeapYamlConversionException($"A service '{service.Name}' is missing a runner in the configuration file '{leapYaml.Path}' and will be ignored.");
+            }
+
+            RunnerYaml? selectedRunnerYaml = null;
+            if (preferences.Services.TryGetValue(service.Name, out var preference))
+            {
+                logger.LogInformation("Found a runner preference '{Runner}' for service '{Service}' in the configuration file '{Path}'.", preference.PreferredRunner, service.Name, leapYaml.Path);
+                if (RunnerTypepMapping.TryGetValue(preference.PreferredRunner, out var preferredRunnerType))
+                {
+                    var preferredRunnerYaml = serviceYaml.Runners.FirstOrDefault(runnerYaml => runnerYaml != null && runnerYaml.GetType() == preferredRunnerType);
+
+                    if (preferredRunnerYaml != null)
+                    {
+                        selectedRunnerYaml = preferredRunnerYaml;
+                    }
+                    else
+                    {
+                        logger.LogWarning("Unable to find preferred '{Runner}' runner for service '{Service}' in the configuration file '{Path}'. Will proceed with first declared runner", preference.PreferredRunner, service.Name, leapYaml.Path);
+                        if (serviceYaml.Runners.Length > 1)
+                        {
+                            logger.LogInformation("A service '{Service}' has more than one runner in the configuration file '{Path}' and there was no Runner preference found. The '{RunnerKind}' runner will be used as it is the first declared.", service.Name, leapYaml.Path, service.Runners[0]);
+                        }
+                    }
+                }
+            }
+
+            selectedRunnerYaml ??= serviceYaml.Runners.FirstOrDefault();
+            this.GetRunnerFromYaml(service, selectedRunnerYaml);
+
+            service.ActiveRunner = service.Runners[0];
+        }
+
+        private void GetRunnerFromYaml(Service service, RunnerYaml? runnerYaml)
+        {
+            if (runnerYaml == null)
+            {
+                throw new LeapYamlConversionException($"A service '{service.Name}' has an invalid runner in the configuration file '{leapYaml.Path}'. The service will be ignored.");
+            }
 
             var runner = runnerYaml switch
             {
@@ -216,15 +258,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
 
             this.ConvertRunnerProtocolAndPort(service, runner, runnerYaml);
             ConvertEnvironmentVariables(runner, runnerYaml);
-
             service.Runners.Add(runner);
-
-            if (service.Runners.Count > 1)
-            {
-                logger.LogWarning("A service '{Service}' has more than one runner in the configuration file '{Path}'. The '{RunnerKind}' runner will be used as it is the first declared.", service.Name, leapYaml.Path, service.Runners[0]);
-            }
-
-            service.ActiveRunner = service.Runners[0];
         }
 
         private void ConvertRunnerProtocolAndPort(Service service, Runner runner, RunnerYaml runnerYaml)
@@ -260,12 +294,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
 
             var workingDirectory = EnsureAbsolutePath(exeRunnerYaml.WorkingDirectory, leapYaml);
 
-            return new ExecutableRunner
-            {
-                Command = exeRunnerYaml.Command,
-                Arguments = [.. arguments],
-                WorkingDirectory = workingDirectory,
-            };
+            return new ExecutableRunner { Command = exeRunnerYaml.Command, Arguments = [.. arguments], WorkingDirectory = workingDirectory, };
         }
 
         private Runner ConvertDockerRunner(Service service, DockerRunnerYaml dockerRunnerYaml)
@@ -310,12 +339,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                 dockerVolumeMappings.Add(new DockerRunnerVolumeMapping(sourcePath, destinationPath));
             }
 
-            return new DockerRunner
-            {
-                ImageAndTag = dockerRunnerYaml.ImageAndTag,
-                ContainerPort = containerPort.Value,
-                Volumes = [.. dockerVolumeMappings],
-            };
+            return new DockerRunner { ImageAndTag = dockerRunnerYaml.ImageAndTag, ContainerPort = containerPort.Value, Volumes = [.. dockerVolumeMappings], };
         }
 
         private Runner ConvertDotnetRunner(Service service, DotnetRunnerYaml dotnetRunnerYaml)
@@ -332,11 +356,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                 throw new LeapYamlConversionException($"A .NET project runner references a project that does not exist at '{projectPath}' in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
             }
 
-            return new DotnetRunner
-            {
-                ProjectPath = projectPath,
-                Watch = dotnetRunnerYaml.Watch.GetValueOrDefault(true),
-            };
+            return new DotnetRunner { ProjectPath = projectPath, Watch = dotnetRunnerYaml.Watch.GetValueOrDefault(true), };
         }
 
         private Runner ConvertOpenApiRunner(Service service, OpenApiRunnerYaml openApiRunnerYaml)
@@ -371,11 +391,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                 }
             }
 
-            return new OpenApiRunner
-            {
-                Specification = specPathOrUrl,
-                IsUrl = isUrl,
-            };
+            return new OpenApiRunner { Specification = specPathOrUrl, IsUrl = isUrl, };
         }
 
         private Runner ConvertRemoteRunner(Service service, RemoteRunnerYaml remoteRunnerYaml)
@@ -385,10 +401,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep : IPipelineStep
                 throw new LeapYamlConversionException($"A remote runner has an invalid URL '{remoteRunnerYaml.Url}' in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
             }
 
-            return new RemoteRunner
-            {
-                Url = url.OriginalString,
-            };
+            return new RemoteRunner { Url = url.OriginalString, };
         }
 
         private static string EnsureAbsolutePath(string path, LeapYamlFile leapYaml)

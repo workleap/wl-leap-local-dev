@@ -8,6 +8,7 @@ public static class TelemetryMeters
     public static readonly Meter LeapMeter = new Meter(TelemetryConstants.AssemblyName, TelemetryConstants.AssemblyVersion);
     private static readonly TagList Tags = new TagList { { "user_id", TelemetryAnonymizer.ComputeAnonymizedEndUserId() } };
     private static readonly Counter<long> LeapRunCounter = LeapMeter.CreateCounter<long>("leap.runs");
+    private static readonly Counter<long> LeapPreferencesCounter = LeapMeter.CreateCounter<long>("leap.preferences");
     private static readonly Counter<long> MongodbStartCounter = LeapMeter.CreateCounter<long>("dependency.mongodb.starts");
     private static readonly Counter<long> EventGridStartCounter = LeapMeter.CreateCounter<long>("dependency.eventgrid.starts");
     private static readonly Counter<long> RedisStartCounter = LeapMeter.CreateCounter<long>("dependency.redis.starts");
@@ -19,6 +20,7 @@ public static class TelemetryMeters
     private static readonly Counter<long> OutdatedLeapCounter = LeapMeter.CreateCounter<long>("leap.outdated");
 
     public static void TrackLeapRun() => LeapRunCounter.Add(1, Tags);
+    public static void TrackPreferencesRun() => LeapPreferencesCounter.Add(1, Tags);
     public static void TrackMongodbStart() => MongodbStartCounter.Add(1, Tags);
     public static void TrackEventGridStart() => EventGridStartCounter.Add(1, Tags);
     public static void TrackRedisStart() => RedisStartCounter.Add(1, Tags);

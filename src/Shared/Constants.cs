@@ -11,6 +11,7 @@ internal static class Constants
 
     private const string AppSettingsFileName = "appsettings.json";
     public const string EventGridSettingsFileName = "eventgridsettings.json";
+    public const string PreferencesFileName = "preferences.json";
 
     public const string LeapYamlFileName = "leap.yaml";
     public const string SecondaryLeapYamlFileName = "leap.yml";
@@ -54,10 +55,25 @@ internal static class Constants
         .. SupportedWildcardLocalhostDomainNames,
     ];
 
+    public static readonly string[] AllowedRunners =
+    [
+        ExecutableRunnerYamlDiscriminator,
+        DockerRunnerYamlDiscriminator,
+        DotnetRunnerYamlDiscriminator,
+        OpenApiRunnerYamlDiscriminator,
+        RemoteRunnerYamlDiscriminator,
+    ];
+
     // "1347" means "leap" in leetspeak (https://en.wikipedia.org/wiki/Leet)
     public const int LeapReverseProxyPort = 1347;
 
     public const int LeapAzureCliProxyPort = 6501;
+
+    public const string ExecutableRunnerYamlDiscriminator = "executable";
+    public const string DockerRunnerYamlDiscriminator = "docker";
+    public const string DotnetRunnerYamlDiscriminator = "dotnet";
+    public const string OpenApiRunnerYamlDiscriminator = "openapi";
+    public const string RemoteRunnerYamlDiscriminator = "remote";
 
     private static readonly string UserProfileDirectoryPath = Path.GetFullPath(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 
@@ -66,6 +82,9 @@ internal static class Constants
 
     /// <summary>User-managed event grid configuration file path</summary>
     public static readonly string UserEventGridSettingsFilePath = Path.Combine(RootDirectoryPath, EventGridSettingsFileName);
+
+    /// <summary>User-managed event grid configuration file path</summary>
+    public static readonly string UserLeapPreferencesFilePath = Path.Combine(RootDirectoryPath, PreferencesFileName);
 
     /// <summary>The directory that contains auto-generated Leap files</summary>
     public static readonly string GeneratedDirectoryPath = Path.Combine(RootDirectoryPath, LeapGeneratedDirectoryName);

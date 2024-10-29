@@ -5,7 +5,7 @@ namespace Leap.Cli.Configuration.Yaml;
 
 internal sealed class DockerRunnerYaml : RunnerYaml, IHasProtocol, IHasPort
 {
-    public const string YamlDiscriminator = "docker";
+    public const string YamlDiscriminator = Constants.DockerRunnerYamlDiscriminator;
 
     [YamlMember(Alias = "image", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
     public string? ImageAndTag { get; set; }

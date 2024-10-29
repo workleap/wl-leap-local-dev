@@ -6,7 +6,7 @@ namespace Leap.Cli.Configuration.Yaml;
 
 internal sealed class DotnetRunnerYaml : RunnerYaml, IHasPort, IHasProtocol
 {
-    public const string YamlDiscriminator = "dotnet";
+    public const string YamlDiscriminator = Constants.DotnetRunnerYamlDiscriminator;
 
     [YamlMember(Alias = "project", ScalarStyle = ScalarStyle.DoubleQuoted)]
     public string? ProjectPath { get; set; }

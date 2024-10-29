@@ -6,7 +6,7 @@ namespace Leap.Cli.Configuration.Yaml;
 
 internal sealed class ExecutableRunnerYaml : RunnerYaml, IHasPort, IHasProtocol
 {
-    public const string YamlDiscriminator = "executable";
+    public const string YamlDiscriminator = Constants.ExecutableRunnerYamlDiscriminator;
 
     [YamlMember(Alias = "command", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
     public string? Command { get; set; }

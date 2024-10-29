@@ -5,7 +5,7 @@ namespace Leap.Cli.Configuration.Yaml;
 
 internal sealed class OpenApiRunnerYaml : RunnerYaml, IHasPort
 {
-    public const string YamlDiscriminator = "openapi";
+    public const string YamlDiscriminator = Constants.OpenApiRunnerYamlDiscriminator;
 
     [YamlMember(Alias = "spec", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
     public string? Specification { get; set; }

@@ -5,7 +5,7 @@ namespace Leap.Cli.Configuration.Yaml;
 
 internal sealed class RemoteRunnerYaml : RunnerYaml
 {
-    public const string YamlDiscriminator = "remote";
+    public const string YamlDiscriminator = Constants.RemoteRunnerYamlDiscriminator;
 
     [YamlMember(Alias = "url", ScalarStyle = ScalarStyle.DoubleQuoted)]
     public string? Url { get; set; }

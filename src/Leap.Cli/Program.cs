@@ -29,6 +29,12 @@ StartupDefaults.SetUtf8Encoding();
 var rootCommand = new RootCommand("Workleap's Local Environment Application Proxy")
 {
     new RunCommand(),
+    new Command("preferences", "Configure preferences for Leap services")
+    {
+        new PreferencesSetCommand(),
+        new PreferencesListCommand(),
+        new PreferencesRemoveCommand(),
+    },
     new UpdateHostsFileCommand(),
     new AddCertificateAuthorityToComputerRootStoreCommand(),
 };
@@ -70,6 +76,7 @@ builder.UseDependencyInjection((services, context) =>
         .AddHttpMessageHandler<AzuriteAuthenticationHandler>();
 
     services.AddSingleton<LeapConfigManager>();
+    services.AddSingleton<PreferencesSettingsManager>();
     services.AddSingleton<ILeapYamlAccessor>(x => x.GetRequiredService<LeapConfigManager>());
 
     services.AddSingleton<IDependencyHandler, MongoDependencyHandler>();

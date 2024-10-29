@@ -6,7 +6,7 @@ namespace Leap.Cli.Pipeline;
 
 internal sealed class EnsureDockerIsRunningPipelineStep(
     IDockerComposeManager dockerCompose,
-    ILogger<EnsureLeapDirectoriesCreatedPipelineStep> logger) : IPipelineStep
+    ILogger<EnsureDockerIsRunningPipelineStep> logger) : IPipelineStep
 {
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
