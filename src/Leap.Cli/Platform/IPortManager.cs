@@ -9,4 +9,6 @@ internal interface IPortManager
     bool TryRegisterPort(int port, [NotNullWhen(false)] out InvalidPortReason? reason);
 
     bool IsPortInValidRange(int port);
+
+    bool IsPortAvailable(int port);
 }

@@ -148,7 +148,10 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
             var resourceLogger = loggerService.GetLogger(proxyResource);
             try
             {
-                var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions { EnvironmentName = Environments.Production, });
+                var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions
+                {
+                    EnvironmentName = Environments.Production,
+                });
 
                 builder.WebHost.UseUrls("http://+:" + proxyResource.Port);
 
@@ -159,7 +162,10 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
                 builder.Logging.ClearProviders();
                 builder.Logging.AddResourceLogger(resourceLogger);
 
-                builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["Logging:LogLevel:Default"] = "Information", });
+                builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Logging:LogLevel:Default"] = "Information",
+                });
 
                 this._app = builder.Build();
 
@@ -186,7 +192,11 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
 
                 await this._app.StartAsync(cancellationToken);
 
-                await notificationService.PublishUpdateAsync(proxyResource, state => state with { State = KnownResourceStates.Running, Urls = [new UrlSnapshot(Name: "http", Url: "http://127.0.0.1:" + proxyResource.Port, IsInternal: false)], });
+                await notificationService.PublishUpdateAsync(proxyResource, state => state with
+                {
+                    State = KnownResourceStates.Running,
+                    Urls = [new UrlSnapshot(Name: "http", Url: "http://127.0.0.1:" + proxyResource.Port, IsInternal: false)],
+                });
             }
             catch (OperationCanceledException)
             {

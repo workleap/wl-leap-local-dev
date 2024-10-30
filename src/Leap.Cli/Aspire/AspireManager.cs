@@ -4,6 +4,8 @@ using Aspire.Hosting.Lifecycle;
 using CliWrap;
 using Leap.Cli.Pipeline;
 using Leap.Cli.Platform;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,15 +14,21 @@ namespace Leap.Cli.Aspire;
 
 internal sealed class AspireManager : IAspireManager
 {
+    private const int AspireDashboardOtlpPort = 18889;
+    private const int AspireDashboardPort = 18888;
+    private const int AspireResourceServiceEndpointPort = 18887;
+
     // https://github.com/dotnet/aspire/blob/v8.0.0-preview.3.24105.21/src/Aspire.Dashboard/DashboardWebApplication.cs#L18-L21
-    public const string AspireDashboardOtlpUrlDefaultValue = "https://localhost:18889";
-    public const string AspireDashboardUrlDefaultValue = "https://localhost:18888";
-    public const string AspireResourceServiceEndpointUrl = "https://localhost:18887";
+    public static readonly string AspireDashboardOtlpUrlDefaultValue = $"https://localhost:{AspireDashboardOtlpPort}";
+    public static readonly string AspireDashboardUrlDefaultValue = $"https://localhost:{AspireDashboardPort}";
+    public static readonly string AspireResourceServiceEndpointUrl = $"https://localhost:{AspireResourceServiceEndpointPort}";
+
     public const string AspireOtlpDefaultApiKey = "leap";
 
     private readonly ILogger _logger;
     private readonly INuGetPackageDownloader _nuGetPackageDownloader;
     private readonly IPlatformHelper _platformHelper;
+    private readonly IPortManager _portManager;
     private readonly IOptions<LeapGlobalOptions> _leapGlobalOptions;
     private readonly ICliWrap _cliWrap;
 
@@ -31,12 +39,14 @@ internal sealed class AspireManager : IAspireManager
         ILogger<AspireManager> logger,
         INuGetPackageDownloader nuGetPackageDownloader,
         IPlatformHelper platformHelper,
+        IPortManager portManager,
         IOptions<LeapGlobalOptions> leapGlobalOptions,
         ICliWrap cliWrap)
     {
         this._logger = logger;
         this._nuGetPackageDownloader = nuGetPackageDownloader;
         this._platformHelper = platformHelper;
+        this._portManager = portManager;
         this._leapGlobalOptions = leapGlobalOptions;
         this._cliWrap = cliWrap;
 
@@ -97,11 +107,28 @@ internal sealed class AspireManager : IAspireManager
     {
         this._logger.LogInformation("Starting .NET Aspire dashboard...");
 
+        this.EnsureAspirePortsAreAvailable();
+
         DistributedApplication? app = null;
         try
         {
             app = await this.BuildDistributedApplicationAsync(cancellationToken);
-            await app.StartAsync(cancellationToken);
+
+            var dashboardReadinessAwaiter = app.Services.GetRequiredService<AspireDashboardReadinessAwaiter>();
+            var dashboardReadyTask = dashboardReadinessAwaiter.WaitForDashboardReadyAsync(cancellationToken);
+
+            var startAppTask = app.StartAsync(cancellationToken).ContinueWith(task =>
+            {
+                if (task.IsFaulted)
+                {
+                    this._logger.LogError(task.Exception, "Failed to start .NET Aspire");
+                }
+            }, cancellationToken, TaskContinuationOptions.RunContinuationsAsynchronously, TaskScheduler.Default);
+
+            var firstTaskToFinish = await Task.WhenAny(dashboardReadyTask, startAppTask);
+
+            // Task.WhenAny won't throw the finished task exception, so we do it manually
+            await firstTaskToFinish;
         }
         catch (Exception ex)
         {
@@ -120,14 +147,31 @@ internal sealed class AspireManager : IAspireManager
         return app;
     }
 
+    private void EnsureAspirePortsAreAvailable()
+    {
+        this.EnsurePortIsAvailable(AspireDashboardOtlpPort);
+        this.EnsurePortIsAvailable(AspireDashboardPort);
+        this.EnsurePortIsAvailable(AspireResourceServiceEndpointPort);
+    }
+
+    private void EnsurePortIsAvailable(int port)
+    {
+        if (!this._portManager.IsPortAvailable(port))
+        {
+            throw new LeapException($"Failed to start .NET Aspire dashboard because the port {port} is already in use. Do you have another instance of Leap local dev running?");
+        }
+    }
+
     private async Task<DistributedApplication> BuildDistributedApplicationAsync(CancellationToken cancellationToken)
     {
         await this.UseCustomAspireWorkloadAsync(cancellationToken);
 
-        // TODO do we want to assign a well-known .NET Aspire port (same for the Aspire OTLP exporter port) instead of the default 18888 / 18889?
-        // TODO do we want to proxy the Aspire dashboard URL to our YARP reverse proxy in order to have a nicer local domain URL?
         this.Builder.Services.TryAddLifecycleHook<UseLeapCertificateForAspireDashboardLifecycleHook>();
         this.Builder.Services.TryAddLifecycleHook<DetectDotnetBuildRaceConditionErrorLifecycleHook>();
+
+        this.Builder.Services.TryAddSingleton<AspireDashboardReadinessAwaiter>();
+        this.Builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDistributedApplicationLifecycleHook, AspireDashboardReadinessAwaiter>(
+            x => x.GetRequiredService<AspireDashboardReadinessAwaiter>()));
 
         this.Builder.IgnoreConsoleTerminationSignals();
         this.Builder.ConfigureConsoleLogging(this._leapGlobalOptions.Value);

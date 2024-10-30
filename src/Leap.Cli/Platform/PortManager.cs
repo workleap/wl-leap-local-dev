@@ -34,15 +34,30 @@ internal sealed class PortManager : IPortManager
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var listener = new TcpListener(IPAddress.Any, port: 0);
+            // https://stackoverflow.com/a/150974/825695
+            using var listener = new TcpListener(IPAddress.Loopback, port: 0);
             listener.Start();
             var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-            listener.Stop();
 
             if (ReservedPorts.Add(port))
             {
                 return port;
             }
+        }
+    }
+
+    public bool IsPortAvailable(int port)
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, port);
+
+        try
+        {
+            listener.Start();
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
         }
     }
 
