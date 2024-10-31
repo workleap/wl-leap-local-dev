@@ -46,8 +46,8 @@ internal sealed class DockerComposeManager(ICliWrap cliWrap, IFileSystem fileSys
             .WithValidation(CommandResultValidation.None)
             .WithWorkingDirectory(Constants.DockerComposeDirectoryPath)
             .WithArguments(["compose", "--file", Constants.DockerComposeFilePath, "up", "--remove-orphans", "--wait", serviceName])
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(x => logger.LogDebug("{StandardOutput}", x?.Trim())))
-            .WithStandardErrorPipe(PipeTarget.ToDelegate(x => logger.LogDebug("{StandardError}", x?.Trim())));
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(x => logger.LogDebug("{StandardOutput}", x.Trim())))
+            .WithStandardErrorPipe(PipeTarget.ToDelegate(x => logger.LogDebug("{StandardError}", x.Trim())));
 
         var result = await cliWrap.ExecuteBufferedAsync(command, cancellationToken);
 
@@ -63,8 +63,8 @@ internal sealed class DockerComposeManager(ICliWrap cliWrap, IFileSystem fileSys
             .WithValidation(CommandResultValidation.None)
             .WithWorkingDirectory(Constants.DockerComposeDirectoryPath)
             .WithArguments(["compose", "--file", Constants.DockerComposeFilePath, "stop", serviceName])
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(x => logger.LogDebug("{StandardOutput}", x?.Trim())))
-            .WithStandardErrorPipe(PipeTarget.ToDelegate(x => logger.LogDebug("{StandardError}", x?.Trim())));
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(x => logger.LogDebug("{StandardOutput}", x.Trim())))
+            .WithStandardErrorPipe(PipeTarget.ToDelegate(x => logger.LogDebug("{StandardError}", x.Trim())));
 
         var result = await cliWrap.ExecuteBufferedAsync(command, cancellationToken);
 

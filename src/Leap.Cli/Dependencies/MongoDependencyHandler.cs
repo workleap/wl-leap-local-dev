@@ -14,7 +14,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Dependencies;
 
-internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency>
+internal sealed class MongoDependencyHandler(
+    IConfigureDockerCompose dockerCompose,
+    IConfigureEnvironmentVariables environmentVariables,
+    IConfigureAppSettingsJson appSettingsJson,
+    ICliWrap cliWrap,
+    IAspireManager aspire)
+    : DependencyHandler<MongoDependency>
 {
     public const int MongoPort = 27217;
 
@@ -27,40 +33,20 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
     private static readonly string NonReplicaSetConnectionString = $"mongodb://127.0.0.1:{MongoPort}";
     private static readonly string ReplicaSetConnectionString = $"{NonReplicaSetConnectionString}/?replicaSet={ReplicaSetName}";
 
-    private readonly IConfigureDockerCompose _dockerCompose;
-    private readonly IConfigureEnvironmentVariables _environmentVariables;
-    private readonly IConfigureAppSettingsJson _appSettingsJson;
-    private readonly ICliWrap _cliWrap;
-    private readonly IAspireManager _aspire;
-
-    public MongoDependencyHandler(
-        IConfigureDockerCompose dockerCompose,
-        IConfigureEnvironmentVariables environmentVariables,
-        IConfigureAppSettingsJson appSettingsJson,
-        ICliWrap cliWrap,
-        IAspireManager aspire)
-    {
-        this._dockerCompose = dockerCompose;
-        this._environmentVariables = environmentVariables;
-        this._appSettingsJson = appSettingsJson;
-        this._cliWrap = cliWrap;
-        this._aspire = aspire;
-    }
-
-    protected override Task BeforeStartAsync(MongoDependency dependency, CancellationToken cancellationToken)
+    protected override Task HandleAsync(MongoDependency dependency, CancellationToken cancellationToken)
     {
         TelemetryMeters.TrackMongodbStart();
-        ConfigureDockerCompose(dependency, this._dockerCompose.Configuration);
-        this._environmentVariables.Configure(envVars => ConfigureEnvironmentVariables(dependency, envVars));
-        ConfigureAppSettingsJson(dependency, this._appSettingsJson.Configuration);
+        ConfigureDockerCompose(dependency, dockerCompose.Configuration);
+        environmentVariables.Configure(envVars => ConfigureEnvironmentVariables(dependency, envVars));
+        ConfigureAppSettingsJson(dependency, appSettingsJson.Configuration);
 
-        this._aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
+        aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
         {
             ResourceType = Constants.LeapDependencyAspireResourceType,
             Urls = [dependency.UseReplicaSet ? ReplicaSetConnectionString : NonReplicaSetConnectionString],
         });
 
-        this._aspire.Builder.Eventing.Subscribe<ResourceReadyEvent>(ServiceName, async (evt, ct) =>
+        aspire.Builder.Eventing.Subscribe<ResourceReadyEvent>(ServiceName, async (evt, ct) =>
         {
             var resourceLogger = evt.Services.GetRequiredService<ResourceLoggerService>().GetLogger(ServiceName);
             await this.OnMongoResourceReady(dependency, resourceLogger, ct);
@@ -215,7 +201,7 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
             .WithArguments(["compose", "exec", ServiceName, "mongosh", "--port", MongoPort.ToString(), "--quiet", "--eval", mongoshCommand, "--json", "relaxed"]);
 
         // TODO handle errors and unexpected behavior
-        var result = await this._cliWrap.ExecuteBufferedAsync(command, cancellationToken);
+        var result = await cliWrap.ExecuteBufferedAsync(command, cancellationToken);
 
         return result.StandardOutput;
     }

@@ -7,11 +7,16 @@ using Leap.Cli.Model;
 using Leap.Cli.Platform;
 using Leap.Cli.Platform.Telemetry;
 using Leap.Cli.Yaml;
-using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Dependencies;
 
-internal sealed class SqlServerDependencyHandler : DependencyHandler<SqlServerDependency>
+internal sealed class SqlServerDependencyHandler(
+    IConfigureDockerCompose dockerCompose,
+    IConfigureEnvironmentVariables environmentVariables,
+    IConfigureAppSettingsJson appSettingsJson,
+    IPlatformHelper platformHelper,
+    IAspireManager aspire)
+    : DependencyHandler<SqlServerDependency>
 {
     public const int HostSqlServerPort = 1444;
     private const int ContainerSqlServerPort = 1433;
@@ -23,37 +28,14 @@ internal sealed class SqlServerDependencyHandler : DependencyHandler<SqlServerDe
     private static readonly string HostConnectionString = $"Server=127.0.0.1,{HostSqlServerPort}; Database=master; User=sa; Password=L0c@lh0st!; Encrypt=True; TrustServerCertificate=True";
     private static readonly string ContainerConnectionString = $"Server=host.docker.internal,{ContainerSqlServerPort}; Database=master; User=sa; Password=L0c@lh0st!; Encrypt=True; TrustServerCertificate=True";
 
-    private readonly IConfigureDockerCompose _dockerCompose;
-    private readonly IConfigureEnvironmentVariables _environmentVariables;
-    private readonly IConfigureAppSettingsJson _appSettingsJson;
-    private readonly IPlatformHelper _platformHelper;
-    private readonly ILogger _logger;
-    private readonly IAspireManager _aspire;
-
-    public SqlServerDependencyHandler(
-        IConfigureDockerCompose dockerCompose,
-        IConfigureEnvironmentVariables environmentVariables,
-        IConfigureAppSettingsJson appSettingsJson,
-        IPlatformHelper platformHelper,
-        ILogger<SqlServerDependencyHandler> logger,
-        IAspireManager aspire)
-    {
-        this._environmentVariables = environmentVariables;
-        this._dockerCompose = dockerCompose;
-        this._appSettingsJson = appSettingsJson;
-        this._platformHelper = platformHelper;
-        this._logger = logger;
-        this._aspire = aspire;
-    }
-
-    protected override Task BeforeStartAsync(SqlServerDependency dependency, CancellationToken cancellationToken)
+    protected override Task HandleAsync(SqlServerDependency dependency, CancellationToken cancellationToken)
     {
         TelemetryMeters.TrackSqlServerStart();
-        this.ConfigureDockerCompose(this._dockerCompose.Configuration);
-        this._environmentVariables.Configure(ConfigureEnvironmentVariables);
-        ConfigureAppSettingsJson(this._appSettingsJson.Configuration);
+        this.ConfigureDockerCompose(dockerCompose.Configuration);
+        environmentVariables.Configure(ConfigureEnvironmentVariables);
+        ConfigureAppSettingsJson(appSettingsJson.Configuration);
 
-        this._aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
+        aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
         {
             ResourceType = Constants.LeapDependencyAspireResourceType,
         });
@@ -64,7 +46,7 @@ internal sealed class SqlServerDependencyHandler : DependencyHandler<SqlServerDe
     private void ConfigureDockerCompose(DockerComposeYaml dockerComposeYaml)
     {
         // TODO Users with M1 chips have complained that mcr.microsoft.com/mssql/server doesn't work on their machines. Validate this.
-        var image = this._platformHelper.ProcessArchitecture == Architecture.Arm64 && this._platformHelper.CurrentOS == OSPlatform.OSX
+        var image = platformHelper.ProcessArchitecture == Architecture.Arm64 && platformHelper.CurrentOS == OSPlatform.OSX
             ? "mcr.microsoft.com/azure-sql-edge:latest"
             : "mcr.microsoft.com/mssql/server:2022-latest";
 
@@ -79,7 +61,10 @@ internal sealed class SqlServerDependencyHandler : DependencyHandler<SqlServerDe
                 ["MSSQL_SA_PASSWORD"] = "L0c@lh0st!",
                 ["MSSQL_PID"] = "Developer", // This edition is free for development purposes
             },
-            Ports = { new DockerComposePortMappingYaml(HostSqlServerPort, ContainerSqlServerPort) },
+            Ports =
+            {
+                new DockerComposePortMappingYaml(HostSqlServerPort, ContainerSqlServerPort)
+            },
             Volumes =
             {
                 new DockerComposeVolumeMappingYaml(VolumeName, "/var/opt/mssql", DockerComposeConstants.Volume.ReadWrite),

@@ -4,11 +4,15 @@ using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
 using Leap.Cli.Platform.Telemetry;
-using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Dependencies;
 
-internal sealed class RedisDependencyHandler : DependencyHandler<RedisDependency>
+internal sealed class RedisDependencyHandler(
+    IConfigureDockerCompose dockerCompose,
+    IConfigureEnvironmentVariables environmentVariables,
+    IConfigureAppSettingsJson appSettingsJson,
+    IAspireManager aspire)
+    : DependencyHandler<RedisDependency>
 {
     public const int RedisPort = 6380;
 
@@ -19,34 +23,14 @@ internal sealed class RedisDependencyHandler : DependencyHandler<RedisDependency
     private static readonly string HostConnectionString = $"127.0.0.1:{RedisPort}";
     private static readonly string ContainerConnectionString = $"host.docker.internal:{RedisPort}";
 
-    private readonly IConfigureDockerCompose _dockerCompose;
-    private readonly IConfigureEnvironmentVariables _environmentVariables;
-    private readonly IConfigureAppSettingsJson _appSettingsJson;
-    private readonly ILogger _logger;
-    private readonly IAspireManager _aspire;
-
-    public RedisDependencyHandler(
-        IConfigureDockerCompose dockerCompose,
-        IConfigureEnvironmentVariables environmentVariables,
-        IConfigureAppSettingsJson appSettingsJson,
-        ILogger<RedisDependencyHandler> logger,
-        IAspireManager aspire)
-    {
-        this._dockerCompose = dockerCompose;
-        this._environmentVariables = environmentVariables;
-        this._appSettingsJson = appSettingsJson;
-        this._logger = logger;
-        this._aspire = aspire;
-    }
-
-    protected override Task BeforeStartAsync(RedisDependency dependency, CancellationToken cancellationToken)
+    protected override Task HandleAsync(RedisDependency dependency, CancellationToken cancellationToken)
     {
         TelemetryMeters.TrackRedisStart();
-        ConfigureDockerCompose(this._dockerCompose.Configuration);
-        this._environmentVariables.Configure(ConfigureEnvironmentVariables);
-        ConfigureAppSettingsJson(this._appSettingsJson.Configuration);
+        ConfigureDockerCompose(dockerCompose.Configuration);
+        environmentVariables.Configure(ConfigureEnvironmentVariables);
+        ConfigureAppSettingsJson(appSettingsJson.Configuration);
 
-        this._aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
+        aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
         {
             ResourceType = Constants.LeapDependencyAspireResourceType,
         });
@@ -68,7 +52,10 @@ internal sealed class RedisDependencyHandler : DependencyHandler<RedisDependency
                 "--port", RedisPort.ToString(),
             ],
             Restart = DockerComposeConstants.Restart.UnlessStopped,
-            Ports = { new DockerComposePortMappingYaml(RedisPort, RedisPort) },
+            Ports =
+            {
+                new DockerComposePortMappingYaml(RedisPort, RedisPort)
+            },
             Volumes =
             {
                 new DockerComposeVolumeMappingYaml(VolumeName, "/data", DockerComposeConstants.Volume.ReadWrite),

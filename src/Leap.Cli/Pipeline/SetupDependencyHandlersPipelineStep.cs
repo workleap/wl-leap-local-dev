@@ -3,14 +3,9 @@ using Leap.Cli.Model;
 
 namespace Leap.Cli.Pipeline;
 
-internal sealed class BeforeStartingDependenciesPipelineStep : IPipelineStep
+internal sealed class SetupDependencyHandlersPipelineStep(IEnumerable<IDependencyHandler> handlers) : IPipelineStep
 {
-    private readonly IDependencyHandler[] _handlers;
-
-    public BeforeStartingDependenciesPipelineStep(IEnumerable<IDependencyHandler> handlers)
-    {
-        this._handlers = handlers.ToArray();
-    }
+    private readonly IDependencyHandler[] _handlers = handlers.ToArray();
 
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
@@ -19,7 +14,7 @@ internal sealed class BeforeStartingDependenciesPipelineStep : IPipelineStep
             foreach (var dependency in state.Dependencies)
             {
                 // Tasks are sequential because we can't afford to mix up the console output of each dependency handler
-                await handler.BeforeStartAsync(dependency, cancellationToken);
+                await handler.HandleAsync(dependency, cancellationToken);
             }
         }
     }

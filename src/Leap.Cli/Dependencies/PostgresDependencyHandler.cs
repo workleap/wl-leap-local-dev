@@ -5,11 +5,15 @@ using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
 using Leap.Cli.Platform.Telemetry;
 using Leap.Cli.Yaml;
-using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Dependencies;
 
-internal sealed class PostgresDependencyHandler : DependencyHandler<PostgresDependency>
+internal sealed class PostgresDependencyHandler(
+    IConfigureDockerCompose dockerCompose,
+    IConfigureEnvironmentVariables environmentVariables,
+    IConfigureAppSettingsJson appSettingsJson,
+    IAspireManager aspire)
+    : DependencyHandler<PostgresDependency>
 {
     public const int HostPostgresPort = 5442;
     private const int ContainerPostgresPort = 5432;
@@ -21,34 +25,14 @@ internal sealed class PostgresDependencyHandler : DependencyHandler<PostgresDepe
     private static readonly string HostConnectionString = $"postgresql://127.0.0.1:{HostPostgresPort}/postgres?user=postgres&password=localpassword";
     private static readonly string ContainerConnectionString = $"postgresql://host.docker.internal:{ContainerPostgresPort}/postgres?user=postgres&password=localpassword";
 
-    private readonly IConfigureDockerCompose _dockerCompose;
-    private readonly IConfigureEnvironmentVariables _environmentVariables;
-    private readonly IConfigureAppSettingsJson _appSettingsJson;
-    private readonly ILogger _logger;
-    private readonly IAspireManager _aspire;
-
-    public PostgresDependencyHandler(
-        IConfigureDockerCompose dockerCompose,
-        IConfigureEnvironmentVariables environmentVariables,
-        IConfigureAppSettingsJson appSettingsJson,
-        ILogger<PostgresDependencyHandler> logger,
-        IAspireManager aspire)
-    {
-        this._environmentVariables = environmentVariables;
-        this._dockerCompose = dockerCompose;
-        this._appSettingsJson = appSettingsJson;
-        this._logger = logger;
-        this._aspire = aspire;
-    }
-
-    protected override Task BeforeStartAsync(PostgresDependency dependency, CancellationToken cancellationToken)
+    protected override Task HandleAsync(PostgresDependency dependency, CancellationToken cancellationToken)
     {
         TelemetryMeters.TrackPostgresStart();
-        ConfigureDockerCompose(this._dockerCompose.Configuration);
-        this._environmentVariables.Configure(ConfigureEnvironmentVariables);
-        ConfigureAppSettingsJson(this._appSettingsJson.Configuration);
+        ConfigureDockerCompose(dockerCompose.Configuration);
+        environmentVariables.Configure(ConfigureEnvironmentVariables);
+        ConfigureAppSettingsJson(appSettingsJson.Configuration);
 
-        this._aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
+        aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
         {
             ResourceType = Constants.LeapDependencyAspireResourceType,
             Urls = [HostConnectionString]
@@ -74,7 +58,10 @@ internal sealed class PostgresDependencyHandler : DependencyHandler<PostgresDepe
                 ["POSTGRES_USER"] = pgUser,
                 ["POSTGRES_PASSWORD"] = pgPassword,
             },
-            Ports = { new DockerComposePortMappingYaml(HostPostgresPort, ContainerPostgresPort) },
+            Ports =
+            {
+                new DockerComposePortMappingYaml(HostPostgresPort, ContainerPostgresPort)
+            },
             Volumes =
             {
                 new DockerComposeVolumeMappingYaml(VolumeName, "/var/lib/postgresql/data", DockerComposeConstants.Volume.ReadWrite),

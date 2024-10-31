@@ -7,28 +7,14 @@ using Leap.Cli.Yaml;
 
 namespace Leap.Cli.Pipeline;
 
-internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
+internal sealed class PrepareServiceRunnersPipelineStep(
+    IAspireManager aspire,
+    IConfigureEnvironmentVariables environmentVariables,
+    IPortManager portManager,
+    IConfigureAppSettingsJson appSettingsJson,
+    IConfigureDockerCompose dockerCompose)
+    : IPipelineStep
 {
-    private readonly IAspireManager _aspire;
-    private readonly IConfigureEnvironmentVariables _environmentVariables;
-    private readonly IPortManager _portManager;
-    private readonly IConfigureAppSettingsJson _appSettingsJson;
-    private readonly IConfigureDockerCompose _dockerCompose;
-
-    public PrepareServiceRunnersPipelineStep(
-        IAspireManager aspire,
-        IConfigureEnvironmentVariables environmentVariables,
-        IPortManager portManager,
-        IConfigureAppSettingsJson appSettingsJson,
-        IConfigureDockerCompose dockerCompose)
-    {
-        this._aspire = aspire;
-        this._environmentVariables = environmentVariables;
-        this._portManager = portManager;
-        this._appSettingsJson = appSettingsJson;
-        this._dockerCompose = dockerCompose;
-    }
-
     public Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
         foreach (var service in state.Services.Values)
@@ -43,7 +29,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
     {
         var runner = service.ActiveRunner;
 
-        service.Ingress.LocalhostPort = runner.Port ?? this._portManager.GetRandomAvailablePort(cancellationToken);
+        service.Ingress.LocalhostPort = runner.Port ?? portManager.GetRandomAvailablePort(cancellationToken);
 
         // .NET specific environment variables. Not harmful for non-.NET services.
         // .NET runners can still override these values in their own service environment variables.
@@ -78,13 +64,13 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
                 this.HandleExecutableRunner(service, exeRunner, dependencyResourceNames);
                 break;
             case DockerRunner dockerRunner:
-                this.HandleDockerRunner(service, dockerRunner);
+                this.HandleDockerRunner(service, dockerRunner, dependencyResourceNames);
                 break;
             case DotnetRunner dotnetRunner:
                 this.HandleDotnetRunner(service, dotnetRunner, dependencyResourceNames);
                 break;
             case OpenApiRunner openApiRunner:
-                this.HandleOpenApiRunner(state, service, openApiRunner);
+                this.HandleOpenApiRunner(state, service, openApiRunner, dependencyResourceNames);
                 break;
         }
 
@@ -92,20 +78,20 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         var serviceUrl = service.GetPrimaryUrl();
 
         // Declare the service URL to the other services
-        this._environmentVariables.Configure(x =>
+        environmentVariables.Configure(x =>
         {
             x.Add(new EnvironmentVariable(serviceUrlEnvVarName, serviceUrl, EnvironmentVariableScope.Host));
             x.Add(new EnvironmentVariable(serviceUrlEnvVarName, serviceUrl, EnvironmentVariableScope.Container));
         });
 
         // Declare the service URL to the appsettings.json
-        this._appSettingsJson.Configuration[$"Services:{service.Name}:BaseUrl"] = serviceUrl;
+        appSettingsJson.Configuration[$"Services:{service.Name}:BaseUrl"] = serviceUrl;
     }
 
     private void HandleExecutableRunner(Service service, ExecutableRunner exeRunner, string[] dependencyResourceNames)
     {
         // TODO shall we sanitize the name of the service? Get inspiration from Dapr
-        this._aspire.Builder
+        aspire.Builder
             .AddExecutable(service.Name, exeRunner.Command, exeRunner.WorkingDirectory, exeRunner.Arguments)
             .WithEndpoint(scheme: exeRunner.Protocol, port: service.Ingress.LocalhostPort, isProxied: false, env: "PORT")
             .WithEnvironment("ASPNETCORE_URLS", exeRunner.Protocol + "://*:" + service.Ingress.LocalhostPort)
@@ -124,7 +110,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
             .WaitFor(dependencyResourceNames);
     }
 
-    private void HandleDockerRunner(Service service, DockerRunner dockerRunner)
+    private void HandleDockerRunner(Service service, DockerRunner dockerRunner, string[] dependencyResourceNames)
     {
         // .NET Aspire has shown to be unstable with a large number of containers at startup, so we use Docker Compose for now
         // It provides long-running (persistant) containers, which is useful for services that need to be up all the time
@@ -197,11 +183,16 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
             dockerComposeServiceYaml.Environment[name] = value;
         }
 
-        this._dockerCompose.Configuration.Services[service.Name] = dockerComposeServiceYaml;
+        dockerCompose.Configuration.Services[service.Name] = dockerComposeServiceYaml;
 
-        this._aspire.Builder
-            .AddExternalContainer(new ExternalContainerResource(service.Name, service.ContainerName) { Urls = [service.LocalhostUrl] })
-            .WithConfigurePreferredRunnerCommand(service);
+        // Docker container resources are not managed by Aspire, so we need to declare them manually
+        aspire.Builder
+            .AddExternalContainer(new ExternalContainerResource(service.Name, service.ContainerName)
+            {
+                Urls = [service.LocalhostUrl]
+            })
+            .WithConfigurePreferredRunnerCommand(service)
+            .WaitFor(dependencyResourceNames);
     }
 
     private static IEnumerable<string> GetDockerExtraHostsRuntimeArgs(ApplicationState state)
@@ -227,7 +218,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         var workingDirectoryPath = Path.GetDirectoryName(dotnetRunner.ProjectPath)!;
 
         // TODO shall we sanitize the name of the service? Get inspiration from Dapr
-        this._aspire.Builder
+        aspire.Builder
             .AddDotnetExecutable(service.Name, workingDirectoryPath, dotnetRunner.ProjectPath, dotnetRunner.Watch)
             .WithEndpoint(scheme: dotnetRunner.Protocol, port: service.Ingress.LocalhostPort, isProxied: false, env: "PORT")
             .WithEnvironment("ASPNETCORE_URLS", dotnetRunner.Protocol + "://*:" + service.Ingress.LocalhostPort)
@@ -246,7 +237,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
             .WaitFor(dependencyResourceNames);
     }
 
-    private void HandleOpenApiRunner(ApplicationState state, Service service, OpenApiRunner openApiRunner)
+    private void HandleOpenApiRunner(ApplicationState state, Service service, OpenApiRunner openApiRunner, string[] dependencyResourceNames)
     {
         // See:
         // https://github.com/stoplightio/prism/blob/v5.5.4/docs/getting-started/01-installation.md#docker
@@ -254,7 +245,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         const int prismContainerPort = 4010;
 
         // TODO shall we sanitize the name of the service?
-        var builder = this._aspire.Builder.AddContainer(service.Name, "stoplight/prism", tag: "5")
+        var builder = aspire.Builder.AddContainer(service.Name, "stoplight/prism", tag: "5")
             .WithEndpoint(scheme: "http", port: service.Ingress.LocalhostPort, targetPort: prismContainerPort)
             .WithContainerRuntimeArgs([.. GetDockerExtraHostsRuntimeArgs(state)]);
 
@@ -269,7 +260,8 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
             // https://github.com/dotnet/aspire/blob/v8.0.1/src/Aspire.Hosting/ContainerResourceBuilderExtensions.cs#L79
             builder.WithArgs(["mock", "--host", "0.0.0.0", "--dynamic", "/tmp/swagger.yml"])
                 .WithAnnotation(new ContainerMountAnnotation(openApiRunner.Specification, "/tmp/swagger.yml", ContainerMountType.BindMount, isReadOnly: true))
-                .WithConfigurePreferredRunnerCommand(service);
+                .WithConfigurePreferredRunnerCommand(service)
+                .WaitFor(dependencyResourceNames);
         }
     }
 

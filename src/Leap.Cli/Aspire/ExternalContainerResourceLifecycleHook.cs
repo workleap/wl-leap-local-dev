@@ -27,6 +27,7 @@ internal sealed class ExternalContainerResourceLifecycleHook(
     public Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
     {
         this._mainTask = this.StartAndWatchContainersAsync(appModel, this._tokenSource.Token);
+
         return Task.CompletedTask;
     }
 
@@ -36,6 +37,8 @@ internal sealed class ExternalContainerResourceLifecycleHook(
 
         foreach (var resource in appModel.Resources.OfType<ExternalContainerResource>())
         {
+            this.AddStopContainerCommand(resource);
+            this.AddStartContainerCommand(resource);
             tasks.Add(this.StartAndWatchContainerAsync(resource, cancellationToken));
         }
 
@@ -146,7 +149,8 @@ internal sealed class ExternalContainerResourceLifecycleHook(
             StopTimeStamp = isInTerminalState ? finishedAt : null,
             ExitCode = isInTerminalState ? (int)container.State.ExitCode : null,
             EnvironmentVariables = environmentVariables,
-            Properties = [
+            Properties =
+            [
                 // https://github.com/dotnet/aspire/blob/v8.2.2/src/Shared/Model/KnownProperties.cs#L30-L34
                 new ResourcePropertySnapshot("container.id", container.ID),
                 new ResourcePropertySnapshot("container.image", container.Config.Image),
@@ -201,6 +205,72 @@ internal sealed class ExternalContainerResourceLifecycleHook(
         return false;
     }
 
+    private void AddStopContainerCommand(ExternalContainerResource resource)
+    {
+        var command = new ResourceCommandAnnotation(
+            type: "stop-container",
+            displayName: "Stop",
+            updateState: context => !IsStoppedOrStopping(context.ResourceSnapshot.State?.Text) ? ResourceCommandState.Enabled : ResourceCommandState.Hidden,
+            executeCommand: async context =>
+            {
+                try
+                {
+                    await dockerComposeManager.StopDockerComposeServiceAsync(resource.Name, loggerService.GetLogger(resource), context.CancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    return new ExecuteCommandResult
+                    {
+                        ErrorMessage = "An error occurred while trying to stop the container: " + ex.Message,
+                        Success = false
+                    };
+                }
+
+                return CommandResults.Success();
+            },
+            displayDescription: null,
+            parameter: null,
+            confirmationMessage: null,
+            iconName: "Stop",
+            iconVariant: IconVariant.Filled,
+            isHighlighted: true);
+
+        resource.Annotations.Add(command);
+    }
+
+    private void AddStartContainerCommand(ExternalContainerResource resource)
+    {
+        var command = new ResourceCommandAnnotation(
+            type: "start-container",
+            displayName: "Start",
+            updateState: context => IsStoppedOrStopping(context.ResourceSnapshot.State?.Text) ? ResourceCommandState.Enabled : ResourceCommandState.Hidden,
+            executeCommand: async context =>
+            {
+                try
+                {
+                    await dockerComposeManager.StartDockerComposeServiceAsync(resource.Name, loggerService.GetLogger(resource), context.CancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    return new ExecuteCommandResult
+                    {
+                        ErrorMessage = "An error occurred while trying to start the container: " + ex.Message,
+                        Success = false
+                    };
+                }
+
+                return CommandResults.Success();
+            },
+            displayDescription: null,
+            parameter: null,
+            confirmationMessage: null,
+            iconName: "Play",
+            iconVariant: IconVariant.Filled,
+            isHighlighted: true);
+
+        resource.Annotations.Add(command);
+    }
+
     public async ValueTask DisposeAsync()
     {
         await this._tokenSource.CancelAsync();
@@ -224,4 +294,7 @@ internal sealed class ExternalContainerResourceLifecycleHook(
         this._dockerClient.Dispose();
         this._tokenSource.Dispose();
     }
+
+    // https://github.com/dotnet/aspire/blob/34d6aabf330dd4ea0bf69fca138c8c1ba1250fce/src/Aspire.Hosting/ApplicationModel/CommandsConfigurationExtensions.cs#L115
+    private static bool IsStoppedOrStopping(string? state) => KnownResourceStates.TerminalStates.Contains(state) || state == KnownResourceStates.Stopping;
 }

@@ -9,7 +9,13 @@ using Leap.Cli.Platform.Telemetry;
 
 namespace Leap.Cli.Dependencies;
 
-internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDependency>, IDisposable
+internal sealed class EventGridDependencyHandler(
+    IConfigureDockerCompose dockerCompose,
+    IConfigureEnvironmentVariables environmentVariables,
+    IConfigureAppSettingsJson appSettingsJson,
+    ILogger<EventGridDependencyHandler> logger,
+    IAspireManager aspire)
+    : DependencyHandler<EventGridDependency>, IDisposable
 {
     private const int EventGridPort = 6500;
 
@@ -19,39 +25,20 @@ internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDe
     private static readonly string EventGridHostUrl = $"https://127.0.0.1:{EventGridPort}";
     private static readonly string EventGridContainerUrl = $"https://host.docker.internal:{EventGridPort}";
 
-    private readonly IConfigureDockerCompose _dockerCompose;
-    private readonly IConfigureEnvironmentVariables _environmentVariables;
-    private readonly IConfigureAppSettingsJson _appSettingsJson;
-    private readonly ILogger<EventGridDependencyHandler> _logger;
-    private readonly IAspireManager _aspire;
     private readonly SemaphoreSlim _generatedEventGridSettingsFileWriteLock = new SemaphoreSlim(initialCount: 1, maxCount: 1);
 
     private FileSystemWatcher? _userEventGridSettingsFileWatcher;
 
-    public EventGridDependencyHandler(
-        IConfigureDockerCompose dockerCompose,
-        IConfigureEnvironmentVariables environmentVariables,
-        IConfigureAppSettingsJson appSettingsJson,
-        ILogger<EventGridDependencyHandler> logger,
-        IAspireManager aspire)
-    {
-        this._dockerCompose = dockerCompose;
-        this._environmentVariables = environmentVariables;
-        this._appSettingsJson = appSettingsJson;
-        this._logger = logger;
-        this._aspire = aspire;
-    }
-
-    protected override async Task BeforeStartAsync(EventGridDependency dependency, CancellationToken cancellationToken)
+    protected override async Task HandleAsync(EventGridDependency dependency, CancellationToken cancellationToken)
     {
         TelemetryMeters.TrackEventGridStart();
         await this.EnsureEventGridSettingsFilesExists(dependency, cancellationToken);
         this.StartWatchingUserEventGridSettings(dependency, cancellationToken);
-        ConfigureDockerCompose(this._dockerCompose.Configuration);
-        this._environmentVariables.Configure(ConfigureEnvironmentVariables);
-        ConfigureAppSettingsJson(this._appSettingsJson.Configuration);
+        ConfigureDockerCompose(dockerCompose.Configuration);
+        environmentVariables.Configure(ConfigureEnvironmentVariables);
+        ConfigureAppSettingsJson(appSettingsJson.Configuration);
 
-        this._aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
+        aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
         {
             ResourceType = Constants.LeapDependencyAspireResourceType,
             Urls = [EventGridHostUrl]
@@ -73,7 +60,7 @@ internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDe
             }
             catch (Exception ex)
             {
-                this._logger.LogWarning(
+                logger.LogWarning(
                     "An error occured while writing an empty Event Grid settings file at {EventGridSettingsFilePath}. You may create it yourself by following our documentation: https://github.com/gsoft-inc/wl-eventgrid-emulator. {ExceptionMessage}",
                     Constants.UserEventGridSettingsFilePath, ex.Message);
             }
@@ -177,13 +164,13 @@ internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDe
         }
         catch (JsonException)
         {
-            this._logger.LogWarning(
+            logger.LogWarning(
                 "Failed to deserialize user-managed Event Grid configuration at {UserEventGridSettingsFilePath}, the file might be malformed.",
                 Constants.UserEventGridSettingsFilePath);
         }
         catch (Exception ex)
         {
-            this._logger.LogWarning(
+            logger.LogWarning(
                 "An unexpected error occurred while reading user-managed Event Grid configuration at {EventGridSettingsFilePath}: {ExceptionMessage}",
                 Constants.UserEventGridSettingsFilePath, ex.Message);
         }
@@ -200,14 +187,8 @@ internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDe
         }
         catch (Exception ex)
         {
-            this._logger.LogError(ex, "An unexpected error occurred while writing the generated Event Grid settings at {EventGridSettingsFilePath}", Constants.GeneratedEventGridSettingsFilePath);
+            logger.LogError(ex, "An unexpected error occurred while writing the generated Event Grid settings at {EventGridSettingsFilePath}", Constants.GeneratedEventGridSettingsFilePath);
         }
-    }
-
-    protected override Task AfterStartAsync(EventGridDependency dependency, CancellationToken cancellationToken)
-    {
-        this._logger.LogInformation("Event Grid emulator is up and running, you can edit your topic subscriptions at {FilePath}", Constants.UserEventGridSettingsFilePath);
-        return Task.CompletedTask;
     }
 
     private static void ConfigureDockerCompose(DockerComposeYaml dockerComposeYaml)
@@ -217,10 +198,13 @@ internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDe
             Image = "workleap/eventgridemulator:0.4.2",
             ContainerName = ContainerName,
             Restart = DockerComposeConstants.Restart.UnlessStopped,
-            Ports = { new DockerComposePortMappingYaml(EventGridPort, EventGridPort) },
+            Ports =
+            {
+                new DockerComposePortMappingYaml(EventGridPort, EventGridPort)
+            },
             Volumes =
             {
-                new DockerComposeVolumeMappingYaml(Constants.GeneratedEventGridSettingsFilePath, "/app/appsettings.json",  DockerComposeConstants.Volume.ReadOnly),
+                new DockerComposeVolumeMappingYaml(Constants.GeneratedEventGridSettingsFilePath, "/app/appsettings.json", DockerComposeConstants.Volume.ReadOnly),
                 new DockerComposeVolumeMappingYaml(Constants.CertificatesDirectoryPath, "/cert", DockerComposeConstants.Volume.ReadOnly),
             },
             Environment =

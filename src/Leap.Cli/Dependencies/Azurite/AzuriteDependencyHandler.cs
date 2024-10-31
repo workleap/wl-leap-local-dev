@@ -13,46 +13,32 @@ using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Dependencies.Azurite;
 
-internal sealed partial class AzuriteDependencyHandler : DependencyHandler<AzuriteDependency>
+internal sealed partial class AzuriteDependencyHandler(
+    IConfigureDockerCompose dockerCompose,
+    IConfigureEnvironmentVariables environmentVariables,
+    IConfigureAppSettingsJson appSettingsJson,
+    IHttpClientFactory httpClientFactory,
+    IAspireManager aspire)
+    : DependencyHandler<AzuriteDependency>
 {
     private const string ServiceName = AzuriteDependencyYaml.YamlDiscriminator;
     private const string ContainerName = "leap-azurite";
     private const string DataVolumeName = "leap_azurite_data";
 
-    private readonly IConfigureDockerCompose _dockerCompose;
-    private readonly IConfigureEnvironmentVariables _environmentVariables;
-    private readonly IConfigureAppSettingsJson _appSettingsJson;
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IAspireManager _aspire;
-
-    public AzuriteDependencyHandler(
-        IConfigureDockerCompose dockerCompose,
-        IConfigureEnvironmentVariables environmentVariables,
-        IConfigureAppSettingsJson appSettingsJson,
-        IHttpClientFactory httpClientFactory,
-        IAspireManager aspire)
-    {
-        this._dockerCompose = dockerCompose;
-        this._environmentVariables = environmentVariables;
-        this._appSettingsJson = appSettingsJson;
-        this._httpClientFactory = httpClientFactory;
-        this._aspire = aspire;
-    }
-
-    protected override Task BeforeStartAsync(AzuriteDependency dependency, CancellationToken cancellationToken)
+    protected override Task HandleAsync(AzuriteDependency dependency, CancellationToken cancellationToken)
     {
         TelemetryMeters.TrackAzuriteStart();
-        ConfigureDockerCompose(this._dockerCompose.Configuration);
-        this._environmentVariables.Configure(ConfigureEnvironmentVariables);
-        ConfigureAppSettingsJson(this._appSettingsJson.Configuration);
+        ConfigureDockerCompose(dockerCompose.Configuration);
+        environmentVariables.Configure(ConfigureEnvironmentVariables);
+        ConfigureAppSettingsJson(appSettingsJson.Configuration);
 
-        this._aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
+        aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
         {
             ResourceType = Constants.LeapDependencyAspireResourceType,
             Urls = [AzuriteConstants.HostBlobServiceUri, AzuriteConstants.HostQueueServiceUri, AzuriteConstants.HostTableServiceUri]
         });
 
-        this._aspire.Builder.Eventing.Subscribe<ResourceReadyEvent>(ServiceName, async (evt, ct) =>
+        aspire.Builder.Eventing.Subscribe<ResourceReadyEvent>(ServiceName, async (evt, ct) =>
         {
             var resourceLogger = evt.Services.GetRequiredService<ResourceLoggerService>().GetLogger(ServiceName);
             await this.OnAzuriteResourceReady(dependency, resourceLogger, ct);
@@ -148,7 +134,7 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
 
     private async Task OnAzuriteResourceReady(AzuriteDependency dependency, ILogger resourceLogger, CancellationToken cancellationToken)
     {
-        var httpClient = this._httpClientFactory.CreateClient(AzuriteConstants.HttpClientName);
+        var httpClient = httpClientFactory.CreateClient(AzuriteConstants.HttpClientName);
 
         foreach (var container in dependency.Containers)
         {
