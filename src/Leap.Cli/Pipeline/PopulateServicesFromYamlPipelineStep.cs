@@ -255,6 +255,11 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
                     ? protocol.ToLowerInvariant()
                     : throw new LeapYamlConversionException($"A runner has an invalid protocol '{protocol}' in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
             }
+
+            if (runnerYaml is IHasPort { Port: { } port })
+            {
+                runner.Port = port;
+            }
         }
 
         private Runner ConvertExecutableRunner(Service service, ExecutableRunnerYaml exeRunnerYaml)
