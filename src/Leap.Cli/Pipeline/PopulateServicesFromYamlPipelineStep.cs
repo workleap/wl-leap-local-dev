@@ -222,11 +222,6 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
                 logger.LogWarning("Unable to find preferred '{Runner}' runner for service '{Service}' in the configuration file '{Path}'. Will proceed with first declared runner", preferredRunnerName, service.Name, leapYaml.Path);
             }
 
-            if (service.Runners.Count > 1)
-            {
-                logger.LogInformation("A service '{Service}' has more than one runner in the configuration file '{Path}' and there was no runner preference found. The '{RunnerKind}' runner will be used as it is the first declared.", service.Name, leapYaml.Path, service.Runners[0]);
-            }
-
             service.ActiveRunner = service.Runners[0];
         }
 
@@ -259,13 +254,6 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
                 runner.Protocol = SupportedBackendProtocols.Contains(protocol)
                     ? protocol.ToLowerInvariant()
                     : throw new LeapYamlConversionException($"A runner has an invalid protocol '{protocol}' in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
-            }
-
-            if (runnerYaml is IHasPort { Port: { } port })
-            {
-                runner.Port = portManager.TryRegisterPort(port, out var reason)
-                    ? port
-                    : throw new LeapYamlConversionException($"A service '{service.Name}' contains a runner expected to launch and bind to an invalid port '{port}' in the configuration file '{leapYaml.Path}'. The port is {reason.Value}. The service will be ignored.");
             }
         }
 

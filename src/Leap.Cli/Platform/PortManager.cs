@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 using Leap.Cli.Dependencies;
@@ -59,24 +58,6 @@ internal sealed class PortManager : IPortManager
         {
             return false;
         }
-    }
-
-    public bool TryRegisterPort(int port, [NotNullWhen(false)] out InvalidPortReason? reason)
-    {
-        if (!this.IsPortInValidRange(port))
-        {
-            reason = InvalidPortReason.OutOfBounds;
-            return false;
-        }
-
-        if (!ReservedPorts.Add(port))
-        {
-            reason = InvalidPortReason.ReservedByLeap;
-            return false;
-        }
-
-        reason = null;
-        return true;
     }
 
     public bool IsPortInValidRange(int port)

@@ -3,17 +3,14 @@ using CliWrap;
 using CliWrap.Buffered;
 using CliWrap.Exceptions;
 using Leap.Cli.Platform.Telemetry;
-using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Platform;
 
-internal sealed class CliWrapExecutor(ITelemetryHelper telemetryHelper, ILogger<CliWrapExecutor> logger) : ICliWrap
+internal sealed class CliWrapExecutor(ITelemetryHelper telemetryHelper) : ICliWrap
 {
     public async Task<CommandResult> ExecuteAsync(Command command, CancellationToken forcefulCancellationToken, CancellationToken gracefulCancellationToken = default)
     {
         using var activity = this.CreateCommandActivity(command);
-
-        this.LogCommandExecution(command);
 
         try
         {
@@ -40,8 +37,6 @@ internal sealed class CliWrapExecutor(ITelemetryHelper telemetryHelper, ILogger<
     public async Task<BufferedCommandResult> ExecuteBufferedAsync(Command command, CancellationToken cancellationToken)
     {
         using var activity = this.CreateCommandActivity(command);
-
-        this.LogCommandExecution(command);
 
         try
         {
@@ -75,10 +70,5 @@ internal sealed class CliWrapExecutor(ITelemetryHelper telemetryHelper, ILogger<
         }
 
         return activity;
-    }
-
-    private void LogCommandExecution(ICommandConfiguration command)
-    {
-        logger.LogTrace("Executing command {Command} {Arguments}", command.TargetFilePath, command.Arguments);
     }
 }
