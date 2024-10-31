@@ -35,7 +35,7 @@ internal sealed class SqlServerDependencyHandler(
         environmentVariables.Configure(ConfigureEnvironmentVariables);
         ConfigureAppSettingsJson(appSettingsJson.Configuration);
 
-        aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
+        aspire.Builder.AddDockerComposeResource(new DockerComposeResource(ServiceName, ContainerName)
         {
             ResourceType = Constants.LeapDependencyAspireResourceType,
         });

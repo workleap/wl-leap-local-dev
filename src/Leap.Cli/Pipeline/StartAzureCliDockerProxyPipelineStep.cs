@@ -264,7 +264,7 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "An error occurred while tracking external containers.");
+                    logger.LogError(ex, "An error occurred while tracking Docker Compose services.");
                 }
             }
         }

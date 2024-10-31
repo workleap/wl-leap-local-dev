@@ -40,7 +40,7 @@ internal sealed class MongoDependencyHandler(
         environmentVariables.Configure(envVars => ConfigureEnvironmentVariables(dependency, envVars));
         ConfigureAppSettingsJson(dependency, appSettingsJson.Configuration);
 
-        aspire.Builder.AddExternalContainer(new ExternalContainerResource(ServiceName, ContainerName)
+        aspire.Builder.AddDockerComposeResource(new DockerComposeResource(ServiceName, ContainerName)
         {
             ResourceType = Constants.LeapDependencyAspireResourceType,
             Urls = [dependency.UseReplicaSet ? ReplicaSetConnectionString : NonReplicaSetConnectionString],

@@ -3,11 +3,11 @@ using Aspire.Hosting.Lifecycle;
 
 namespace Leap.Cli.Aspire;
 
-internal static class ExternalContainerResourceExtensions
+internal static class DockerComposeResourceExtensions
 {
-    public static IResourceBuilder<ExternalContainerResource> AddExternalContainer(this IDistributedApplicationBuilder builder, ExternalContainerResource resource)
+    public static IResourceBuilder<DockerComposeResource> AddDockerComposeResource(this IDistributedApplicationBuilder builder, DockerComposeResource resource)
     {
-        builder.Services.TryAddLifecycleHook<ExternalContainerResourceLifecycleHook>();
+        builder.Services.TryAddLifecycleHook<DockerComposeResourceLifecycleHook>();
 
         var urls = resource.Urls
             .Select((url, index) => new UrlSnapshot(index.ToString(), url, IsInternal: false))

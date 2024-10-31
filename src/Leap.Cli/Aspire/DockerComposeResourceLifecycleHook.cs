@@ -12,8 +12,8 @@ namespace Leap.Cli.Aspire;
 
 // Task management inspired by
 // https://github.com/dotnet/aspire/blob/v8.0.1/src/Aspire.Hosting/Dashboard/DashboardLifecycleHook.cs
-internal sealed class ExternalContainerResourceLifecycleHook(
-    ILogger<ExternalContainerResourceLifecycleHook> logger,
+internal sealed class DockerComposeResourceLifecycleHook(
+    ILogger<DockerComposeResourceLifecycleHook> logger,
     IDockerComposeManager dockerComposeManager,
     ResourceNotificationService notificationService,
     ResourceLoggerService loggerService)
@@ -35,7 +35,7 @@ internal sealed class ExternalContainerResourceLifecycleHook(
     {
         List<Task> tasks = [];
 
-        foreach (var resource in appModel.Resources.OfType<ExternalContainerResource>())
+        foreach (var resource in appModel.Resources.OfType<DockerComposeResource>())
         {
             this.AddStopContainerCommand(resource);
             this.AddStartContainerCommand(resource);
@@ -46,7 +46,7 @@ internal sealed class ExternalContainerResourceLifecycleHook(
         await Task.WhenAll(tasks).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
     }
 
-    private async Task StartAndWatchContainerAsync(ExternalContainerResource resource, CancellationToken cancellationToken)
+    private async Task StartAndWatchContainerAsync(DockerComposeResource resource, CancellationToken cancellationToken)
     {
         await notificationService.WaitForDependenciesAsync(resource, cancellationToken);
 
@@ -61,7 +61,7 @@ internal sealed class ExternalContainerResourceLifecycleHook(
         }
     }
 
-    private async Task StartContainerAsync(ExternalContainerResource resource, ILogger resourceLogger, CancellationToken cancellationToken)
+    private async Task StartContainerAsync(DockerComposeResource resource, ILogger resourceLogger, CancellationToken cancellationToken)
     {
         try
         {
@@ -81,7 +81,7 @@ internal sealed class ExternalContainerResourceLifecycleHook(
         }
     }
 
-    private async Task WatchContainerAsync(ExternalContainerResource resource, ILogger resourceLogger, CancellationToken cancellationToken)
+    private async Task WatchContainerAsync(DockerComposeResource resource, ILogger resourceLogger, CancellationToken cancellationToken)
     {
         try
         {
@@ -110,7 +110,7 @@ internal sealed class ExternalContainerResourceLifecycleHook(
         }
     }
 
-    private async Task SynchronizeResourceSnapshotWithContainerAsync(ExternalContainerResource resource, CancellationToken cancellationToken)
+    private async Task SynchronizeResourceSnapshotWithContainerAsync(DockerComposeResource resource, CancellationToken cancellationToken)
     {
         // https://docs.docker.com/reference/api/engine/version/v1.47/#tag/Container/operation/ContainerInspect
         var container = await this._dockerClient.Containers.InspectContainerAsync(resource.ContainerName, cancellationToken);
@@ -161,7 +161,7 @@ internal sealed class ExternalContainerResourceLifecycleHook(
         });
     }
 
-    private async Task WatchContainerLogsUntilStoppedAsync(ExternalContainerResource resource, ILogger resourceLogger, CancellationToken cancellationToken)
+    private async Task WatchContainerLogsUntilStoppedAsync(DockerComposeResource resource, ILogger resourceLogger, CancellationToken cancellationToken)
     {
         var getLogsParameters = new ContainerLogsParameters
         {
@@ -205,7 +205,7 @@ internal sealed class ExternalContainerResourceLifecycleHook(
         return false;
     }
 
-    private void AddStopContainerCommand(ExternalContainerResource resource)
+    private void AddStopContainerCommand(DockerComposeResource resource)
     {
         var command = new ResourceCommandAnnotation(
             type: "stop-container",
@@ -238,7 +238,7 @@ internal sealed class ExternalContainerResourceLifecycleHook(
         resource.Annotations.Add(command);
     }
 
-    private void AddStartContainerCommand(ExternalContainerResource resource)
+    private void AddStartContainerCommand(DockerComposeResource resource)
     {
         var command = new ResourceCommandAnnotation(
             type: "start-container",

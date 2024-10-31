@@ -1,6 +1,6 @@
 ﻿namespace Leap.Cli.Aspire;
 
-internal sealed class ExternalContainerResource(string name, string containerName) : Resource(name), IResourceWithWaitSupport
+internal sealed class DockerComposeResource(string name, string containerName) : Resource(name), IResourceWithWaitSupport
 {
     public string ContainerName { get; } = containerName;
 

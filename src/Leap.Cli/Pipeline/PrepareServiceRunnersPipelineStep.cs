@@ -187,7 +187,7 @@ internal sealed class PrepareServiceRunnersPipelineStep(
 
         // Docker container resources are not managed by Aspire, so we need to declare them manually
         aspire.Builder
-            .AddExternalContainer(new ExternalContainerResource(service.Name, service.ContainerName)
+            .AddDockerComposeResource(new DockerComposeResource(service.Name, service.ContainerName)
             {
                 Urls = [service.LocalhostUrl]
             })
