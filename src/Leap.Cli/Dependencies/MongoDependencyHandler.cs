@@ -63,7 +63,7 @@ internal sealed class MongoDependencyHandler(
 
         var service = new DockerComposeServiceYaml
         {
-            Image = "mongo:7.0",
+            Image = new DockerComposeImageName("mongo:7.0.15"),
             ContainerName = ContainerName,
             Command = command,
             Restart = DockerComposeConstants.Restart.UnlessStopped,

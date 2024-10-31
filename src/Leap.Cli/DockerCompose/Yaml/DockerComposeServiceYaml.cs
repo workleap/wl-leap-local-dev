@@ -15,7 +15,7 @@ internal sealed class DockerComposeServiceYaml
     }
 
     [YamlMember(Alias = "image")]
-    public string Image { get; set; } = string.Empty;
+    public DockerComposeImageName Image { get; set; } = DockerComposeImageName.Empty;
 
     [YamlMember(Alias = "container_name", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
     public string? ContainerName { get; set; }

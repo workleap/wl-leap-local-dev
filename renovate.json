@@ -11,14 +11,14 @@
   ],
   "customManagers": [
     {
-      "description": "Workleap Event Grid emulator",
+      "description": "Docker images referenced in C# code",
       "customType": "regex",
       "fileMatch": [
         "\\.cs$"
       ],
       "matchStringsStrategy": "any",
       "matchStrings": [
-        "\"(?<depName>workleap/eventgridemulator):(?<currentValue>[^\"]+)\""
+        "DockerComposeImageName\\(\"(?<depName>[^:]+):(?<currentValue>[^\"]+)\"\\)"
       ],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"

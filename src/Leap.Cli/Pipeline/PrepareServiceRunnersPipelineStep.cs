@@ -116,7 +116,7 @@ internal sealed class PrepareServiceRunnersPipelineStep(
         // It provides long-running (persistant) containers, which is useful for services that need to be up all the time
         var dockerComposeServiceYaml = new DockerComposeServiceYaml
         {
-            Image = dockerRunner.ImageAndTag,
+            Image = new DockerComposeImageName(dockerRunner.ImageAndTag),
             ContainerName = service.ContainerName,
             Ports = [new DockerComposePortMappingYaml(service.Ingress.LocalhostPort, dockerRunner.ContainerPort)],
             Restart = DockerComposeConstants.Restart.No,
