@@ -118,6 +118,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
             })
             .WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables())
             .WithOtlpExporter()
+            .WithConfigurePreferredRunnerCommand(service)
             .WaitFor(Constants.LeapAzureCliProxyResourceName);
     }
 
@@ -131,11 +132,9 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
             ContainerName = service.ContainerName,
             Ports = [new DockerComposePortMappingYaml(service.Ingress.LocalhostPort, dockerRunner.ContainerPort)],
             Restart = DockerComposeConstants.Restart.No,
-
             PullPolicy = dockerRunner.ImageAndTag.Contains("azurecr.io/")
                 ? DockerComposeConstants.PullPolicy.Always // Developers are expecting to use their latest images
                 : DockerComposeConstants.PullPolicy.Missing,
-
             Environment = new KeyValueCollectionYaml
             {
                 ["ASPNETCORE_URLS"] = dockerRunner.Protocol + "://*:" + dockerRunner.ContainerPort,
@@ -198,10 +197,9 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
 
         this._dockerCompose.Configuration.Services[service.ContainerName] = dockerComposeServiceYaml;
 
-        this._aspire.Builder.AddExternalContainer(new ExternalContainerResource(service.Name, service.ContainerName)
-        {
-            Urls = [service.LocalhostUrl]
-        });
+        this._aspire.Builder
+            .AddExternalContainer(new ExternalContainerResource(service.Name, service.ContainerName) { Urls = [service.LocalhostUrl] })
+            .WithConfigurePreferredRunnerCommand(service);
     }
 
     private static IEnumerable<string> GetDockerExtraHostsRuntimeArgs(ApplicationState state)
@@ -242,6 +240,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
             .WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables())
             .WithOtlpExporter()
             .WithRestartAndWaitForDebuggerCommand()
+            .WithConfigurePreferredRunnerCommand(service)
             .WaitFor(Constants.LeapAzureCliProxyResourceName);
     }
 
@@ -267,7 +266,8 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
             // relative to the Aspire app host directory, but our spec path is already consolidated and absolute. See:
             // https://github.com/dotnet/aspire/blob/v8.0.1/src/Aspire.Hosting/ContainerResourceBuilderExtensions.cs#L79
             builder.WithArgs(["mock", "--host", "0.0.0.0", "--dynamic", "/tmp/swagger.yml"])
-                .WithAnnotation(new ContainerMountAnnotation(openApiRunner.Specification, "/tmp/swagger.yml", ContainerMountType.BindMount, isReadOnly: true));
+                .WithAnnotation(new ContainerMountAnnotation(openApiRunner.Specification, "/tmp/swagger.yml", ContainerMountType.BindMount, isReadOnly: true))
+                .WithConfigurePreferredRunnerCommand(service);
         }
     }
 

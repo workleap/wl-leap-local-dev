@@ -29,21 +29,12 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
         string.Join('|', Constants.SupportedWildcardLocalhostDomainNames.Select(ConvertWildcardDomainToPattern)),
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-    private static readonly Dictionary<string, Type> RunnerTypepMapping = new(StringComparer.OrdinalIgnoreCase)
-    {
-        [ExecutableRunnerYaml.YamlDiscriminator] = typeof(ExecutableRunnerYaml),
-        [DockerRunnerYaml.YamlDiscriminator] = typeof(DockerRunnerYaml),
-        [DotnetRunnerYaml.YamlDiscriminator] = typeof(DotnetRunnerYaml),
-        [OpenApiRunnerYaml.YamlDiscriminator] = typeof(OpenApiRunnerYaml),
-        [RemoteRunnerYaml.YamlDiscriminator] = typeof(RemoteRunnerYaml),
-    };
-
     private static string ConvertWildcardDomainToPattern(string domain) => $"^{Regex.Escape(domain).Replace("\\*", "[a-z0-9]+(-[a-z0-9]+)*")}$";
 
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
         var leapYamls = await leapYamlAccessor.GetAllAsync(cancellationToken);
-        var preferences = await preferencesManager.GetUserLeapPreferencesAsync(cancellationToken);
+        var preferences = await preferencesManager.GetLeapUserPreferencesAsync(cancellationToken);
 
         foreach (var leapYaml in leapYamls)
         {
@@ -210,36 +201,36 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
                 throw new LeapYamlConversionException($"A service '{service.Name}' is missing a runner in the configuration file '{leapYaml.Path}' and will be ignored.");
             }
 
-            RunnerYaml? selectedRunnerYaml = null;
-            if (preferences.Services.TryGetValue(service.Name, out var preference))
+            foreach (var runnerYaml in serviceYaml.Runners)
             {
-                logger.LogInformation("Found a runner preference '{Runner}' for service '{Service}' in the configuration file '{Path}'.", preference.PreferredRunner, service.Name, leapYaml.Path);
-                if (RunnerTypepMapping.TryGetValue(preference.PreferredRunner, out var preferredRunnerType))
-                {
-                    var preferredRunnerYaml = serviceYaml.Runners.FirstOrDefault(runnerYaml => runnerYaml != null && runnerYaml.GetType() == preferredRunnerType);
-
-                    if (preferredRunnerYaml != null)
-                    {
-                        selectedRunnerYaml = preferredRunnerYaml;
-                    }
-                    else
-                    {
-                        logger.LogWarning("Unable to find preferred '{Runner}' runner for service '{Service}' in the configuration file '{Path}'. Will proceed with first declared runner", preference.PreferredRunner, service.Name, leapYaml.Path);
-                        if (serviceYaml.Runners.Length > 1)
-                        {
-                            logger.LogInformation("A service '{Service}' has more than one runner in the configuration file '{Path}' and there was no Runner preference found. The '{RunnerKind}' runner will be used as it is the first declared.", service.Name, leapYaml.Path, service.Runners[0]);
-                        }
-                    }
-                }
+                this.ConvertRunnerFromYaml(service, runnerYaml);
             }
 
-            selectedRunnerYaml ??= serviceYaml.Runners.FirstOrDefault();
-            this.GetRunnerFromYaml(service, selectedRunnerYaml);
+            if (preferences.GetPreferredRunnerForService(service.Name) is { } preferredRunnerName)
+            {
+                logger.LogInformation("Found a runner preference '{Runner}' for service '{Service}' in the configuration file '{Path}'.", preferredRunnerName, service.Name, leapYaml.Path);
+
+                var preferredRunner = service.Runners.FirstOrDefault(runner => runner.Type == preferredRunnerName);
+
+                if (preferredRunner != null)
+                {
+                    service.ActiveRunner = preferredRunner;
+                    service.PreferredRunner = preferredRunnerName;
+                    return;
+                }
+
+                logger.LogWarning("Unable to find preferred '{Runner}' runner for service '{Service}' in the configuration file '{Path}'. Will proceed with first declared runner", preferredRunnerName, service.Name, leapYaml.Path);
+            }
+
+            if (service.Runners.Count > 1)
+            {
+                logger.LogInformation("A service '{Service}' has more than one runner in the configuration file '{Path}' and there was no runner preference found. The '{RunnerKind}' runner will be used as it is the first declared.", service.Name, leapYaml.Path, service.Runners[0]);
+            }
 
             service.ActiveRunner = service.Runners[0];
         }
 
-        private void GetRunnerFromYaml(Service service, RunnerYaml? runnerYaml)
+        private void ConvertRunnerFromYaml(Service service, RunnerYaml? runnerYaml)
         {
             if (runnerYaml == null)
             {
@@ -294,7 +285,12 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
 
             var workingDirectory = EnsureAbsolutePath(exeRunnerYaml.WorkingDirectory, leapYaml);
 
-            return new ExecutableRunner { Command = exeRunnerYaml.Command, Arguments = [.. arguments], WorkingDirectory = workingDirectory, };
+            return new ExecutableRunner
+            {
+                Command = exeRunnerYaml.Command,
+                Arguments = [.. arguments],
+                WorkingDirectory = workingDirectory,
+            };
         }
 
         private Runner ConvertDockerRunner(Service service, DockerRunnerYaml dockerRunnerYaml)
@@ -339,7 +335,12 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
                 dockerVolumeMappings.Add(new DockerRunnerVolumeMapping(sourcePath, destinationPath));
             }
 
-            return new DockerRunner { ImageAndTag = dockerRunnerYaml.ImageAndTag, ContainerPort = containerPort.Value, Volumes = [.. dockerVolumeMappings], };
+            return new DockerRunner
+            {
+                ImageAndTag = dockerRunnerYaml.ImageAndTag,
+                ContainerPort = containerPort.Value,
+                Volumes = [.. dockerVolumeMappings],
+            };
         }
 
         private Runner ConvertDotnetRunner(Service service, DotnetRunnerYaml dotnetRunnerYaml)
@@ -356,7 +357,11 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
                 throw new LeapYamlConversionException($"A .NET project runner references a project that does not exist at '{projectPath}' in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
             }
 
-            return new DotnetRunner { ProjectPath = projectPath, Watch = dotnetRunnerYaml.Watch.GetValueOrDefault(true), };
+            return new DotnetRunner
+            {
+                ProjectPath = projectPath,
+                Watch = dotnetRunnerYaml.Watch.GetValueOrDefault(true),
+            };
         }
 
         private Runner ConvertOpenApiRunner(Service service, OpenApiRunnerYaml openApiRunnerYaml)
@@ -391,7 +396,11 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
                 }
             }
 
-            return new OpenApiRunner { Specification = specPathOrUrl, IsUrl = isUrl, };
+            return new OpenApiRunner
+            {
+                Specification = specPathOrUrl,
+                IsUrl = isUrl,
+            };
         }
 
         private Runner ConvertRemoteRunner(Service service, RemoteRunnerYaml remoteRunnerYaml)
@@ -401,7 +410,10 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
                 throw new LeapYamlConversionException($"A remote runner has an invalid URL '{remoteRunnerYaml.Url}' in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
             }
 
-            return new RemoteRunner { Url = url.OriginalString, };
+            return new RemoteRunner
+            {
+                Url = url.OriginalString,
+            };
         }
 
         private static string EnsureAbsolutePath(string path, LeapYamlFile leapYaml)

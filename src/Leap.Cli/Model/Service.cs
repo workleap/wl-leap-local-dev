@@ -21,6 +21,8 @@ internal sealed class Service
 
     public string ContainerName { get; }
 
+    public string PreferredRunner { get; set; } = string.Empty;
+
     public List<Runner> Runners { get; } = [];
 
     public HashSet<string> Profiles { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -28,8 +30,8 @@ internal sealed class Service
     public Runner ActiveRunner
     {
         get => this._activeRunner
-            ?? this.Runners.FirstOrDefault()
-            ?? throw new InvalidOperationException($"No runners are defined for the service '{this.Name}'");
+               ?? this.Runners.FirstOrDefault()
+               ?? throw new InvalidOperationException($"No runners are defined for the service '{this.Name}'");
 
         set => this._activeRunner = value;
     }
@@ -69,5 +71,12 @@ internal sealed class Service
         }
 
         return this.Ingress.Host.IsLocalhost ? this.LocalhostUrl : this.ReverseProxyUrl;
+    }
+
+    public List<string> GetRunnerNames()
+    {
+        return this.Runners
+            .Select(runner => runner.Type)
+            .ToList();
     }
 }

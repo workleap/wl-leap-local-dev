@@ -136,7 +136,7 @@ internal static class DotnetExecutableResourceExtensions
 
                     try
                     {
-                        await TriggerResourceSnapshotChangeAsync(resource, context);
+                        await context.TriggerResourceSnapshotChangeAsync(resource);
 
                         PersistentDotnetExecutableDebuggingState.EnableDebugging(resource.DebuggingSignalFilePath);
 
@@ -155,7 +155,7 @@ internal static class DotnetExecutableResourceExtensions
                     finally
                     {
                         this._areResourcesRestartingForDebugging[resource.Name] = false;
-                        await TriggerResourceSnapshotChangeAsync(resource, context);
+                        await context.TriggerResourceSnapshotChangeAsync(resource);
                     }
 
                     return CommandResults.Success();
@@ -168,15 +168,6 @@ internal static class DotnetExecutableResourceExtensions
                 isHighlighted: false);
 
             resource.Annotations.Add(command);
-        }
-
-        private static async Task TriggerResourceSnapshotChangeAsync(DotnetExecutableResource resource, ExecuteCommandContext context)
-        {
-            await context.ServiceProvider.GetRequiredService<ResourceNotificationService>().PublishUpdateAsync(resource, state => state with
-            {
-                // No-op. We're not mutating the snapshot, we only want to trigger a change to force a re-evaluation (updateState lambdas declared above)
-                // of the commands displayed on the dashboard
-            });
         }
     }
 }

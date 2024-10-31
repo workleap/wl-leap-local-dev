@@ -1,6 +1,8 @@
-﻿namespace Leap.Cli.Model;
+﻿using Leap.Cli.Configuration.Yaml;
 
-internal sealed class DockerRunner : Runner
+namespace Leap.Cli.Model;
+
+internal sealed class DockerRunner() : Runner(DockerRunnerYaml.YamlDiscriminator)
 {
     public required string ImageAndTag { get; init; }
 

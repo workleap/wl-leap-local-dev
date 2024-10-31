@@ -25,15 +25,13 @@ internal sealed class PreferencesRemoveCommandHandler(PreferencesSettingsManager
     {
         TelemetryMeters.TrackPreferencesRun();
 
-        var preferences = await preferencesSettingsManager.GetUserLeapPreferencesAsync(cancellationToken);
-        if (preferences.Services.Remove(options.Service))
+        if (await preferencesSettingsManager.RemovePreferredRunnerForServiceAsync(options.Service, cancellationToken))
         {
-            await preferencesSettingsManager.SaveUserLeapPreferencesAsync(preferences, cancellationToken);
             logger.LogInformation("Removed preference for service: {Service}", options.Service);
         }
         else
         {
-            logger.LogWarning("No preferences found for service: {Service}", options.Service);
+            logger.LogWarning("No preference found for service: {Service}", options.Service);
         }
 
         return 0;

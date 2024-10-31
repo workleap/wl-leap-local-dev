@@ -27,12 +27,10 @@ internal sealed class PreferencesSetCommandHandler(PreferencesSettingsManager pr
     {
         TelemetryMeters.TrackPreferencesRun();
 
-        var preferences = await preferencesSettingsManager.GetUserLeapPreferencesAsync(cancellationToken);
-        logger.LogInformation("Setting preference for service `{Service}` to use `{Runner}` runner...", options.Service, options.Runner);
-        preferences.Services[options.Service] = new Preference(options.Runner);
-        await preferencesSettingsManager.SaveUserLeapPreferencesAsync(preferences, cancellationToken);
-
+        logger.LogInformation("Setting preference for service '{Service}' to use '{Runner}' runner...", options.Service, options.Runner);
+        await preferencesSettingsManager.SetPreferredRunnerForServiceAsync(options.Service, options.Runner, cancellationToken);
         logger.LogInformation("Successfully set preference");
+
         return 0;
     }
 }

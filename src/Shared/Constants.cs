@@ -84,7 +84,7 @@ internal static class Constants
     public static readonly string UserEventGridSettingsFilePath = Path.Combine(RootDirectoryPath, EventGridSettingsFileName);
 
     /// <summary>User-managed event grid configuration file path</summary>
-    public static readonly string UserLeapPreferencesFilePath = Path.Combine(RootDirectoryPath, PreferencesFileName);
+    public static readonly string LeapUserPreferencesFilePath = Path.Combine(RootDirectoryPath, PreferencesFileName);
 
     /// <summary>The directory that contains auto-generated Leap files</summary>
     public static readonly string GeneratedDirectoryPath = Path.Combine(RootDirectoryPath, LeapGeneratedDirectoryName);

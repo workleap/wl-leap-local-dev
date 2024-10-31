@@ -1,6 +1,8 @@
-﻿namespace Leap.Cli.Model;
+﻿using Leap.Cli.Configuration.Yaml;
 
-internal sealed class DotnetRunner : Runner
+namespace Leap.Cli.Model;
+
+internal sealed class DotnetRunner() : Runner(DotnetRunnerYaml.YamlDiscriminator)
 {
     public required string ProjectPath { get; init; }
 

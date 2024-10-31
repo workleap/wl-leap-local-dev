@@ -1,6 +1,8 @@
-﻿namespace Leap.Cli.Model;
+﻿using Leap.Cli.Configuration.Yaml;
 
-internal sealed class OpenApiRunner : Runner
+namespace Leap.Cli.Model;
+
+internal sealed class OpenApiRunner() : Runner(OpenApiRunnerYaml.YamlDiscriminator)
 {
     public required string Specification { get; init; }
 

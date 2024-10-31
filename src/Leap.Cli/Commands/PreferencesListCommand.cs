@@ -16,7 +16,7 @@ internal sealed class PreferencesListCommandHandler(PreferencesSettingsManager p
     {
         TelemetryMeters.TrackPreferencesRun();
 
-        var preferences = await preferencesSettingsManager.GetUserLeapPreferencesAsync(cancellationToken);
+        var preferences = await preferencesSettingsManager.GetLeapUserPreferencesAsync(cancellationToken);
         if (preferences.Services.Count == 0)
         {
             logger.LogInformation("No preferences were defined for any service.");

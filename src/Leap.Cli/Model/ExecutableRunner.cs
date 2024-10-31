@@ -1,6 +1,8 @@
-﻿namespace Leap.Cli.Model;
+﻿using Leap.Cli.Configuration.Yaml;
 
-internal sealed class ExecutableRunner : Runner
+namespace Leap.Cli.Model;
+
+internal sealed class ExecutableRunner() : Runner(ExecutableRunnerYaml.YamlDiscriminator)
 {
     public required string Command { get; init; }
 
