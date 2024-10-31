@@ -17,7 +17,7 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
 {
     public const int MongoPort = 27217;
 
-    private const string ServiceName = "mongo";
+    private const string ServiceName = MongoDependencyYaml.YamlDiscriminator;
     private const string ContainerName = "leap-mongo";
     private const string DataVolumeName = "leap_mongo_data";
     private const string ConfigVolumeName = "leapmongo_config";

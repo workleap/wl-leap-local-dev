@@ -1,8 +1,10 @@
+using Leap.Cli.Dependencies.Azurite;
+
 namespace Leap.Cli.Model;
 
 internal sealed class AzuriteDependency : Dependency
 {
-    public AzuriteDependency(IReadOnlyCollection<string> containers, IReadOnlyCollection<string> tables, IReadOnlyCollection<string> queues)
+    public AzuriteDependency(IReadOnlyCollection<string> containers, IReadOnlyCollection<string> tables, IReadOnlyCollection<string> queues) : base(AzuriteDependencyYaml.YamlDiscriminator)
     {
         this.Containers = containers;
         this.Tables = tables;

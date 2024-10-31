@@ -1,3 +1,5 @@
-﻿namespace Leap.Cli.Model;
+﻿using Leap.Cli.Dependencies;
 
-internal sealed class PostgresDependency : Dependency;
+namespace Leap.Cli.Model;
+
+internal sealed class PostgresDependency() : Dependency(PostgresDependencyYaml.YamlDiscriminator);

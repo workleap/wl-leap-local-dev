@@ -12,7 +12,7 @@ internal sealed class RedisDependencyHandler : DependencyHandler<RedisDependency
 {
     public const int RedisPort = 6380;
 
-    private const string ServiceName = "redis";
+    private const string ServiceName = RedisDependencyYaml.YamlDiscriminator;
     private const string ContainerName = "leap-redis";
     private const string VolumeName = "leap_redis_data";
 

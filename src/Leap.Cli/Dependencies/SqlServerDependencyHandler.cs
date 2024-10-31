@@ -16,7 +16,7 @@ internal sealed class SqlServerDependencyHandler : DependencyHandler<SqlServerDe
     public const int HostSqlServerPort = 1444;
     private const int ContainerSqlServerPort = 1433;
 
-    private const string ServiceName = "sqlserver";
+    private const string ServiceName = SqlServerDependencyYaml.YamlDiscriminator;
     private const string ContainerName = "leap-sqlserver";
     private const string VolumeName = "leap_sqlserver_data";
 

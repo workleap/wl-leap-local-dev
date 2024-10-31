@@ -14,7 +14,7 @@ namespace Leap.Cli.Dependencies.Azurite;
 
 internal sealed partial class AzuriteDependencyHandler : DependencyHandler<AzuriteDependency>
 {
-    private const string ServiceName = "azurite";
+    private const string ServiceName = AzuriteDependencyYaml.YamlDiscriminator;
     private const string ContainerName = "leap-azurite";
     private const string DataVolumeName = "leap_azurite_data";
 

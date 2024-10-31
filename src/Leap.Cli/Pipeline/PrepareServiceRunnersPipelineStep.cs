@@ -70,16 +70,18 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         service.EnvironmentVariables["LOGGING__CONSOLE__FORMATTERNAME"] = "simple";
         service.EnvironmentVariables["LOGGING__CONSOLE__FORMATTEROPTIONS__TIMESTAMPFORMAT"] = "yyyy-MM-ddTHH:mm:ss.fffffff ";
 
+        string[] dependencyResourceNames = [.. state.Dependencies.Select(x => x.Name), Constants.LeapAzureCliProxyResourceName];
+
         switch (runner)
         {
             case ExecutableRunner exeRunner:
-                this.HandleExecutableRunner(service, exeRunner);
+                this.HandleExecutableRunner(service, exeRunner, dependencyResourceNames);
                 break;
             case DockerRunner dockerRunner:
                 this.HandleDockerRunner(service, dockerRunner);
                 break;
             case DotnetRunner dotnetRunner:
-                this.HandleDotnetRunner(service, dotnetRunner);
+                this.HandleDotnetRunner(service, dotnetRunner, dependencyResourceNames);
                 break;
             case OpenApiRunner openApiRunner:
                 this.HandleOpenApiRunner(state, service, openApiRunner);
@@ -100,7 +102,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         this._appSettingsJson.Configuration[$"Services:{service.Name}:BaseUrl"] = serviceUrl;
     }
 
-    private void HandleExecutableRunner(Service service, ExecutableRunner exeRunner)
+    private void HandleExecutableRunner(Service service, ExecutableRunner exeRunner, string[] dependencyResourceNames)
     {
         // TODO shall we sanitize the name of the service? Get inspiration from Dapr
         this._aspire.Builder
@@ -119,7 +121,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
             .WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables())
             .WithOtlpExporter()
             .WithConfigurePreferredRunnerCommand(service)
-            .WaitFor(Constants.LeapAzureCliProxyResourceName);
+            .WaitFor(dependencyResourceNames);
     }
 
     private void HandleDockerRunner(Service service, DockerRunner dockerRunner)
@@ -220,7 +222,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
         }
     }
 
-    private void HandleDotnetRunner(Service service, DotnetRunner dotnetRunner)
+    private void HandleDotnetRunner(Service service, DotnetRunner dotnetRunner, string[] dependencyResourceNames)
     {
         var workingDirectoryPath = Path.GetDirectoryName(dotnetRunner.ProjectPath)!;
 
@@ -241,7 +243,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
             .WithOtlpExporter()
             .WithRestartAndWaitForDebuggerCommand()
             .WithConfigurePreferredRunnerCommand(service)
-            .WaitFor(Constants.LeapAzureCliProxyResourceName);
+            .WaitFor(dependencyResourceNames);
     }
 
     private void HandleOpenApiRunner(ApplicationState state, Service service, OpenApiRunner openApiRunner)

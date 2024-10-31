@@ -13,7 +13,7 @@ internal sealed class EventGridDependencyHandler : DependencyHandler<EventGridDe
 {
     private const int EventGridPort = 6500;
 
-    private const string ServiceName = "eventgrid";
+    private const string ServiceName = EventGridDependencyYaml.YamlDiscriminator;
     private const string ContainerName = "leap-eventgrid";
 
     private static readonly string EventGridHostUrl = $"https://127.0.0.1:{EventGridPort}";

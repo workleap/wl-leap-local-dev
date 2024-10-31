@@ -14,7 +14,7 @@ internal sealed class PostgresDependencyHandler : DependencyHandler<PostgresDepe
     public const int HostPostgresPort = 5442;
     private const int ContainerPostgresPort = 5432;
 
-    private const string ServiceName = "postgres";
+    private const string ServiceName = PostgresDependencyYaml.YamlDiscriminator;
     private const string ContainerName = "leap-postgres";
     private const string VolumeName = "leap_postgres_data";
 
