@@ -9,6 +9,7 @@ using Leap.Cli.Model;
 using Leap.Cli.Platform;
 using Leap.Cli.Platform.Telemetry;
 using Leap.Cli.Yaml;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Dependencies;
@@ -30,7 +31,6 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
     private readonly IConfigureEnvironmentVariables _environmentVariables;
     private readonly IConfigureAppSettingsJson _appSettingsJson;
     private readonly ICliWrap _cliWrap;
-    private readonly ILogger _logger;
     private readonly IAspireManager _aspire;
 
     public MongoDependencyHandler(
@@ -38,14 +38,12 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
         IConfigureEnvironmentVariables environmentVariables,
         IConfigureAppSettingsJson appSettingsJson,
         ICliWrap cliWrap,
-        ILogger<MongoDependencyHandler> logger,
         IAspireManager aspire)
     {
         this._dockerCompose = dockerCompose;
         this._environmentVariables = environmentVariables;
         this._appSettingsJson = appSettingsJson;
         this._cliWrap = cliWrap;
-        this._logger = logger;
         this._aspire = aspire;
     }
 
@@ -60,6 +58,12 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
         {
             ResourceType = Constants.LeapDependencyAspireResourceType,
             Urls = [dependency.UseReplicaSet ? ReplicaSetConnectionString : NonReplicaSetConnectionString],
+        });
+
+        this._aspire.Builder.Eventing.Subscribe<ResourceReadyEvent>(ServiceName, async (evt, ct) =>
+        {
+            var resourceLogger = evt.Services.GetRequiredService<ResourceLoggerService>().GetLogger(ServiceName);
+            await this.OnMongoResourceReady(dependency, resourceLogger, ct);
         });
 
         return Task.CompletedTask;
@@ -126,23 +130,19 @@ internal sealed class MongoDependencyHandler : DependencyHandler<MongoDependency
         appsettings["ConnectionStrings:Mongo"] = dependency.UseReplicaSet ? ReplicaSetConnectionString : NonReplicaSetConnectionString;
     }
 
-    protected override async Task AfterStartAsync(MongoDependency dependency, CancellationToken cancellationToken)
+    private async Task OnMongoResourceReady(MongoDependency dependency, ILogger logger, CancellationToken cancellationToken)
     {
         if (dependency.UseReplicaSet)
         {
             // TODO even if the replica set is already initialized, this can be a little slow (like, 2-5 seconds)
             // TODO we could have a cache layer in leap for arbitrary data, and store the container ID of the mongo container
             // TODO then we could check if the container ID is the same as the one in the cache, and if so, we can skip this step
-            this._logger.LogInformation("Starting MongoDB replica set '{ReplicaSet}'...", ReplicaSetName);
+            logger.LogInformation("Starting MongoDB replica set '{ReplicaSet}'...", ReplicaSetName);
 
             await this.EnsureReplicaSetReadyAsync(cancellationToken);
 
             // TODO that might not be true, improve the error handling
-            this._logger.LogInformation("MongoDB replica set is ready");
-        }
-        else
-        {
-            this._logger.LogInformation("MongoDB is ready");
+            logger.LogInformation("MongoDB replica set is ready");
         }
     }
 

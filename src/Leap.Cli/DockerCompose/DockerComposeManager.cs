@@ -8,22 +8,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.DockerCompose;
 
-internal sealed class DockerComposeManager : IDockerComposeManager
+internal sealed class DockerComposeManager(ICliWrap cliWrap, IFileSystem fileSystem) : IDockerComposeManager
 {
-    private readonly ICliWrap _cliWrap;
-    private readonly IFileSystem _fileSystem;
-    private readonly ILogger _logger;
-
-    public DockerComposeManager(ICliWrap cliWrap, IFileSystem fileSystem, ILogger<DockerComposeManager> logger)
-    {
-        this._cliWrap = cliWrap;
-        this._fileSystem = fileSystem;
-        this._logger = logger;
-
-        this.Configuration = new DockerComposeYaml();
-    }
-
-    public DockerComposeYaml Configuration { get; }
+    public DockerComposeYaml Configuration { get; } = new();
 
     public async Task EnsureDockerIsRunningAsync(CancellationToken cancellationToken)
     {
@@ -34,7 +21,7 @@ internal sealed class DockerComposeManager : IDockerComposeManager
         BufferedCommandResult result;
         try
         {
-            result = await this._cliWrap.ExecuteBufferedAsync(command, cancellationToken);
+            result = await cliWrap.ExecuteBufferedAsync(command, cancellationToken);
         }
         catch (Exception)
         {
@@ -49,26 +36,41 @@ internal sealed class DockerComposeManager : IDockerComposeManager
 
     public async Task WriteUpdatedDockerComposeFileAsync(CancellationToken cancellationToken)
     {
-        var dockerComposeFilePath = Path.Combine(Constants.DockerComposeDirectoryPath, "docker-compose.yaml");
-
-        await using var stream = this._fileSystem.File.Create(dockerComposeFilePath);
+        await using var stream = fileSystem.File.Create(Constants.DockerComposeFilePath);
         await DockerComposeSerializer.SerializeAsync(stream, this.Configuration, cancellationToken);
     }
 
-    public async Task StartDockerComposeAsync(CancellationToken cancellationToken)
+    public async Task StartDockerComposeServiceAsync(string serviceName, ILogger logger, CancellationToken cancellationToken)
     {
         var command = new Command("docker")
             .WithValidation(CommandResultValidation.None)
             .WithWorkingDirectory(Constants.DockerComposeDirectoryPath)
-            .WithArguments(["compose", "up", "--remove-orphans", "--wait"])
-            .WithStandardOutputPipe(PipeTarget.ToDelegate(x => this._logger.LogDebug("{StandardOutput}", x?.Trim())))
-            .WithStandardErrorPipe(PipeTarget.ToDelegate(x => this._logger.LogDebug("{StandardError}", x?.Trim())));
+            .WithArguments(["compose", "--file", Constants.DockerComposeFilePath, "up", "--remove-orphans", "--wait", serviceName])
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(x => logger.LogDebug("{StandardOutput}", x?.Trim())))
+            .WithStandardErrorPipe(PipeTarget.ToDelegate(x => logger.LogDebug("{StandardError}", x?.Trim())));
 
-        var result = await this._cliWrap.ExecuteBufferedAsync(command, cancellationToken);
+        var result = await cliWrap.ExecuteBufferedAsync(command, cancellationToken);
 
         if (result.ExitCode != 0)
         {
-            throw new InvalidOperationException($"An error occurred while starting Docker services with '{command.TargetFilePath} {command.Arguments}'");
+            throw new InvalidOperationException($"An error occurred while starting Docker Compose service '{serviceName}' with '{command.TargetFilePath} {command.Arguments}'");
+        }
+    }
+
+    public async Task StopDockerComposeServiceAsync(string serviceName, ILogger logger, CancellationToken cancellationToken)
+    {
+        var command = new Command("docker")
+            .WithValidation(CommandResultValidation.None)
+            .WithWorkingDirectory(Constants.DockerComposeDirectoryPath)
+            .WithArguments(["compose", "--file", Constants.DockerComposeFilePath, "stop", serviceName])
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(x => logger.LogDebug("{StandardOutput}", x?.Trim())))
+            .WithStandardErrorPipe(PipeTarget.ToDelegate(x => logger.LogDebug("{StandardError}", x?.Trim())));
+
+        var result = await cliWrap.ExecuteBufferedAsync(command, cancellationToken);
+
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"An error occurred while stopping Docker Compose service '{serviceName}' with '{command.TargetFilePath} {command.Arguments}'");
         }
     }
 }

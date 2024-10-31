@@ -30,10 +30,10 @@ internal sealed class PrepareReverseProxyPipelineStep(IAspireManager aspireManag
             .WithInitialState(new CustomResourceSnapshot
             {
                 ResourceType = "Reverse proxy",
-                State = "Starting",
+                State = KnownResourceStates.Starting,
+                CreationTimeStamp = DateTime.Now,
                 Properties = [new ResourcePropertySnapshot(CustomResourceKnownProperties.Source, "leap")]
-            })
-            .ExcludeFromManifest();
+            });
 
         return Task.CompletedTask;
     }
@@ -164,7 +164,8 @@ internal sealed class PrepareReverseProxyPipelineStep(IAspireManager aspireManag
 
                 await notificationService.PublishUpdateAsync(yarpResource, state => state with
                 {
-                    State = "Running",
+                    State = KnownResourceStates.Running,
+                    StartTimeStamp = DateTime.Now,
                     Urls = [.. urls],
                 });
             }
@@ -174,7 +175,8 @@ internal sealed class PrepareReverseProxyPipelineStep(IAspireManager aspireManag
 
                 await notificationService.PublishUpdateAsync(yarpResource, state => state with
                 {
-                    State = "Finished"
+                    State = KnownResourceStates.FailedToStart,
+                    StopTimeStamp = DateTime.Now,
                 });
             }
         }

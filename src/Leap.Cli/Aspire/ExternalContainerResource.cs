@@ -1,8 +1,8 @@
 ﻿namespace Leap.Cli.Aspire;
 
-internal sealed class ExternalContainerResource(string name, string containerNameOrId) : Resource(name), IResourceWithWaitSupport
+internal sealed class ExternalContainerResource(string name, string containerName) : Resource(name), IResourceWithWaitSupport
 {
-    public string ContainerNameOrId { get; } = containerNameOrId;
+    public string ContainerName { get; } = containerName;
 
     public string ResourceType { get; init; } = "Container";
 

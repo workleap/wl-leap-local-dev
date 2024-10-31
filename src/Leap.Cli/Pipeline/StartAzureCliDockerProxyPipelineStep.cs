@@ -17,6 +17,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Pipeline;
 
+// Same concept as our Azure CLI credentials proxy for Docker containers,
+// but applied everywhere to speed-up the aquisition of Azure CLI tokens.
+// https://github.com/gsoft-inc/azure-cli-credentials-proxy
 internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
 {
     private readonly ICliWrap _cliWrap;
@@ -59,9 +62,7 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
             return;
         }
 
-        // Docker containers cannot access the host's Azure CLI credentials, because they don't ship with the Azure CLI.
-        // It's the same concept that we used here: https://github.com/gsoft-inc/azure-cli-credentials-proxy
-        this.RunAzureCliCredentialsProxyInAspireAsync(cancellationToken);
+        this.AddAzureCliCredentialsProxyAspireResource();
     }
 
     private async Task<bool> IsAzureCliInstalledAsync(CancellationToken cancellationToken)
@@ -93,19 +94,19 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
         }
     }
 
-    private void RunAzureCliCredentialsProxyInAspireAsync(CancellationToken cancellationToken)
+    private void AddAzureCliCredentialsProxyAspireResource()
     {
         this._aspireManager.Builder.Services.TryAddLifecycleHook<HostAzureCliDockerProxyInAspireLifecycleHook>();
         this._aspireManager.Builder.Services.TryAddSingleton(this._cliWrap);
 
-        this._aspireManager.Builder.AddResource(new AzureCliDockerProxyResource(Constants.LeapAzureCliProxyPort))
+        this._aspireManager.Builder.AddResource(new AzureCliDockerProxyResource())
             .WithInitialState(new CustomResourceSnapshot
             {
                 ResourceType = Constants.LeapDependencyAspireResourceType,
                 State = KnownResourceStates.Starting,
+                CreationTimeStamp = DateTime.Now,
                 Properties = [new ResourcePropertySnapshot(CustomResourceKnownProperties.Source, "leap")]
-            })
-            .ExcludeFromManifest();
+            });
 
         this._environmentVariables.Configure(x =>
         {
@@ -125,10 +126,7 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
         return Task.CompletedTask;
     }
 
-    private sealed class AzureCliDockerProxyResource(int port) : Resource(Constants.LeapAzureCliProxyResourceName)
-    {
-        public int Port { get; } = port;
-    }
+    private sealed class AzureCliDockerProxyResource() : Resource(Constants.LeapAzureCliProxyResourceName);
 
     private sealed class HostAzureCliDockerProxyInAspireLifecycleHook(ILogger<HostAzureCliDockerProxyInAspireLifecycleHook> logger, ICliWrap cliWrap, ResourceNotificationService notificationService, ResourceLoggerService loggerService)
         : IDistributedApplicationLifecycleHook, IAsyncDisposable
@@ -146,6 +144,7 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
         {
             var proxyResource = appModel.Resources.OfType<AzureCliDockerProxyResource>().Single();
             var resourceLogger = loggerService.GetLogger(proxyResource);
+
             try
             {
                 var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions
@@ -153,7 +152,7 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
                     EnvironmentName = Environments.Production,
                 });
 
-                builder.WebHost.UseUrls("http://+:" + proxyResource.Port);
+                builder.WebHost.UseUrls($"http://+:{Constants.LeapAzureCliProxyPort}");
 
                 // Suppress Ctrl+C, SIGINT, and SIGTERM signals because already handled by System.CommandLine
                 // through the cancellation token that is passed to the pipeline step.
@@ -179,12 +178,12 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
                 // Explain what this is when developers click on the resource URL in the Aspire dashboard
                 this._app.MapGet("/", static async (HttpContext context, CancellationToken requestCancellationToken) =>
                 {
-                    const string htmlHelp = """
-                                            This service enables containerized applications to access your Azure CLI developer credentials
-                                            when authenticating against Azure services using RBAC with your identity,
-                                            without requiring the installation of the Azure CLI in the container.
-                                            Learn more at <a href="https://github.com/gsoft-inc/azure-cli-credentials-proxy">https://github.com/gsoft-inc/azure-cli-credentials-proxy</a>.
-                                            """;
+                    const string htmlHelp = /*lang=html*/"""
+                        This service enables containerized applications to access your Azure CLI developer credentials
+                        when authenticating against Azure services using RBAC with your identity,
+                        without requiring the installation of the Azure CLI in the container.
+                        Learn more at <a href="https://github.com/gsoft-inc/azure-cli-credentials-proxy">https://github.com/gsoft-inc/azure-cli-credentials-proxy</a>.
+                        """;
 
                     context.Response.ContentType = MediaTypeNames.Text.Html;
                     await context.Response.WriteAsync(htmlHelp, cancellationToken: requestCancellationToken);
@@ -195,7 +194,8 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
                 await notificationService.PublishUpdateAsync(proxyResource, state => state with
                 {
                     State = KnownResourceStates.Running,
-                    Urls = [new UrlSnapshot(Name: "http", Url: "http://127.0.0.1:" + proxyResource.Port, IsInternal: false)],
+                    StartTimeStamp = DateTime.Now,
+                    Urls = [new UrlSnapshot(Name: "http", Url: $"http://127.0.0.1:{Constants.LeapAzureCliProxyPort}", IsInternal: false)],
                 });
             }
             catch (OperationCanceledException)
@@ -208,7 +208,8 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
 
                 await notificationService.PublishUpdateAsync(proxyResource, state => state with
                 {
-                    State = KnownResourceStates.Finished
+                    State = KnownResourceStates.FailedToStart,
+                    StopTimeStamp = DateTime.Now,
                 });
             }
         }

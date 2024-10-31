@@ -1,4 +1,6 @@
-﻿namespace Leap.Cli.DockerCompose;
+﻿using Microsoft.Extensions.Logging;
+
+namespace Leap.Cli.DockerCompose;
 
 internal interface IDockerComposeManager : IConfigureDockerCompose
 {
@@ -6,5 +8,7 @@ internal interface IDockerComposeManager : IConfigureDockerCompose
 
     Task WriteUpdatedDockerComposeFileAsync(CancellationToken cancellationToken);
 
-    Task StartDockerComposeAsync(CancellationToken cancellationToken);
+    Task StartDockerComposeServiceAsync(string serviceName, ILogger logger, CancellationToken cancellationToken);
+
+    Task StopDockerComposeServiceAsync(string serviceName, ILogger logger, CancellationToken cancellationToken);
 }

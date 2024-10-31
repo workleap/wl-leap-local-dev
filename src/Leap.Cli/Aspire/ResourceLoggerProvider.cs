@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Aspire;
@@ -32,7 +31,6 @@ internal sealed class ResourceLoggerProvider(ILogger underlyingLogger) : ILogger
         return underlyingLogger.IsEnabled(logLevel);
     }
 
-    [SuppressMessage("ApiDesign", "RS0030:Do not use banned APIs", Justification = "DateTime.Now is used to display the local time to the user")]
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
         var message = $"[{DateTime.Now:HH:mm:ss:ffff} {LogLevelStrings[logLevel]}] {formatter(state, exception)}";

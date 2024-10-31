@@ -197,7 +197,7 @@ internal sealed class PrepareServiceRunnersPipelineStep : IPipelineStep
             dockerComposeServiceYaml.Environment[name] = value;
         }
 
-        this._dockerCompose.Configuration.Services[service.ContainerName] = dockerComposeServiceYaml;
+        this._dockerCompose.Configuration.Services[service.Name] = dockerComposeServiceYaml;
 
         this._aspire.Builder
             .AddExternalContainer(new ExternalContainerResource(service.Name, service.ContainerName) { Urls = [service.LocalhostUrl] })

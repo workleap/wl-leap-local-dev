@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using Aspire.Hosting.Lifecycle;
 using CliWrap;
 using Leap.Cli.Configuration;
+using Leap.Cli.DockerCompose;
 using Leap.Cli.Pipeline;
 using Leap.Cli.Platform;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,6 +31,7 @@ internal sealed class AspireManager : IAspireManager
     private readonly INuGetPackageDownloader _nuGetPackageDownloader;
     private readonly IPlatformHelper _platformHelper;
     private readonly IPortManager _portManager;
+    private readonly IDockerComposeManager _dockerComposeManager;
     private readonly PreferencesSettingsManager _preferencesSettingsManager;
     private readonly IOptions<LeapGlobalOptions> _leapGlobalOptions;
     private readonly ICliWrap _cliWrap;
@@ -42,6 +44,7 @@ internal sealed class AspireManager : IAspireManager
         INuGetPackageDownloader nuGetPackageDownloader,
         IPlatformHelper platformHelper,
         IPortManager portManager,
+        IDockerComposeManager dockerComposeManager,
         PreferencesSettingsManager preferencesSettingsManager,
         IOptions<LeapGlobalOptions> leapGlobalOptions,
         ICliWrap cliWrap)
@@ -50,6 +53,7 @@ internal sealed class AspireManager : IAspireManager
         this._nuGetPackageDownloader = nuGetPackageDownloader;
         this._platformHelper = platformHelper;
         this._portManager = portManager;
+        this._dockerComposeManager = dockerComposeManager;
         this._preferencesSettingsManager = preferencesSettingsManager;
         this._leapGlobalOptions = leapGlobalOptions;
         this._cliWrap = cliWrap;
@@ -173,6 +177,7 @@ internal sealed class AspireManager : IAspireManager
         this.Builder.Services.TryAddLifecycleHook<UseLeapCertificateForAspireDashboardLifecycleHook>();
         this.Builder.Services.TryAddLifecycleHook<DetectDotnetBuildRaceConditionErrorLifecycleHook>();
         this.Builder.Services.AddSingleton(this._preferencesSettingsManager);
+        this.Builder.Services.AddSingleton(this._dockerComposeManager);
 
         this.Builder.Services.TryAddSingleton<AspireDashboardReadinessAwaiter>();
         this.Builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDistributedApplicationLifecycleHook, AspireDashboardReadinessAwaiter>(

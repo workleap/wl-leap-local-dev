@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Aspire.Hosting.Lifecycle;
 using Microsoft.Extensions.Logging;
 using Docker.DotNet;
@@ -5,127 +6,183 @@ using Docker.DotNet.Models;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using Leap.Cli.DockerCompose;
 
 namespace Leap.Cli.Aspire;
 
 // Task management inspired by
 // https://github.com/dotnet/aspire/blob/v8.0.1/src/Aspire.Hosting/Dashboard/DashboardLifecycleHook.cs
-internal sealed class ExternalContainerResourceLifecycleHook(ILogger<ExternalContainerResourceLifecycleHook> logger, ResourceNotificationService notificationService, ResourceLoggerService loggerService)
+internal sealed class ExternalContainerResourceLifecycleHook(
+    ILogger<ExternalContainerResourceLifecycleHook> logger,
+    IDockerComposeManager dockerComposeManager,
+    ResourceNotificationService notificationService,
+    ResourceLoggerService loggerService)
     : IDistributedApplicationLifecycleHook, IAsyncDisposable
 {
     private readonly CancellationTokenSource _tokenSource = new();
-    private Task? _trackTask;
+    private readonly DockerClient _dockerClient = new DockerClientConfiguration().CreateClient();
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _getContainerLogsSince = new(StringComparer.Ordinal);
+    private Task? _mainTask;
 
     public Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
     {
-        this._trackTask = this.TrackExternalContainers(appModel, cancellationToken);
+        this._mainTask = this.StartAndWatchContainersAsync(appModel, this._tokenSource.Token);
         return Task.CompletedTask;
     }
 
-    private async Task TrackExternalContainers(DistributedApplicationModel appModel, CancellationToken cancellationToken)
+    private async Task StartAndWatchContainersAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken)
     {
         List<Task> tasks = [];
 
         foreach (var resource in appModel.Resources.OfType<ExternalContainerResource>())
         {
-            tasks.Add(this.TrackExternalContainer(resource, cancellationToken));
+            tasks.Add(this.StartAndWatchContainerAsync(resource, cancellationToken));
         }
 
         // The watch task should already be logging exceptions, so we don't need to log them here.
         await Task.WhenAll(tasks).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
     }
 
-    private async Task TrackExternalContainer(ExternalContainerResource resource, CancellationToken cancellationToken)
+    private async Task StartAndWatchContainerAsync(ExternalContainerResource resource, CancellationToken cancellationToken)
     {
+        await notificationService.WaitForDependenciesAsync(resource, cancellationToken);
+
         var resourceLogger = loggerService.GetLogger(resource);
+        this._getContainerLogsSince[resource.ContainerName] = DateTimeOffset.Now;
 
-        using var client = new DockerClientConfiguration().CreateClient();
-
-        DateTimeOffset? since = null;
+        await this.StartContainerAsync(resource, resourceLogger, cancellationToken);
 
         while (!cancellationToken.IsCancellationRequested)
         {
-            try
+            await this.WatchContainerAsync(resource, resourceLogger, cancellationToken);
+        }
+    }
+
+    private async Task StartContainerAsync(ExternalContainerResource resource, ILogger resourceLogger, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await dockerComposeManager.StartDockerComposeServiceAsync(resource.Name, resourceLogger, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // Application is shutting down
+        }
+        catch
+        {
+            await notificationService.PublishUpdateAsync(resource, snapshot => snapshot with
             {
-                var container = await client.Containers.InspectContainerAsync(resource.ContainerNameOrId, cancellationToken);
+                State = KnownResourceStates.FailedToStart,
+                StopTimeStamp = DateTime.Now,
+            });
+        }
+    }
 
-                var image = await client.Images.InspectImageAsync(container.Image, cancellationToken);
+    private async Task WatchContainerAsync(ExternalContainerResource resource, ILogger resourceLogger, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await this.SynchronizeResourceSnapshotWithContainerAsync(resource, cancellationToken);
+            await this.WatchContainerLogsUntilStoppedAsync(resource, resourceLogger, cancellationToken);
+            await this.SynchronizeResourceSnapshotWithContainerAsync(resource, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Application is shutting down
+            return;
+        }
+        catch
+        {
+            // Ignored as we do not want to flood the user console logs with errors that are not actionable.
+        }
 
-                var status = container.State switch
+        try
+        {
+            // Wait for a few seconds before checking the container again.
+            await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            // Application is shutting down
+        }
+    }
+
+    private async Task SynchronizeResourceSnapshotWithContainerAsync(ExternalContainerResource resource, CancellationToken cancellationToken)
+    {
+        // https://docs.docker.com/reference/api/engine/version/v1.47/#tag/Container/operation/ContainerInspect
+        var container = await this._dockerClient.Containers.InspectContainerAsync(resource.ContainerName, cancellationToken);
+
+        var status = container.State.Status switch
+        {
+            "created" => KnownResourceStates.Starting,
+            "restarting" => KnownResourceStates.Starting,
+            "running" => KnownResourceStates.Running,
+            "paused" => KnownResourceStates.Running,
+            "removing" => KnownResourceStates.Stopping,
+            "exited" => container.State.ExitCode == 0 ? KnownResourceStates.Finished : KnownResourceStates.Exited,
+            "dead" => KnownResourceStates.Exited,
+            _ => new ResourceStateSnapshot("Unknown", KnownResourceStateStyles.Info), // Should not happen, we covered all known states.
+        };
+
+        // Examples: "2024-10-31T13:16:45.067731016Z" or "0001-01-01T00:00:00Z"
+        DateTime? startedAt = DateTimeOffset.TryParse(container.State.StartedAt, out var parsedStartedAt) && parsedStartedAt != DateTimeOffset.MinValue ? parsedStartedAt.DateTime.ToLocalTime() : null;
+        DateTime? finishedAt = DateTimeOffset.TryParse(container.State.FinishedAt, out var parsedFinishedAt) && parsedFinishedAt != DateTimeOffset.MinValue ? parsedFinishedAt.DateTime.ToLocalTime() : null;
+
+        var ports = container.NetworkSettings.Ports.SelectMany(x => x.Value ?? [])
+            .Select(x => int.Parse(x.HostPort, NumberStyles.None, CultureInfo.InvariantCulture))
+            .ToImmutableArray();
+
+        var environmentVariables = container.Config.Env.Select(env => env.Split('=', count: 2))
+            .Select(parts => new EnvironmentVariableSnapshot(parts[0], parts[1], IsFromSpec: true))
+            .ToImmutableArray();
+
+        var isInTerminalState = KnownResourceStates.TerminalStates.Contains(status?.Text);
+
+        await notificationService.PublishUpdateAsync(resource, snapshot => snapshot with
+        {
+            State = status,
+            CreationTimeStamp = container.Created,
+            StartTimeStamp = startedAt,
+            StopTimeStamp = isInTerminalState ? finishedAt : null,
+            ExitCode = isInTerminalState ? (int)container.State.ExitCode : null,
+            EnvironmentVariables = environmentVariables,
+            Properties = [
+                // https://github.com/dotnet/aspire/blob/v8.2.2/src/Shared/Model/KnownProperties.cs#L30-L34
+                new ResourcePropertySnapshot("container.id", container.ID),
+                new ResourcePropertySnapshot("container.image", container.Config.Image),
+                new ResourcePropertySnapshot("container.command", string.Join(' ', container.Config.Cmd ?? [])),
+                new ResourcePropertySnapshot("container.args", container.Args.ToImmutableArray()),
+                new ResourcePropertySnapshot("container.ports", ports),
+            ],
+        });
+    }
+
+    private async Task WatchContainerLogsUntilStoppedAsync(ExternalContainerResource resource, ILogger resourceLogger, CancellationToken cancellationToken)
+    {
+        var getLogsParameters = new ContainerLogsParameters
+        {
+            Timestamps = false,
+            Follow = true,
+            ShowStderr = true,
+            ShowStdout = true,
+            Since = this._getContainerLogsSince[resource.ContainerName].ToUnixTimeSeconds().ToString(),
+        };
+
+        try
+        {
+            await this._dockerClient.Containers.GetContainerLogsAsync(resource.ContainerName, getLogsParameters, cancellationToken, new Progress<string>(line =>
+            {
+                if (TryRemoveNonPrintableMultiplexedDockerLogHeader(line, out var remainder))
                 {
-                    { Running: true } or { Restarting: true } => new ResourceStateSnapshot("Running", KnownResourceStateStyles.Success),
-                    { Paused: true } => new ResourceStateSnapshot("Paused", KnownResourceStateStyles.Info),
-                    { ExitCode: not 0 } => new ResourceStateSnapshot("Exited", KnownResourceStateStyles.Error),
-                    _ => new ResourceStateSnapshot("Finished", KnownResourceStateStyles.Info),
-                };
+                    line = remainder;
+                }
 
-                var ports = from port in container.NetworkSettings.Ports
-                            from mapping in (port.Value ?? [])
-                            select int.Parse(mapping.HostPort, NumberStyles.None, CultureInfo.InvariantCulture);
-
-                var env = container.Config.Env.Select(env => env.Split('=', count: 2)).Select(parts => new EnvironmentVariableSnapshot(parts[0], parts[1], IsFromSpec: true));
-
-                await notificationService.PublishUpdateAsync(resource, state => (state with
-                {
-                    State = status,
-                    CreationTimeStamp = container.Created,
-                    ExitCode = container.State.FinishedAt is null ? (int)container.State.ExitCode : null,
-                    Properties = ImmutableArray.Create<ResourcePropertySnapshot>([
-                        new("container.id", container.ID),
-                        new("container.image", container.Config.Image),
-                        new("container.command", string.Join(' ', container.Config.Cmd ?? [])),
-                        new("container.args", (ImmutableArray<string>) [.. container.Args]),
-                        new("container.ports", (ImmutableArray<int>) [.. ports]),
-                        new("Image sha", image.ID),
-                    ]),
-                    EnvironmentVariables = [.. env],
-                }));
-
-                var logParameters = new ContainerLogsParameters
-                {
-                    Timestamps = false,
-                    Follow = true,
-                    ShowStderr = true,
-                    ShowStdout = true,
-                    Since = since?.ToUnixTimeSeconds().ToString()
-                };
-
-                // TODO We noticed that the ordering of logs is somehow not guaranteed, we might want to address this in the future.
-                await client.Containers.GetContainerLogsAsync(resource.ContainerNameOrId, logParameters, cancellationToken, new Progress<string>(line =>
-                {
-                    if (TryRemoveNonPrintableMultiplexedDockerLogHeader(line, out var remainder))
-                    {
-                        line = remainder;
-                    }
-
-                    resourceLogger.LogInformation("{StdOut}", line);
-                }));
-
-                await notificationService.PublishUpdateAsync(resource, state => state with { State = status });
-            }
-            catch (OperationCanceledException ex) when (ex.CancellationToken == cancellationToken)
-            {
-                // Application is shutting down
-                break;
-            }
-            catch
-            {
-                // Ignored as we do not want to flood the user console logs with errors that are not actionable.
-            }
-
-#pragma warning disable RS0030 // "--since" accepts local datetimes (https://docs.docker.com/reference/cli/docker/container/logs/)
-            since = DateTimeOffset.Now;
-#pragma warning restore RS0030
-
-            try
-            {
-                // Wait for a few seconds before checking the container again.
-                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
-            }
-            catch (OperationCanceledException)
-            {
-                // Application is shutting down
-            }
+                resourceLogger.LogInformation("{StdOut}", line);
+            }));
+        }
+        finally
+        {
+            this._getContainerLogsSince[resource.ContainerName] = DateTimeOffset.Now;
         }
     }
 
@@ -148,11 +205,11 @@ internal sealed class ExternalContainerResourceLifecycleHook(ILogger<ExternalCon
     {
         await this._tokenSource.CancelAsync();
 
-        if (this._trackTask != null)
+        if (this._mainTask != null)
         {
             try
             {
-                await this._trackTask;
+                await this._mainTask;
             }
             catch (OperationCanceledException)
             {
@@ -164,6 +221,7 @@ internal sealed class ExternalContainerResourceLifecycleHook(ILogger<ExternalCon
             }
         }
 
+        this._dockerClient.Dispose();
         this._tokenSource.Dispose();
     }
 }

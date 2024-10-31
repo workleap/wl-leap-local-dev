@@ -8,6 +8,7 @@ using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
 using Leap.Cli.Platform.Telemetry;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Dependencies.Azurite;
@@ -22,7 +23,6 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
     private readonly IConfigureEnvironmentVariables _environmentVariables;
     private readonly IConfigureAppSettingsJson _appSettingsJson;
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly ILogger _logger;
     private readonly IAspireManager _aspire;
 
     public AzuriteDependencyHandler(
@@ -30,14 +30,12 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
         IConfigureEnvironmentVariables environmentVariables,
         IConfigureAppSettingsJson appSettingsJson,
         IHttpClientFactory httpClientFactory,
-        ILogger<AzuriteDependencyHandler> logger,
         IAspireManager aspire)
     {
         this._dockerCompose = dockerCompose;
         this._environmentVariables = environmentVariables;
         this._appSettingsJson = appSettingsJson;
         this._httpClientFactory = httpClientFactory;
-        this._logger = logger;
         this._aspire = aspire;
     }
 
@@ -52,6 +50,12 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
         {
             ResourceType = Constants.LeapDependencyAspireResourceType,
             Urls = [AzuriteConstants.HostBlobServiceUri, AzuriteConstants.HostQueueServiceUri, AzuriteConstants.HostTableServiceUri]
+        });
+
+        this._aspire.Builder.Eventing.Subscribe<ResourceReadyEvent>(ServiceName, async (evt, ct) =>
+        {
+            var resourceLogger = evt.Services.GetRequiredService<ResourceLoggerService>().GetLogger(ServiceName);
+            await this.OnAzuriteResourceReady(dependency, resourceLogger, ct);
         });
 
         return Task.CompletedTask;
@@ -142,31 +146,31 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
         appsettings["Azure:Storage:Table:ServiceUri"] = AzuriteConstants.HostTableServiceUri;
     }
 
-    protected override async Task AfterStartAsync(AzuriteDependency dependency, CancellationToken cancellationToken)
+    private async Task OnAzuriteResourceReady(AzuriteDependency dependency, ILogger resourceLogger, CancellationToken cancellationToken)
     {
         var httpClient = this._httpClientFactory.CreateClient(AzuriteConstants.HttpClientName);
 
         foreach (var container in dependency.Containers)
         {
-            await this.CreateContainerAsync(httpClient, container, cancellationToken);
+            await CreateContainerAsync(httpClient, resourceLogger, container, cancellationToken);
         }
 
         foreach (var table in dependency.Tables)
         {
-            await this.CreateTableAsync(httpClient, table, cancellationToken);
+            await CreateTableAsync(httpClient, resourceLogger, table, cancellationToken);
         }
 
         foreach (var queue in dependency.Queues)
         {
-            await this.CreateQueueAsync(httpClient, queue, cancellationToken);
+            await CreateQueueAsync(httpClient, resourceLogger, queue, cancellationToken);
         }
 
-        this._logger.LogInformation("Azurite is ready");
+        resourceLogger.LogInformation("Azurite is ready");
     }
 
-    private async Task CreateContainerAsync(HttpMessageInvoker httpClient, string container, CancellationToken cancellationToken)
+    private static async Task CreateContainerAsync(HttpMessageInvoker httpClient, ILogger resourceLogger, string container, CancellationToken cancellationToken)
     {
-        this._logger.LogDebug("Creating blob storage container '{Container}'...", container);
+        resourceLogger.LogDebug("Creating blob storage container '{Container}'...", container);
 
         // https://learn.microsoft.com/en-us/rest/api/storageservices/create-container?tabs=shared-key
         var createContainerUri = new UriBuilder(AzuriteConstants.HostBlobServiceUri);
@@ -176,12 +180,12 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
         using var request = new HttpRequestMessage(HttpMethod.Put, createContainerUri.Uri);
         using var response = await httpClient.SendAsync(request, cancellationToken);
 
-        this.WarnOnCreationFailure(response, "container", container);
+        WarnOnCreationFailure(response, resourceLogger, "container", container);
     }
 
-    private async Task CreateTableAsync(HttpMessageInvoker httpClient, string table, CancellationToken cancellationToken)
+    private static async Task CreateTableAsync(HttpMessageInvoker httpClient, ILogger resourceLogger, string table, CancellationToken cancellationToken)
     {
-        this._logger.LogDebug("Creating storage table '{Table}'...", table);
+        resourceLogger.LogDebug("Creating storage table '{Table}'...", table);
 
         // https://learn.microsoft.com/en-us/rest/api/storageservices/create-table
         var createTableUri = new UriBuilder(AzuriteConstants.HostTableServiceUri);
@@ -195,12 +199,12 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
 
         using var response = await httpClient.SendAsync(request, cancellationToken);
 
-        this.WarnOnCreationFailure(response, "table", table);
+        WarnOnCreationFailure(response, resourceLogger, "table", table);
     }
 
-    private async Task CreateQueueAsync(HttpMessageInvoker httpClient, string queue, CancellationToken cancellationToken)
+    private static async Task CreateQueueAsync(HttpMessageInvoker httpClient, ILogger resourceLogger, string queue, CancellationToken cancellationToken)
     {
-        this._logger.LogDebug("Creating storage queue '{Queue}'...", queue);
+        resourceLogger.LogDebug("Creating storage queue '{Queue}'...", queue);
 
         // https://learn.microsoft.com/en-us/rest/api/storageservices/create-queue4
         var createQueueUri = new UriBuilder(AzuriteConstants.HostQueueServiceUri);
@@ -209,21 +213,19 @@ internal sealed partial class AzuriteDependencyHandler : DependencyHandler<Azuri
         using var request = new HttpRequestMessage(HttpMethod.Put, createQueueUri.Uri);
         using var response = await httpClient.SendAsync(request, cancellationToken);
 
-        this.WarnOnCreationFailure(response, "queue", queue);
+        WarnOnCreationFailure(response, resourceLogger, "queue", queue);
     }
 
-    private void WarnOnCreationFailure(HttpResponseMessage response, string resourceType, string resourceName)
+    private static void WarnOnCreationFailure(HttpResponseMessage response, ILogger resourceLogger, string resourceType, string resourceName)
     {
         if (!response.IsSuccessStatusCode && response.StatusCode != HttpStatusCode.Conflict)
         {
-            this._logger.LogWarning("Creating the storage{ResourceType} '{ResourceName}' has failed", resourceType, resourceName);
+            resourceLogger.LogWarning("Creating the storage{ResourceType} '{ResourceName}' has failed", resourceType, resourceName);
         }
     }
 
     [JsonSerializable(typeof(CreateTableRequestBody))]
-    private partial class AzureStorageContext : JsonSerializerContext
-    {
-    }
+    private partial class AzureStorageContext : JsonSerializerContext;
 
     private sealed class CreateTableRequestBody
     {

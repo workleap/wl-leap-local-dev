@@ -111,11 +111,4 @@ internal sealed class RedisDependencyHandler : DependencyHandler<RedisDependency
     {
         appsettings["ConnectionStrings:Redis"] = HostConnectionString;
     }
-
-    protected override Task AfterStartAsync(RedisDependency dependency, CancellationToken cancellationToken)
-    {
-        this._logger.LogInformation("Redis instance is ready");
-
-        return Task.CompletedTask;
-    }
 }

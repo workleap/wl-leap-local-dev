@@ -115,11 +115,4 @@ internal sealed class SqlServerDependencyHandler : DependencyHandler<SqlServerDe
     {
         appsettings["ConnectionStrings:SqlServer"] = HostConnectionString;
     }
-
-    protected override Task AfterStartAsync(SqlServerDependency dependency, CancellationToken cancellationToken)
-    {
-        this._logger.LogInformation("SQL Server instance is ready");
-
-        return Task.CompletedTask;
-    }
 }

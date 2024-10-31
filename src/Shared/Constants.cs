@@ -98,6 +98,9 @@ internal static class Constants
     /// <summary>The directory that contains the generated Docker Compose files</summary>
     public static readonly string DockerComposeDirectoryPath = Path.Combine(GeneratedDirectoryPath, LeapDockerComposeDirectoryName);
 
+    /// <summary>The path of the generated Docker Compose file</summary>
+    public static readonly string DockerComposeFilePath = Path.Combine(DockerComposeDirectoryPath, "docker-compose.yaml");
+
     /// <summary>The directory that contains the generated local development certificate files</summary>
     public static readonly string CertificatesDirectoryPath = Path.Combine(GeneratedDirectoryPath, LeapCertificatesDirectoryName);
 

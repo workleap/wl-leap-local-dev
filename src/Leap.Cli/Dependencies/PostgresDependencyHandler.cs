@@ -117,11 +117,4 @@ internal sealed class PostgresDependencyHandler : DependencyHandler<PostgresDepe
     {
         appsettings["ConnectionStrings:PostgreSQL"] = HostConnectionString;
     }
-
-    protected override Task AfterStartAsync(PostgresDependency dependency, CancellationToken cancellationToken)
-    {
-        this._logger.LogInformation("PostgreSQL instance is ready");
-
-        return Task.CompletedTask;
-    }
 }

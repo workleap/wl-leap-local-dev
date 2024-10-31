@@ -17,6 +17,8 @@ internal static class ExternalContainerResourceExtensions
             .WithInitialState(new CustomResourceSnapshot
             {
                 ResourceType = resource.ResourceType,
+                CreationTimeStamp = DateTime.Now,
+                State = KnownResourceStates.Starting,
                 Properties = [],
                 Urls = [.. urls],
             });
