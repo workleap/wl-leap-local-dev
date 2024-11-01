@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Leap.Cli.DockerCompose.Yaml;
 
 /// <summary>
@@ -6,12 +8,19 @@ namespace Leap.Cli.DockerCompose.Yaml;
 /// </summary>
 internal sealed class DockerComposeImageName(string value)
 {
-    public static readonly DockerComposeImageName Empty = new DockerComposeImageName(string.Empty);
+    public static readonly DockerComposeImageName Empty = new(string.Empty);
+    private static readonly Regex AcrRegex = new(@"^(?<acrName>.+)\.azurecr\.io/", RegexOptions.Compiled);
 
     public string Value { get; } = value;
 
     public override string ToString()
     {
         return this.Value;
+    }
+
+    public string? GetAzureContainerRegistryName()
+    {
+        var match = AcrRegex.Match(this.Value);
+        return match.Success ? match.Groups["acrName"].Value : null;
     }
 }
