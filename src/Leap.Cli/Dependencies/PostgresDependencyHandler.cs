@@ -49,7 +49,7 @@ internal sealed class PostgresDependencyHandler(
 
         var service = new DockerComposeServiceYaml
         {
-            Image = new DockerComposeImageName("postgres:16.4"),
+            Image = new DockerComposeImageName("postgres:17.0"),
             ContainerName = ContainerName,
             Restart = DockerComposeConstants.Restart.UnlessStopped,
             Environment = new KeyValueCollectionYaml
