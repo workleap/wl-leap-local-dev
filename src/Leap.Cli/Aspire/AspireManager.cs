@@ -148,9 +148,9 @@ internal sealed class AspireManager : IAspireManager
             throw new InvalidOperationException("Failed to start .NET Aspire", ex);
         }
 
-        this._logger.LogInformation(".NET Aspire started successfully:");
-        this._logger.LogInformation(" - Access the dashboard at {AspireDashboardUrl}", AspireDashboardUrlDefaultValue);
-        this._logger.LogInformation(" - Send OpenTelemetry traces, metrics and logs to {AspireDashboardOtlpUrl} using GRPC", AspireDashboardOtlpUrlDefaultValue);
+        this._logger.LogInformation("----------------------------------------------");
+        this._logger.LogInformation("Dashboard available at {AspireDashboardUrl}", AspireDashboardUrlDefaultValue);
+        this._logger.LogInformation("----------------------------------------------");
 
         return app;
     }

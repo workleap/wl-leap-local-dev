@@ -88,12 +88,27 @@ function Assert-DockerContainer {
     [string]$containerName
   )
 
-  $containerRunning = [bool](docker ps --quiet --filter name="$containerName")
-  if ($containerRunning) {
-    Write-Host "Docker container $containerName is running."
-  }
-  else {
-    throw "Docker container $containerName is not running."
+  Write-Host "Checking if Docker container '$containerName' is running..."
+
+  $timeout = New-TimeSpan -Minutes 1
+  $startTime = Get-Date
+
+  while ($true) {
+    $now = Get-Date
+    $elapsed = $now - $startTime
+
+    if ($elapsed -ge $timeout) {
+      throw "Checking Docker container '$containerName' timed out after $($timeout.TotalMinutes) minutes."
+    }
+
+    $containerRunning = [bool](docker ps --quiet --filter name="$containerName")
+    if ($containerRunning) {
+      Write-Host "Docker container '$containerName' is running."
+      break
+    }
+    else {
+      Start-Sleep -Seconds 1
+    }
   }
 }
 

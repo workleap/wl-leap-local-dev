@@ -65,6 +65,12 @@ internal sealed class DockerComposeResourceLifecycleHook(
     {
         try
         {
+            // Removing the potential "Waiting" state that was set by the WaitForDependenciesAsync.
+            await notificationService.PublishUpdateAsync(resource, snapshot => snapshot with
+            {
+                State = KnownResourceStates.Starting,
+            });
+
             await dockerComposeManager.StartDockerComposeServiceAsync(resource.Name, resourceLogger, cancellationToken);
         }
         catch (OperationCanceledException)

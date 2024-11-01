@@ -168,14 +168,14 @@ internal sealed class PrepareServiceRunnersPipelineStep(
 
         if ("https".Equals(dockerRunner.Protocol, StringComparison.OrdinalIgnoreCase))
         {
-            var randomContainerCrtPath = $"/etc/ssl/leap-{Guid.NewGuid()}.crt";
-            var randomContainerKeyPath = $"/etc/ssl/leap-{Guid.NewGuid()}.key";
+            const string containerCrtFilePath = "/etc/ssl/certs/leap-certificate.crt";
+            const string containerKeyFilePath = "/etc/ssl/certs/leap-certificate.key";
 
-            dockerComposeServiceYaml.Volumes.Add(new DockerComposeVolumeMappingYaml(Constants.LocalCertificateCrtFilePath, randomContainerCrtPath, DockerComposeConstants.Volume.ReadOnly));
-            dockerComposeServiceYaml.Volumes.Add(new DockerComposeVolumeMappingYaml(Constants.LocalCertificateKeyFilePath, randomContainerKeyPath, DockerComposeConstants.Volume.ReadOnly));
+            dockerComposeServiceYaml.Volumes.Add(new DockerComposeVolumeMappingYaml(Constants.LocalCertificateCrtFilePath, containerCrtFilePath, DockerComposeConstants.Volume.ReadOnly));
+            dockerComposeServiceYaml.Volumes.Add(new DockerComposeVolumeMappingYaml(Constants.LocalCertificateKeyFilePath, containerKeyFilePath, DockerComposeConstants.Volume.ReadOnly));
 
-            dockerComposeServiceYaml.Environment["ASPNETCORE_Kestrel__Certificates__Default__Path"] = randomContainerCrtPath;
-            dockerComposeServiceYaml.Environment["ASPNETCORE_Kestrel__Certificates__Default__KeyPath"] = randomContainerKeyPath;
+            dockerComposeServiceYaml.Environment["ASPNETCORE_Kestrel__Certificates__Default__Path"] = containerCrtFilePath;
+            dockerComposeServiceYaml.Environment["ASPNETCORE_Kestrel__Certificates__Default__KeyPath"] = containerKeyFilePath;
         }
 
         foreach (var (name, value) in service.GetServiceAndRunnerEnvironmentVariables())

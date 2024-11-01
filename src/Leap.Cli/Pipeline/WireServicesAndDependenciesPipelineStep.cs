@@ -36,7 +36,7 @@ internal sealed class WireServicesAndDependenciesPipelineStep(
 
             foreach (var service in state.Services.Values)
             {
-                if (scope == EnvironmentVariableScope.Container && configureDockerCompose.Configuration.Services.TryGetValue(service.ContainerName, out var dockerComposeServiceYaml))
+                if (scope == EnvironmentVariableScope.Container && configureDockerCompose.Configuration.Services.TryGetValue(service.Name, out var dockerComposeServiceYaml))
                 {
                     dockerComposeServiceYaml.Environment.TryAdd(envvarName, envvarValue);
                 }
