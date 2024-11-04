@@ -1,4 +1,5 @@
 ﻿using Leap.Cli.Commands;
+using Leap.Cli.Dependencies;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
 using Microsoft.Extensions.Logging;
@@ -33,6 +34,10 @@ internal sealed class UpdateHostsFilePipelineStep : IPipelineStep
             .Where(x => !x.Ingress.Host.IsLocalhost)
             .Select(x => x.Ingress.Host.ToString())
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        // Allows MongoDB replica set connection string to resolve the name of the Docker Compose service used by the replica set member
+        // https://dba.stackexchange.com/a/78550/83022
+        requiredHostnames.Add(MongoDependencyHandler.ServiceName);
 
         var missingHostnames = requiredHostnames.Except(existingHostnames, StringComparer.OrdinalIgnoreCase).ToArray();
         if (missingHostnames.Length == 0)

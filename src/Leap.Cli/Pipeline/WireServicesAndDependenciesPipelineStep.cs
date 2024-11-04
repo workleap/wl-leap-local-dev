@@ -47,7 +47,11 @@ internal sealed class WireServicesAndDependenciesPipelineStep(
         var hosts = await hostsFileManager.GetAllCustomHostnamesAsync(cancellationToken);
         if (hosts != null)
         {
-            var dockerComposeExtraHosts = hosts.Select(host => $"{host}:host-gateway").ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var dockerComposeExtraHosts = hosts
+                .Where(host => !configureDockerCompose.Configuration.Services.ContainsKey(host))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(host => $"{host}:host-gateway")
+                .ToArray();
 
             foreach (var dockerComposeServiceYaml in configureDockerCompose.Configuration.Services.Values)
             {

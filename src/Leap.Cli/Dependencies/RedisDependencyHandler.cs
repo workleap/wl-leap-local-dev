@@ -33,6 +33,7 @@ internal sealed class RedisDependencyHandler(
         aspire.Builder.AddDockerComposeResource(new DockerComposeResource(ServiceName, ContainerName)
         {
             ResourceType = Constants.LeapDependencyAspireResourceType,
+            Urls = [$"tcp://{HostConnectionString}"],
         });
 
         return Task.CompletedTask;

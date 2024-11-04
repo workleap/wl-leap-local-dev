@@ -115,7 +115,7 @@ builder.UseDependencyInjection((services, context) =>
         .AddHttpMessageHandler<AzureDevOpsAuthenticationHandler>()
         .ConfigureHttpClient(x =>
         {
-            // See https://github.com/microsoft/azure-devops-auth-samples/blob/master/ManagedClientConsoleAppSample/Program.cs
+            // See https://github.com/microsoft/azure-devops-auth-samples/blob/9097287405fde466a745dfb94c2dcaf0860a79e9/ManagedClientConsoleAppSample/Program.cs
             x.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue(MediaTypeNames.Application.Json));
             x.DefaultRequestHeaders.Add("User-Agent", "Leap");
             x.DefaultRequestHeaders.Add("X-TFS-FedAuthRedirect", "Suppress");

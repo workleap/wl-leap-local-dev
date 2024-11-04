@@ -7,6 +7,7 @@ steps:
       sudo sh -c 'echo "# Begin lines managed by Leap CLI" >> /etc/hosts' && \
       sudo sh -c 'echo "127.0.0.1 aspnetcorewebapi.workleap.localhost" >> /etc/hosts' && \
       sudo sh -c 'echo "127.0.0.1 containerapp.workleap.localhost" >> /etc/hosts' && \
+      sudo sh -c 'echo "127.0.0.1 mongo" >> /etc/hosts' && \
       sudo sh -c 'echo "# End lines managed by Leap CLI" >> /etc/hosts'
     displayName: "macOS: Update hosts file"
     condition: eq(variables['Agent.OS'], 'Darwin')

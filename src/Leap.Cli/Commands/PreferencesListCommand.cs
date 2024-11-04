@@ -26,7 +26,7 @@ internal sealed class PreferencesListCommandHandler(PreferencesSettingsManager p
             logger.LogInformation("Listing preferences for Leap services:");
             foreach (var (service, preference) in preferences.Services)
             {
-                logger.LogInformation("- {Service}: `{PreferredRunner}` runner", service, preference.PreferredRunner);
+                logger.LogInformation(" - {Service}: '{PreferredRunner}' runner", service, preference.PreferredRunner);
             }
         }
 

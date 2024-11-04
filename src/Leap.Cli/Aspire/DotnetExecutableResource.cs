@@ -35,7 +35,7 @@ internal static class DotnetExecutableResourceExtensions
 
         // .NET hooks are executed before the application starts. Inspired by:
         // https://github.com/dotnet/tye/blob/release/0.11.0/src/Microsoft.Tye.Hosting/ProcessRunner.cs#L223
-        // See also: https://github.com/dotnet/runtime/blob/main/docs/design/features/host-startup-hook.md
+        // See also: https://github.com/dotnet/runtime/blob/v8.0.10/docs/design/features/host-startup-hook.md
         return builder.WithEnvironment(context =>
         {
             context.EnvironmentVariables["DOTNET_STARTUP_HOOKS"] = typeof(StartupHookAssemblyHandle).Assembly.Location;

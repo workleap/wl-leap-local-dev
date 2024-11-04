@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 namespace Leap.Cli.Platform;
 
 // mkcert has over 40k+ stars on GitHub, is cross-platform, already used in ShareGate in various local setup scripts,
-// and even recommended by Microsoft to setup Azurite with HTTPS: https://github.com/Azure/Azurite/blob/main/README.md#mkcert
+// and even recommended by Microsoft to setup Azurite with HTTPS: https://github.com/Azure/Azurite/blob/v3.33.0/README.md#mkcert
 // as well as Google: https://web.dev/articles/how-to-use-local-https
 internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fileSystem, IPlatformHelper platformHelper, ILogger<MkcertCertificateManager> logger)
 {

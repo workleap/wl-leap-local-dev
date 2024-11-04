@@ -53,7 +53,7 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
         var isAzureCliLoggedIn = await this.IsAzureCliLoggedInAsync(cancellationToken);
         if (!isAzureCliLoggedIn)
         {
-            throw new LeapException("Azure CLI is installed but not logged in. Please run `az login` to login.");
+            throw new LeapException("Azure CLI is installed but not logged in. Please run 'az login' to login.");
         }
 
         var hasNoServiceToRun = state.Services.Count == 0;
