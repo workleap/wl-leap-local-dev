@@ -155,6 +155,7 @@ internal sealed class DockerComposeResourceLifecycleHook(
             StopTimeStamp = isInTerminalState ? finishedAt : null,
             ExitCode = isInTerminalState ? (int)container.State.ExitCode : null,
             EnvironmentVariables = environmentVariables,
+            Urls = isInTerminalState ? [] : [.. resource.Urls.Select((url, idx) => new UrlSnapshot(EndpointNameHelper.GetLocalhostEndpointName(idx), url, IsInternal: false))],
             Properties =
             [
                 // https://github.com/dotnet/aspire/blob/v8.2.2/src/Shared/Model/KnownProperties.cs#L30-L34

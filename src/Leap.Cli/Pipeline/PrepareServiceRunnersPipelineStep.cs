@@ -93,7 +93,8 @@ internal sealed class PrepareServiceRunnersPipelineStep(
         // TODO shall we sanitize the name of the service? Get inspiration from Dapr
         aspire.Builder
             .AddExecutable(service.Name, exeRunner.Command, exeRunner.WorkingDirectory, exeRunner.Arguments)
-            .WithEndpoint(scheme: exeRunner.Protocol, port: service.Ingress.LocalhostPort, isProxied: false, env: "PORT")
+            .WithEndpoint(name: EndpointNameHelper.GetLocalhostEndpointName(), scheme: exeRunner.Protocol, port: service.Ingress.LocalhostPort, isProxied: false, env: "PORT")
+            .WithReverseProxyUrl(service)
             .WithEnvironment("ASPNETCORE_URLS", exeRunner.Protocol + "://*:" + service.Ingress.LocalhostPort)
             .WithEnvironment("NODE_EXTRA_CA_CERTS", Constants.LeapCertificateAuthorityFilePath)
             .WithEnvironment(context =>
@@ -191,6 +192,7 @@ internal sealed class PrepareServiceRunnersPipelineStep(
             {
                 Urls = [service.LocalhostUrl]
             })
+            .WithReverseProxyUrl(service)
             .WithConfigurePreferredRunnerCommand(service)
             .WaitFor(dependencyResourceNames);
     }
@@ -220,7 +222,8 @@ internal sealed class PrepareServiceRunnersPipelineStep(
         // TODO shall we sanitize the name of the service? Get inspiration from Dapr
         aspire.Builder
             .AddDotnetExecutable(service.Name, workingDirectoryPath, dotnetRunner.ProjectPath, dotnetRunner.Watch)
-            .WithEndpoint(scheme: dotnetRunner.Protocol, port: service.Ingress.LocalhostPort, isProxied: false, env: "PORT")
+            .WithEndpoint(name: EndpointNameHelper.GetLocalhostEndpointName(), scheme: dotnetRunner.Protocol, port: service.Ingress.LocalhostPort, isProxied: false, env: "PORT")
+            .WithReverseProxyUrl(service)
             .WithEnvironment("ASPNETCORE_URLS", dotnetRunner.Protocol + "://*:" + service.Ingress.LocalhostPort)
             .WithEnvironment(context =>
             {
@@ -246,7 +249,8 @@ internal sealed class PrepareServiceRunnersPipelineStep(
 
         // TODO shall we sanitize the name of the service?
         var builder = aspire.Builder.AddContainer(service.Name, "stoplight/prism", tag: "5")
-            .WithEndpoint(scheme: "http", port: service.Ingress.LocalhostPort, targetPort: prismContainerPort)
+            .WithEndpoint(name: EndpointNameHelper.GetLocalhostEndpointName(), scheme: "http", port: service.Ingress.LocalhostPort, targetPort: prismContainerPort)
+            .WithReverseProxyUrl(service)
             .WithContainerRuntimeArgs([.. GetDockerExtraHostsRuntimeArgs(state)]);
 
         if (openApiRunner.IsUrl)

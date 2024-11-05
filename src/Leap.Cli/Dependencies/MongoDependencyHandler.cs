@@ -64,13 +64,8 @@ internal sealed partial class MongoDependencyHandler(
         // https://www.mongodb.com/docs/manual/reference/parameters/#mongodb-parameter-param.enableDetailedConnectionHealthMetricLogLines
         InlinedQuotedStringCollectionYaml command =
         [
-            "--quiet", "--bind_ip_all", "--port", MongoPort.ToString(), "--setParameter", "enableDetailedConnectionHealthMetricLogLines=false"
+            "--quiet", "--bind_ip_all", "--port", MongoPort.ToString(), "--replSet", ReplicaSetName, "--setParameter", "enableDetailedConnectionHealthMetricLogLines=false"
         ];
-
-        if (dependency.UseReplicaSet)
-        {
-            command.AddRange(["--replSet", ReplicaSetName]);
-        }
 
         var service = new DockerComposeServiceYaml
         {
