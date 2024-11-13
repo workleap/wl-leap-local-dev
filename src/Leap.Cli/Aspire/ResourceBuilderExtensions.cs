@@ -43,7 +43,7 @@ internal static class ResourceBuilderExtensions
     private static ResourceCommandAnnotation GetConfigureRunnerCommand(IResource resource, Service service, string runnerName)
     {
         return new ResourceCommandAnnotation(
-            type: $"configure-{runnerName}-runner",
+            name: $"configure-{runnerName}-runner",
             displayName: runnerName switch
             {
                 DockerRunnerYaml.YamlDiscriminator => "Run service using Docker",

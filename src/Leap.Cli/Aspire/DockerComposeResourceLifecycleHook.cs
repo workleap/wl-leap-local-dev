@@ -215,7 +215,7 @@ internal sealed class DockerComposeResourceLifecycleHook(
     private void AddStopContainerCommand(DockerComposeResource resource)
     {
         var command = new ResourceCommandAnnotation(
-            type: "stop-container",
+            name: "stop-container",
             displayName: "Stop",
             updateState: context => !IsStoppedOrStopping(context.ResourceSnapshot.State?.Text) ? ResourceCommandState.Enabled : ResourceCommandState.Hidden,
             executeCommand: async context =>
@@ -248,7 +248,7 @@ internal sealed class DockerComposeResourceLifecycleHook(
     private void AddStartContainerCommand(DockerComposeResource resource)
     {
         var command = new ResourceCommandAnnotation(
-            type: "start-container",
+            name: "start-container",
             displayName: "Start",
             updateState: context => IsStoppedOrStopping(context.ResourceSnapshot.State?.Text) ? ResourceCommandState.Enabled : ResourceCommandState.Hidden,
             executeCommand: async context =>

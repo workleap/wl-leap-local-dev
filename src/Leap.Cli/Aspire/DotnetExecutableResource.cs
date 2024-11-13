@@ -110,7 +110,7 @@ internal static class DotnetExecutableResourceExtensions
         private void AddRestartAndWaitForDebuggerCommand(DotnetExecutableResource resource)
         {
             var command = new ResourceCommandAnnotation(
-                type: "dotnet-restart-and-debug",
+                name: "dotnet-restart-and-debug",
                 displayName: "Restart and wait for debugger",
                 updateState: context =>
                 {
