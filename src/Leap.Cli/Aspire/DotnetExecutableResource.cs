@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Reflection;
 using Aspire.Hosting.Lifecycle;
+using Leap.Cli.Platform.Telemetry;
 using Leap.StartupHook;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -158,6 +159,7 @@ internal static class DotnetExecutableResourceExtensions
                         await context.TriggerResourceSnapshotChangeAsync(resource);
                     }
 
+                    TelemetryMeters.TrackWaitForDebuggerCommand(resource.Name);
                     return CommandResults.Success();
                 },
                 displayDescription: null,

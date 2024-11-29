@@ -5,4 +5,6 @@ internal sealed class ApplicationState
     public List<Dependency> Dependencies { get; } = new();
 
     public Dictionary<string, Service> Services { get; } = new();
+
+    public long StartTime { get; set; }
 }

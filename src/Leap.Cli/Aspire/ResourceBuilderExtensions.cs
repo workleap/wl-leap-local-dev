@@ -1,6 +1,7 @@
 using Leap.Cli.Configuration;
 using Leap.Cli.Configuration.Yaml;
 using Leap.Cli.Model;
+using Leap.Cli.Platform.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using NuGet.Packaging;
 
@@ -60,6 +61,7 @@ internal static class ResourceBuilderExtensions
                     : ResourceCommandState.Enabled,
             executeCommand: async context =>
             {
+                TelemetryMeters.TrackPreferencesCommand();
                 try
                 {
                     var preferencesSettingsManager = context.ServiceProvider.GetRequiredService<PreferencesSettingsManager>();

@@ -7,6 +7,7 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Leap.Cli.DockerCompose;
+using Leap.Cli.Platform.Telemetry;
 
 namespace Leap.Cli.Aspire;
 
@@ -233,6 +234,7 @@ internal sealed class DockerComposeResourceLifecycleHook(
                     };
                 }
 
+                TelemetryMeters.TrackDockerResourceCommand(resource.Name);
                 return CommandResults.Success();
             },
             displayDescription: null,
@@ -266,6 +268,7 @@ internal sealed class DockerComposeResourceLifecycleHook(
                     };
                 }
 
+                TelemetryMeters.TrackDockerResourceCommand(resource.Name);
                 return CommandResults.Success();
             },
             displayDescription: null,

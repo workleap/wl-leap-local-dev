@@ -1,4 +1,5 @@
-﻿using Leap.Cli.Model;
+﻿using System.Diagnostics;
+using Leap.Cli.Model;
 using Leap.Cli.Platform.Telemetry;
 using Microsoft.Extensions.Logging;
 
@@ -10,6 +11,8 @@ internal sealed class WaitForUserCancellationPipelineStep(
 {
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
+        var leapStartTimestamp = Stopwatch.GetTimestamp();
+        TelemetryMeters.TrackLeapStartDuration(new TimeSpan(leapStartTimestamp - state.StartTime));
         telemetryHelper.StopRootActivity();
 
         logger.LogInformation("Press Ctrl+C to stop Leap");

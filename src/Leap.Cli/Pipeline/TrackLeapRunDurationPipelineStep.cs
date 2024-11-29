@@ -6,25 +6,16 @@ namespace Leap.Cli.Pipeline;
 
 internal sealed class TrackLeapRunDurationPipelineStep : IPipelineStep
 {
-    private readonly Stopwatch _stopwatch;
-
-    public TrackLeapRunDurationPipelineStep()
-    {
-        this._stopwatch = new Stopwatch();
-    }
-
     public Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
-        this._stopwatch.Start();
-
+        state.StartTime = Stopwatch.GetTimestamp();
         return Task.CompletedTask;
     }
 
     public Task StopAsync(ApplicationState state, CancellationToken cancellationToken)
     {
-        this._stopwatch.Stop();
-        var runTime = this._stopwatch.Elapsed;
-        TelemetryMeters.TrackLeapRunDuration(runTime);
+        var runtime = Stopwatch.GetTimestamp();
+        TelemetryMeters.TrackLeapRunDuration(new TimeSpan(runtime - state.StartTime));
 
         return Task.CompletedTask;
     }
