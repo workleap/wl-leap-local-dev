@@ -81,6 +81,7 @@ builder.UseDependencyInjection((services, context) =>
 
     services.AddSingleton<IDependencyHandler, MongoDependencyHandler>();
     services.AddSingleton<IDependencyHandler, RedisDependencyHandler>();
+    services.AddSingleton<IDependencyHandler, FusionAuthDependencyHandler>();
     services.AddSingleton<IDependencyHandler, AzuriteDependencyHandler>();
     services.AddSingleton<IDependencyHandler, SqlServerDependencyHandler>();
     services.AddSingleton<IDependencyHandler, PostgresDependencyHandler>();
@@ -88,6 +89,7 @@ builder.UseDependencyInjection((services, context) =>
 
     services.AddSingleton<IDependencyYamlHandler<MongoDependencyYaml>, MongoDependencyYamlHandler>();
     services.AddSingleton<IDependencyYamlHandler<RedisDependencyYaml>, RedisDependencyYamlHandler>();
+    services.AddSingleton<IDependencyYamlHandler<FusionAuthDependencyYaml>, FusionAuthDependencyYamlHandler>();
     services.AddSingleton<IDependencyYamlHandler<AzuriteDependencyYaml>, AzuriteDependencyYamlHandler>();
     services.AddSingleton<IDependencyYamlHandler<SqlServerDependencyYaml>, SqlServerDependencyYamlHandler>();
     services.AddSingleton<IDependencyYamlHandler<PostgresDependencyYaml>, PostgresDependencyYamlHandler>();
@@ -132,6 +134,7 @@ builder.UseDependencyInjection((services, context) =>
         ServiceDescriptor.Singleton<IPipelineStep, BeginAspireDownloadTaskPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, EnsureMkcertCertificateExistsPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, CreateCertificateAuthorityBundlePipelineStep>(),
+        ServiceDescriptor.Singleton<IPipelineStep, CreateFusionAuthConfigFilesPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, PopulateDependenciesFromYamlPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, PopulateServicesFromYamlPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, UpdateHostsFilePipelineStep>(),

@@ -32,6 +32,7 @@ internal static class LeapYamlSerializer
                 [MongoDependencyYaml.YamlDiscriminator] = typeof(MongoDependencyYaml),
                 [PostgresDependencyYaml.YamlDiscriminator] = typeof(PostgresDependencyYaml),
                 [RedisDependencyYaml.YamlDiscriminator] = typeof(RedisDependencyYaml),
+                [FusionAuthDependencyYaml.YamlDiscriminator] = typeof(FusionAuthDependencyYaml),
                 [SqlServerDependencyYaml.YamlDiscriminator] = typeof(SqlServerDependencyYaml),
             });
         })

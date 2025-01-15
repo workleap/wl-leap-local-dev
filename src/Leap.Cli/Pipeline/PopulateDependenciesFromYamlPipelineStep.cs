@@ -29,6 +29,7 @@ internal sealed class PopulateDependenciesFromYamlPipelineStep : IPipelineStep
         this.PopulateDependencies<MongoDependencyYaml>(state, allDependenciesYaml);
         this.PopulateDependencies<PostgresDependencyYaml>(state, allDependenciesYaml);
         this.PopulateDependencies<RedisDependencyYaml>(state, allDependenciesYaml);
+        this.PopulateDependencies<FusionAuthDependencyYaml>(state, allDependenciesYaml);
         this.PopulateDependencies<SqlServerDependencyYaml>(state, allDependenciesYaml);
     }
 

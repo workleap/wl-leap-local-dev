@@ -10,6 +10,7 @@ internal sealed class EnsureLeapDirectoriesCreatedPipelineStep(IFileSystem fileS
         fileSystem.Directory.CreateDirectory(Constants.RootDirectoryPath);
         fileSystem.Directory.CreateDirectory(Constants.GeneratedDirectoryPath);
         fileSystem.Directory.CreateDirectory(Constants.DockerComposeDirectoryPath);
+        fileSystem.Directory.CreateDirectory(Constants.FusionAuthDirectoryPath);
         fileSystem.Directory.CreateDirectory(Constants.CertificatesDirectoryPath);
         fileSystem.Directory.CreateDirectory(Constants.NuGetPackagesDirectoryPath);
 

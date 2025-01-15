@@ -20,6 +20,7 @@ internal sealed class PortManager : IPortManager
         // Third-party dependencies
         MongoDependencyHandler.MongoPort,
         RedisDependencyHandler.RedisPort,
+        FusionAuthDependencyHandler.FusionAuthPort,
         PostgresDependencyHandler.HostPostgresPort,
         SqlServerDependencyHandler.HostSqlServerPort,
         AzuriteConstants.BlobPort,

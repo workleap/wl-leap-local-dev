@@ -6,6 +6,7 @@ internal static class Constants
     private const string LeapGeneratedDirectoryName = "generated";
     private const string DotnetDebuggingStateDirectoryName = "debugger-signals";
     private const string LeapDockerComposeDirectoryName = "docker-compose";
+    private const string LeapFusionAuthDirectoryName = "fusionauth";
     private const string LeapCertificatesDirectoryName = "certificates";
     private const string LeapNuGetPackagesDirectoryName = "nuget-packages";
 
@@ -97,6 +98,9 @@ internal static class Constants
 
     /// <summary>The directory that contains the generated Docker Compose files</summary>
     public static readonly string DockerComposeDirectoryPath = Path.Combine(GeneratedDirectoryPath, LeapDockerComposeDirectoryName);
+
+    /// <summary>The directory that contains FusionAuth's config files</summary>
+    public static readonly string FusionAuthDirectoryPath = Path.Combine(GeneratedDirectoryPath, LeapFusionAuthDirectoryName);
 
     /// <summary>The path of the generated Docker Compose file</summary>
     public static readonly string DockerComposeFilePath = Path.Combine(DockerComposeDirectoryPath, "docker-compose.yaml");

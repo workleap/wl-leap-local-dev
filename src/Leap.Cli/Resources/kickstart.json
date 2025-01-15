@@ -1,0 +1,34 @@
+{
+  "variables": {
+    "adminEmail": "admin@workleap.com",
+    "adminPassword": "localpassword",
+    "defaultTenantId": "30663132-6464-6665-3032-326466613934"
+  },
+  "apiKeys": [
+    {
+      "key": "local-fusionauth-provisioning-api-key",
+      "description": "API key used for local development FusionAuth provisioning only",
+      "keyManager": true
+    }
+  ],
+  "requests": [
+    {
+      "method": "POST",
+      "url": "/api/user/registration/00000000-0000-0000-0000-000000000001",
+      "body": {
+        "user": {
+          "email": "#{adminEmail}",
+          "password": "#{adminPassword}",
+          "firstName": "Workleap",
+          "lastName": "Admin"
+        },
+        "registration": {
+          "applicationId": "#{FUSIONAUTH_APPLICATION_ID}",
+          "roles": [
+            "admin"
+          ]
+        }
+      }
+    }
+  ]
+}
