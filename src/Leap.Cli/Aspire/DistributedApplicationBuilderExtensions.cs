@@ -54,6 +54,10 @@ internal static class DistributedApplicationBuilderExtensions
             // Hardcoded OTLP API key to prevent Aspire from generating a random one at each run
             // We can use it when manually configuring containers with Docker Compose prior to starting the dashboard
             ["AppHost:OtlpApiKey"] = AspireManager.AspireOtlpDefaultApiKey,
+
+            // Hardcoded DCP API key, so we can use request DCP to get status of services and their logs from tests
+            ["AppHost:ResourceService:AuthMode"] = "ApiKey",
+            ["AppHost:ResourceService:ApiKey"] = AspireManager.DcpDefaultApiKey,
         });
 
         return builder;

@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using Aspire.Hosting.Lifecycle;
 using CliWrap;
@@ -26,6 +26,7 @@ internal sealed class AspireManager : IAspireManager
     public static readonly string AspireResourceServiceEndpointUrl = $"https://localhost:{AspireResourceServiceEndpointPort}";
 
     public const string AspireOtlpDefaultApiKey = "leap";
+    public const string DcpDefaultApiKey = "leap";
 
     private readonly ILogger _logger;
     private readonly INuGetPackageDownloader _nuGetPackageDownloader;
