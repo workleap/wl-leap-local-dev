@@ -1,4 +1,4 @@
-﻿using System.IO.Abstractions;
+using System.IO.Abstractions;
 using CliWrap;
 using CliWrap.Buffered;
 using Leap.Cli.DockerCompose.Yaml;
@@ -21,7 +21,9 @@ internal sealed class DockerComposeManager(ICliWrap cliWrap, IFileSystem fileSys
         BufferedCommandResult result;
         try
         {
-            result = await cliWrap.ExecuteBufferedAsync(command, cancellationToken);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(25));
+            result = await cliWrap.ExecuteBufferedAsync(command, cts.Token);
         }
         catch (Exception)
         {
