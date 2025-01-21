@@ -16,7 +16,7 @@ internal class FusionAuthDependencyHandler(
 {
     public const int FusionAuthPort = 9020;
 
-    private const string AppServiceName = "fusionauthapp";
+    private const string AppServiceName = "fusionauth";
     private const string DbServiceName = "fusionauthdb";
     private const string ProxyServiceName = "fusionauthproxy";
 
@@ -48,16 +48,6 @@ internal class FusionAuthDependencyHandler(
             Urls = [$"https://{HostConnectionString}"]
         });
 
-        aspireManager.Builder.AddDockerComposeResource(new DockerComposeResource(DbServiceName, DbContainerName)
-        {
-            ResourceType = Constants.LeapDependencyAspireResourceType,
-        });
-
-        aspireManager.Builder.AddDockerComposeResource(new DockerComposeResource(ProxyServiceName, ProxyContainerName)
-        {
-            ResourceType = Constants.LeapDependencyAspireResourceType,
-        });
-
         return Task.CompletedTask;
     }
 
@@ -67,22 +57,23 @@ internal class FusionAuthDependencyHandler(
         {
             Image = new DockerComposeImageName("fusionauth/fusionauth-app:1.54.0"),
             ContainerName = AppContainerName,
-            DependsOn = [DbServiceName],
+            DependsOn = [DbServiceName, ProxyServiceName],
             Environment = new KeyValueCollectionYaml()
             {
-                {"DATABASE_URL", $"jdbc:postgresql://{DbContainerName}:5432/fusionauth"},
-                {"DATABASE_ROOT_USERNAME", "postgres"},
-                {"DATABASE_ROOT_PASSWORD", "postgres"},
-                {"DATABASE_USERNAME", "fusionauth"},
-                {"DATABASE_PASSWORD", "local_dev_only_nothing_secret_here"},
-                {"FUSIONAUTH_APP_MEMORY", "256M"},
-                {"FUSIONAUTH_APP_RUNTIME_MODE", "development"},
-                {"FUSIONAUTH_APP_URL", $"http://{AppContainerName}:9011"},
-                {"SEARCH_TYPE", "database"},
-                {"FUSIONAUTH_APP_KICKSTART_FILE", KickstartConfigFilePath},
+                { "DATABASE_URL", $"jdbc:postgresql://{DbContainerName}:5432/fusionauth" },
+                { "DATABASE_ROOT_USERNAME", "postgres" },
+                { "DATABASE_ROOT_PASSWORD", "postgres" },
+                { "DATABASE_USERNAME", "fusionauth" },
+                { "DATABASE_PASSWORD", "local_dev_only_nothing_secret_here" },
+                { "FUSIONAUTH_APP_MEMORY", "256M" },
+                { "FUSIONAUTH_APP_RUNTIME_MODE", "development" },
+                { "FUSIONAUTH_APP_URL", $"http://{AppContainerName}:9011" },
+                { "SEARCH_TYPE", "database" },
+                { "FUSIONAUTH_APP_KICKSTART_FILE", KickstartConfigFilePath },
             },
             Restart = "unless-stopped",
-            Volumes = [
+            Volumes =
+            [
                 new DockerComposeVolumeMappingYaml(ConfigVolumeName, "/usr/local/fusionauth/config"),
                 new DockerComposeVolumeMappingYaml(HostKickstartConfigFilePath, KickstartConfigFilePath)
             ],
@@ -100,7 +91,8 @@ internal class FusionAuthDependencyHandler(
                 ["PGDATA"] = "/var/lib/postgresql/data/pgdata"
             },
             Restart = "unless-stopped",
-            Volumes = [
+            Volumes =
+            [
                 new DockerComposeVolumeMappingYaml(DbVolumeName, "/var/lib/postgresql/data")
             ],
             SecurityOption = ["no-new-privileges:true"]
@@ -113,7 +105,8 @@ internal class FusionAuthDependencyHandler(
             DependsOn = [DbServiceName],
             Restart = "unless-stopped",
             Ports = [new DockerComposePortMappingYaml(9020, 9020)],
-            Volumes = [
+            Volumes =
+            [
                 new DockerComposeVolumeMappingYaml(HostNginxConfigFilePath, "/etc/nginx/conf.d/fusionauth.conf"),
                 new DockerComposeVolumeMappingYaml(Constants.LocalCertificateCrtFilePath, "/etc/ssl/certs/localhost.crt"),
                 new DockerComposeVolumeMappingYaml(Constants.LocalCertificateKeyFilePath, "/etc/ssl/certs/localhost.key")
