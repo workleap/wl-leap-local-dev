@@ -61,6 +61,13 @@ internal sealed class LeapGlobalOptions
         Arity = ArgumentArity.ZeroOrMore,
     };
 
+    public static readonly Option<bool> DisableDotnetWatchOption = new(["--disable-dotnet-watch"])
+    {
+        AllowMultipleArgumentsPerToken = false,
+        Description = "Force the watch option to false for all dotnet runners.",
+        Arity = ArgumentArity.ZeroOrOne,
+    };
+
     public LoggerVerbosity Verbosity { get; set; }
 
     public string[] FeatureFlags { get; set; } = [];
@@ -70,4 +77,6 @@ internal sealed class LeapGlobalOptions
     public bool SkipVersionCheck { get; set; }
 
     public string[] Profiles { get; set; } = [];
+
+    public bool DisableDotnetWatch { get; set; }
 }

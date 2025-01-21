@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 using Leap.Cli.Configuration;
 using Leap.Cli.Configuration.Yaml;
 using Leap.Cli.Model;
@@ -63,7 +63,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
                     continue;
                 }
 
-                var service = new ServiceYamlConverter(logger, portManager, preferences, leapYaml, serviceYaml).Convert(serviceName);
+                var service = new ServiceYamlConverter(logger, portManager, options.Value, preferences, leapYaml, serviceYaml).Convert(serviceName);
 
                 if (service != null && this.ShouldStartService(service))
                 {
@@ -91,7 +91,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
         return Task.CompletedTask;
     }
 
-    private sealed class ServiceYamlConverter(ILogger logger, IPortManager portManager, PreferencesSettings preferences, LeapYamlFile leapYaml, ServiceYaml serviceYaml)
+    private sealed class ServiceYamlConverter(ILogger logger, IPortManager portManager, LeapGlobalOptions options, PreferencesSettings preferences, LeapYamlFile leapYaml, ServiceYaml serviceYaml)
     {
         public Service? Convert(string serviceName)
         {
@@ -353,7 +353,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
             return new DotnetRunner
             {
                 ProjectPath = projectPath,
-                Watch = dotnetRunnerYaml.Watch.GetValueOrDefault(true),
+                Watch = options.DisableDotnetWatch ? false : dotnetRunnerYaml.Watch.GetValueOrDefault(true),
             };
         }
 

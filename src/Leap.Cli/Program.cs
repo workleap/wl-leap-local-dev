@@ -44,6 +44,7 @@ rootCommand.AddGlobalOption(LeapGlobalOptions.FeatureFlagsOption);
 rootCommand.AddGlobalOption(LeapGlobalOptions.EnableDiagnosticOption);
 rootCommand.AddGlobalOption(LeapGlobalOptions.SkipVersionCheckOption);
 rootCommand.AddGlobalOption(LeapGlobalOptions.ProfilesOption);
+rootCommand.AddGlobalOption(LeapGlobalOptions.DisableDotnetWatchOption);
 
 rootCommand.Name = "leap";
 
@@ -59,6 +60,7 @@ builder.UseDependencyInjection((services, context) =>
         options.EnableDiagnostic = context.ParseResult.GetValueForOption(LeapGlobalOptions.EnableDiagnosticOption);
         options.SkipVersionCheck = context.ParseResult.GetValueForOption(LeapGlobalOptions.SkipVersionCheckOption);
         options.Profiles = context.ParseResult.GetValueForOption(LeapGlobalOptions.ProfilesOption) ?? [];
+        options.DisableDotnetWatch = context.ParseResult.GetValueForOption(LeapGlobalOptions.DisableDotnetWatchOption);
     });
 
     services.AddLogging(x => x.AddColoredConsoleLogger(LoggingSource.Leap));
