@@ -75,4 +75,21 @@ internal sealed class DockerComposeManager(ICliWrap cliWrap, IFileSystem fileSys
             throw new InvalidOperationException($"An error occurred while stopping Docker Compose service '{serviceName}' with '{command.TargetFilePath} {command.Arguments}'");
         }
     }
+
+    public async Task ClearDockerComposeServiceVolumeAsync(string serviceName, ILogger logger, CancellationToken cancellationToken)
+    {
+        var command = new Command("docker")
+            .WithValidation(CommandResultValidation.None)
+            .WithWorkingDirectory(Constants.DockerComposeDirectoryPath)
+            .WithArguments(["compose", "--file", Constants.DockerComposeFilePath, "down", serviceName, "-v"])
+            .WithStandardOutputPipe(PipeTarget.ToDelegate(x => logger.LogDebug("{StandardOutput}", x.Trim())))
+            .WithStandardErrorPipe(PipeTarget.ToDelegate(x => logger.LogDebug("{StandardError}", x.Trim())));
+
+        var result = await cliWrap.ExecuteBufferedAsync(command, cancellationToken);
+
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"An error occurred while clearing Docker Compose service volume for '{serviceName}' with '{command.TargetFilePath} {command.Arguments}'");
+        }
+    }
 }

@@ -5,6 +5,7 @@ using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
 using Leap.Cli.Platform.Telemetry;
 using Leap.Cli.Yaml;
+using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Dependencies;
 
@@ -12,6 +13,8 @@ internal class FusionAuthDependencyHandler(
     IConfigureDockerCompose dockerCompose,
     IConfigureEnvironmentVariables environmentVariable,
     IConfigureAppSettingsJson appSettingsJson,
+    DockerComposeManager dockerComposeManager,
+    ILogger<FusionAuthDependencyHandler> logger,
     IAspireManager aspireManager) : DependencyHandler<FusionAuthDependency>
 {
     public const int FusionAuthPort = 9020;
@@ -42,12 +45,14 @@ internal class FusionAuthDependencyHandler(
         environmentVariable.Configure(ConfigureEnvironmentVariables);
         ConfigureAppSettingsJson(appSettingsJson.Configuration);
 
-        aspireManager.Builder.AddDockerComposeResource(new DockerComposeResource(AppServiceName, AppContainerName)
+        var fusionAuthResource = new DockerComposeResource(AppServiceName, AppContainerName)
         {
             ResourceType = Constants.LeapDependencyAspireResourceType,
             Urls = [$"https://{HostConnectionString}"]
-        });
+        };
+        this.AddResetFusionAuthCommand(fusionAuthResource);
 
+        aspireManager.Builder.AddDockerComposeResource(fusionAuthResource);
         return Task.CompletedTask;
     }
 
@@ -134,5 +139,43 @@ internal class FusionAuthDependencyHandler(
     private static void ConfigureAppSettingsJson(JsonObject appsettings)
     {
         appsettings["ConnectionStrings:FusionAuth"] = HostConnectionString;
+    }
+
+    private void AddResetFusionAuthCommand(DockerComposeResource resource)
+    {
+        var command = new ResourceCommandAnnotation(
+            name: "reset-fusionauth",
+            displayName: "Reset FusionAuth",
+            updateState: context => KnownResourceStates.TerminalStates.Contains(context.ResourceSnapshot.State?.Text) ? ResourceCommandState.Disabled : ResourceCommandState.Enabled,
+            executeCommand: async context =>
+            {
+                try
+                {
+                    TelemetryMeters.TrackFusionAuthResets();
+                    await dockerComposeManager.ClearDockerComposeServiceVolumeAsync(AppServiceName, logger, context.CancellationToken);
+                    await dockerComposeManager.ClearDockerComposeServiceVolumeAsync(ProxyServiceName, logger, context.CancellationToken);
+                    await dockerComposeManager.ClearDockerComposeServiceVolumeAsync(DbServiceName, logger, context.CancellationToken);
+
+                    await dockerComposeManager.StartDockerComposeServiceAsync(AppServiceName, logger, context.CancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    return new ExecuteCommandResult
+                    {
+                        ErrorMessage = "An error occurred while trying to reset FusionAuth: " + ex.Message,
+                        Success = false
+                    };
+                }
+
+                return CommandResults.Success();
+            },
+            displayDescription: null,
+            parameter: null,
+            confirmationMessage: "Are you sure you want to reset FusionAuth configurations? You may lose any configurations added afterwards. Select 'Yes' to proceed.",
+            iconName: "ArrowRotateClockwise", // FluentUI icons found here: https://bennymeg.github.io/ngx-fluent-ui/
+            iconVariant: IconVariant.Filled,
+            isHighlighted: false);
+
+        resource.Annotations.Add(command);
     }
 }

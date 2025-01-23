@@ -21,6 +21,7 @@ public static class TelemetryMeters
     private static readonly Counter<long> PostgresStartCounter = LeapMeter.CreateCounter<long>("dependency.postgres.starts");
     private static readonly Counter<long> AzuriteStartCounter = LeapMeter.CreateCounter<long>("dependency.azurite.starts");
     private static readonly Counter<long> FusionAuthStartCounter = LeapMeter.CreateCounter<long>("dependency.fusionauth.starts");
+    private static readonly Counter<long> FusionAuthResetCounter = LeapMeter.CreateCounter<long>("dependency.fusionauth.resets");
     private static readonly Counter<long> LeapServicesStartCounter = LeapMeter.CreateCounter<long>("leap.services.count");
     private static readonly Counter<long> LeapPreferencesCommandCounter = LeapMeter.CreateCounter<long>("leap.preferences.command");
     private static readonly Counter<long> WaitForDebuggerCounter = LeapMeter.CreateCounter<long>("leap.waitfordebugger.command");
@@ -38,6 +39,7 @@ public static class TelemetryMeters
     public static void TrackPostgresStart() => PostgresStartCounter.Add(1, Tags);
     public static void TrackAzuriteStart() => AzuriteStartCounter.Add(1, Tags);
     public static void TrackFusionAuthStart() => FusionAuthStartCounter.Add(1, Tags);
+    public static void TrackFusionAuthResets() => FusionAuthResetCounter.Add(1, Tags);
 
     public static void TrackNumberServices(int servicesCount, Dictionary<string, int> runnerCounts)
     {
