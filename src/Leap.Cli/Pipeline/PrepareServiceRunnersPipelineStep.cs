@@ -105,8 +105,8 @@ internal sealed class PrepareServiceRunnersPipelineStep(
                     context.EnvironmentVariables["ASPNETCORE_Kestrel__Certificates__Default__KeyPath"] = Constants.LocalCertificateKeyFilePath;
                 }
             })
-            .WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables())
             .WithOtlpExporter()
+            .WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables())
             .WithConfigurePreferredRunnerCommand(service)
             .WaitFor(dependencyResourceNames);
     }
@@ -233,8 +233,8 @@ internal sealed class PrepareServiceRunnersPipelineStep(
                     context.EnvironmentVariables["ASPNETCORE_Kestrel__Certificates__Default__KeyPath"] = Constants.LocalCertificateKeyFilePath;
                 }
             })
-            .WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables())
             .WithOtlpExporter()
+            .WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables())
             .WithRestartAndWaitForDebuggerCommand()
             .WithConfigurePreferredRunnerCommand(service)
             .WaitFor(dependencyResourceNames);
@@ -264,6 +264,8 @@ internal sealed class PrepareServiceRunnersPipelineStep(
             // https://github.com/dotnet/aspire/blob/v8.0.1/src/Aspire.Hosting/ContainerResourceBuilderExtensions.cs#L79
             builder.WithArgs(["mock", "--host", "0.0.0.0", "--dynamic", "/tmp/swagger.yml"])
                 .WithAnnotation(new ContainerMountAnnotation(openApiRunner.Specification, "/tmp/swagger.yml", ContainerMountType.BindMount, isReadOnly: true))
+                .WithOtlpExporter()
+                .WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables())
                 .WithConfigurePreferredRunnerCommand(service)
                 .WaitFor(dependencyResourceNames);
         }
