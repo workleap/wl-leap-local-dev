@@ -128,7 +128,7 @@ internal class FusionAuthDependencyHandler(
 
         var fusionAuthProvisioning = new DockerComposeServiceYaml()
         {
-            Image = new DockerComposeImageName("idp0dev0registry0fusionauth0provisioning.azurecr.io/workleap-fusionauth-provisioning:1.0.12"),
+            Image = new DockerComposeImageName("idp0dev0registry0fusionauth0provisioning.azurecr.io/workleap-fusionauth-provisioning:latest"),
             ContainerName = "fusionauth-provisioning",
             DependsOn = [AppServiceName],
             Restart = "no",
