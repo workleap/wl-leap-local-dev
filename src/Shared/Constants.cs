@@ -24,6 +24,8 @@ internal static class Constants
     public const string LeapDependencyAspireResourceType = "Leap dependency";
     public const string LeapAzureCliProxyResourceName = "azure-cli-credentials-proxy";
 
+    public const string FusionAuthProvisioningServiceName = "fusionauth-provisioning";
+
     // ".localhost" is a top-level domain (TLD) reserved by the Internet Engineering Task Force (IETF)
     // that is free to use localhost names as they would any other, without the risk of someone else owning it (like .com).
     // https://www.iana.org/assignments/special-use-domain-names/special-use-domain-names.xhtml

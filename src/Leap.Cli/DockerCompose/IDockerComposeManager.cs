@@ -11,4 +11,6 @@ internal interface IDockerComposeManager : IConfigureDockerCompose
     Task StartDockerComposeServiceAsync(string serviceName, ILogger logger, CancellationToken cancellationToken);
 
     Task StopDockerComposeServiceAsync(string serviceName, ILogger logger, CancellationToken cancellationToken);
+
+    Task ClearDockerComposeServiceVolumeAsync(string serviceName, ILogger logger, CancellationToken cancellationToken);
 }

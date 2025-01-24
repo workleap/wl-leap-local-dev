@@ -13,7 +13,7 @@ internal static class DockerComposeResourceExtensions
             {
                 ResourceType = resource.ResourceType,
                 CreationTimeStamp = DateTime.Now,
-                State = KnownResourceStates.Starting,
+                State = resource.InitialState,
                 Properties = [],
             });
     }

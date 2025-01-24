@@ -144,6 +144,7 @@ builder.UseDependencyInjection((services, context) =>
         ServiceDescriptor.Singleton<IPipelineStep, PrepareServiceRunnersPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, StartAzureCliDockerProxyPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, WireServicesAndDependenciesPipelineStep>(),
+        ServiceDescriptor.Singleton<IPipelineStep, WireFusionAuthProvisioningPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, EnsureDockerIsRunningPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, LoginAzureAcrPipelineStep>(),
         ServiceDescriptor.Singleton<IPipelineStep, WriteDockerComposeFilePipelineStep>(),

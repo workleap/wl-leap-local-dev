@@ -6,5 +6,7 @@ internal sealed class DockerComposeResource(string name, string containerName) :
 
     public string ResourceType { get; init; } = "Container";
 
+    public string InitialState { get; init; } = KnownResourceStates.Starting;
+
     public List<string> Urls { get; init; } = [];
 }

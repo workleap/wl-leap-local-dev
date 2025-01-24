@@ -13,7 +13,7 @@ internal class FusionAuthDependencyHandler(
     IConfigureDockerCompose dockerCompose,
     IConfigureEnvironmentVariables environmentVariable,
     IConfigureAppSettingsJson appSettingsJson,
-    DockerComposeManager dockerComposeManager,
+    IDockerComposeManager dockerComposeManager,
     ILogger<FusionAuthDependencyHandler> logger,
     IAspireManager aspireManager) : DependencyHandler<FusionAuthDependency>
 {
@@ -53,6 +53,13 @@ internal class FusionAuthDependencyHandler(
         this.AddResetFusionAuthCommand(fusionAuthResource);
 
         aspireManager.Builder.AddDockerComposeResource(fusionAuthResource);
+        aspireManager.Builder.AddDockerComposeResource(
+            new DockerComposeResource(Constants.FusionAuthProvisioningServiceName, Constants.FusionAuthProvisioningServiceName)
+            {
+                InitialState = KnownResourceStates.Finished
+            })
+        .WaitFor([AppServiceName]);
+
         return Task.CompletedTask;
     }
 
@@ -119,9 +126,24 @@ internal class FusionAuthDependencyHandler(
             SecurityOption = ["no-new-privileges:true"]
         };
 
+        var fusionAuthProvisioning = new DockerComposeServiceYaml()
+        {
+            Image = new DockerComposeImageName("idp0dev0registry0fusionauth0provisioning.azurecr.io/workleap-fusionauth-provisioning:1.0.12"),
+            ContainerName = "fusionauth-provisioning",
+            DependsOn = [AppServiceName],
+            Restart = "no",
+            Environment = new KeyValueCollectionYaml()
+            {
+                ["DOTNET_ENVIRONMENT"] = "Local",
+                ["Services__FusionAuth__BaseURL"] = $"http://{AppContainerName}:9011"
+            },
+            SecurityOption = ["no-new-privileges:true"]
+        };
+
         dockerComposeYaml.Services[AppServiceName] = fusionAuthApp;
         dockerComposeYaml.Services[DbServiceName] = fusionAuthDb;
         dockerComposeYaml.Services[ProxyServiceName] = fusionAuthProxy;
+        dockerComposeYaml.Services[Constants.FusionAuthProvisioningServiceName] = fusionAuthProvisioning;
 
         dockerComposeYaml.Volumes[ConfigVolumeName] = null;
         dockerComposeYaml.Volumes[DbVolumeName] = null;
@@ -156,6 +178,8 @@ internal class FusionAuthDependencyHandler(
                     await dockerComposeManager.ClearDockerComposeServiceVolumeAsync(ProxyServiceName, logger, context.CancellationToken);
                     await dockerComposeManager.ClearDockerComposeServiceVolumeAsync(DbServiceName, logger, context.CancellationToken);
 
+                    await dockerComposeManager.StartDockerComposeServiceAsync(DbServiceName, logger, context.CancellationToken);
+                    await dockerComposeManager.StartDockerComposeServiceAsync(ProxyServiceName, logger, context.CancellationToken);
                     await dockerComposeManager.StartDockerComposeServiceAsync(AppServiceName, logger, context.CancellationToken);
                 }
                 catch (Exception ex)

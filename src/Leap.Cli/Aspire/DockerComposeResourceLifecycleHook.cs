@@ -51,10 +51,19 @@ internal sealed class DockerComposeResourceLifecycleHook(
     {
         await notificationService.WaitForDependenciesAsync(resource, cancellationToken);
 
+        // Removing the potential "Waiting" state that was set by the WaitForDependenciesAsync.
+        await notificationService.PublishUpdateAsync(resource, snapshot => snapshot with
+        {
+            State = resource.InitialState,
+        });
+
         var resourceLogger = loggerService.GetLogger(resource);
         this._getContainerLogsSince[resource.ContainerName] = DateTimeOffset.Now;
 
-        await this.StartContainerAsync(resource, resourceLogger, cancellationToken);
+        if (resource.InitialState != KnownResourceStates.Finished)
+        {
+            await this.StartContainerAsync(resource, resourceLogger, cancellationToken);
+        }
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -66,12 +75,6 @@ internal sealed class DockerComposeResourceLifecycleHook(
     {
         try
         {
-            // Removing the potential "Waiting" state that was set by the WaitForDependenciesAsync.
-            await notificationService.PublishUpdateAsync(resource, snapshot => snapshot with
-            {
-                State = KnownResourceStates.Starting,
-            });
-
             await dockerComposeManager.StartDockerComposeServiceAsync(resource.Name, resourceLogger, cancellationToken);
         }
         catch (OperationCanceledException)
