@@ -6,6 +6,7 @@ using Aspire.Hosting.Lifecycle;
 using CliWrap;
 using Leap.Cli.Aspire;
 using Leap.Cli.Model;
+using Leap.Cli.Model.Traits;
 using Leap.Cli.Platform;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -57,7 +58,9 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
         }
 
         var hasNoServiceToRun = state.Services.Count == 0;
-        if (hasNoServiceToRun)
+        var hasDependenciesNeedingCliProxy = state.Dependencies.Any(x => x is IRequireAzCLIProxy);
+
+        if (hasNoServiceToRun && !hasDependenciesNeedingCliProxy)
         {
             return;
         }

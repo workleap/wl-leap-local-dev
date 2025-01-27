@@ -24,6 +24,8 @@ internal sealed class LoginAzureAcrPipelineStep(
         {
             await this.LoginToAzureAcrAsync(acrName, cancellationToken);
         }
+
+        await this.LoginToAzureAcrAsync(Constants.FusionAuthProvisioningAcrName, cancellationToken);
     }
 
     private async Task LoginToAzureAcrAsync(string acrName, CancellationToken cancellationToken)

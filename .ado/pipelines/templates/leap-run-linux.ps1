@@ -30,6 +30,7 @@ Process {
 
   dependencies:
     - type: mongo
+    - type: fusionauth
     - type: redis
     - type: postgres
     - type: sqlserver
@@ -60,6 +61,9 @@ Process {
     Assert-DockerContainer -containerName "leap-sqlserver"
     Assert-DockerContainer -containerName "leap-eventgrid"
     Assert-DockerContainer -containerName "leap-azurite"
+    Assert-DockerContainer -containerName "leap-fa-app"
+    Assert-DockerContainer -containerName "leap-fa-db"
+    Assert-DockerContainer -containerName "leap-fa-proxy"
 
     # Assert Event Grid settings generation from leap.yaml file and user settings
     $userEventGridSettingsFilePath = Join-Path "~" ".leap" "eventgridsettings.json"

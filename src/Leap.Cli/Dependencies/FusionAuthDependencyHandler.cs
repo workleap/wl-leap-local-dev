@@ -26,6 +26,7 @@ internal class FusionAuthDependencyHandler(
     private const string AppContainerName = "leap-fa-app";
     private const string DbContainerName = "leap-fa-db";
     private const string ProxyContainerName = "leap-fa-proxy";
+    private const string ProvisioningContainerName = "leap-fa-provisioning";
 
     private const string ConfigVolumeName = "leap_fa_app_config";
     private const string DbVolumeName = "leap_fa_db_data";
@@ -54,7 +55,7 @@ internal class FusionAuthDependencyHandler(
 
         aspireManager.Builder.AddDockerComposeResource(fusionAuthResource);
         aspireManager.Builder.AddDockerComposeResource(
-            new DockerComposeResource(Constants.FusionAuthProvisioningServiceName, Constants.FusionAuthProvisioningServiceName)
+            new DockerComposeResource(Constants.FusionAuthProvisioningServiceName, ProvisioningContainerName)
             {
                 InitialState = KnownResourceStates.Finished
             })
@@ -128,8 +129,8 @@ internal class FusionAuthDependencyHandler(
 
         var fusionAuthProvisioning = new DockerComposeServiceYaml()
         {
-            Image = new DockerComposeImageName("idp0dev0registry0fusionauth0provisioning.azurecr.io/workleap-fusionauth-provisioning:latest"),
-            ContainerName = "fusionauth-provisioning",
+            Image = new DockerComposeImageName(Constants.FusionAuthProvisioningImage),
+            ContainerName = ProvisioningContainerName,
             DependsOn = [AppServiceName],
             Restart = "no",
             Environment = new KeyValueCollectionYaml()
@@ -153,8 +154,8 @@ internal class FusionAuthDependencyHandler(
     {
         environmentVariables.AddRange(
         [
-            new EnvironmentVariable("ConnectionStrings__FusionAuth", HostConnectionString, EnvironmentVariableScope.Host),
-            new EnvironmentVariable("ConnectionStrings__FusionAuth", ContainerConnectionString, EnvironmentVariableScope.Container)
+            new EnvironmentVariable("Services__FusionAuth__BaseURL", HostConnectionString, EnvironmentVariableScope.Host),
+            new EnvironmentVariable("Services__FusionAuth__BaseURL", ContainerConnectionString, EnvironmentVariableScope.Container)
         ]);
     }
 
