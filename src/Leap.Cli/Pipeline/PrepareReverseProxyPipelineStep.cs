@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Aspire.Hosting.Lifecycle;
 using Leap.Cli.Aspire;
 using Leap.Cli.Model;
@@ -171,7 +171,7 @@ internal sealed class PrepareReverseProxyPipelineStep(IAspireManager aspireManag
             }
             catch (Exception ex)
             {
-                yarpLogger.LogError(ex, "An error occured while starting Leap's reverse proxy");
+                yarpLogger.LogError(ex, "An error occurred while starting Leap's reverse proxy");
 
                 await notificationService.PublishUpdateAsync(yarpResource, state => state with
                 {

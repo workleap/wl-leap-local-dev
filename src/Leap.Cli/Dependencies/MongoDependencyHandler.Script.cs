@@ -65,7 +65,7 @@ internal sealed partial class MongoDependencyHandler
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            throw new LeapException($"An error occured while writing the MongoDB replica set init script at '{ReplicaSetInitScriptHostFilePath}'", ex);
+            throw new LeapException($"An error occurred while writing the MongoDB replica set init script at '{ReplicaSetInitScriptHostFilePath}'", ex);
         }
     }
 }

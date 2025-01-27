@@ -61,7 +61,7 @@ internal sealed class EventGridDependencyHandler(
             catch (Exception ex)
             {
                 logger.LogWarning(
-                    "An error occured while writing an empty Event Grid settings file at {EventGridSettingsFilePath}. You may create it yourself by following our documentation: https://github.com/gsoft-inc/wl-eventgrid-emulator. {ExceptionMessage}",
+                    "An error occurred while writing an empty Event Grid settings file at {EventGridSettingsFilePath}. You may create it yourself by following our documentation: https://github.com/gsoft-inc/wl-eventgrid-emulator. {ExceptionMessage}",
                     Constants.UserEventGridSettingsFilePath, ex.Message);
             }
         }

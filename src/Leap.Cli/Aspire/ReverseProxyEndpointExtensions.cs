@@ -1,4 +1,4 @@
-﻿using Aspire.Hosting.Lifecycle;
+using Aspire.Hosting.Lifecycle;
 using Leap.Cli.Model;
 using Microsoft.Extensions.Logging;
 
@@ -114,7 +114,7 @@ internal static class ReverseProxyEndpointExtensions
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError(ex, "An error occured while correcting correcting the URLs of resources.");
+                    logger.LogError(ex, "An error occurred while correcting correcting the URLs of resources.");
                 }
             }
 

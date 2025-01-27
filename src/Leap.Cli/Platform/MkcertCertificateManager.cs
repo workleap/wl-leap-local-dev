@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
@@ -99,7 +99,7 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
             }
             catch (IOException ex)
             {
-                throw new LeapException($"An error occured while deleting the existing local development certificate '{Constants.LocalCertificateCrtFilePath}' and its key '{Constants.LocalCertificateKeyFilePath}' in order to recreate it to support more domains: {ex.Message.TrimEnd('.')}. Please try to delete the files manually.", ex);
+                throw new LeapException($"An error occurred while deleting the existing local development certificate '{Constants.LocalCertificateCrtFilePath}' and its key '{Constants.LocalCertificateKeyFilePath}' in order to recreate it to support more domains: {ex.Message.TrimEnd('.')}. Please try to delete the files manually.", ex);
             }
         }
     }
@@ -116,7 +116,7 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
         }
         catch (Exception ex)
         {
-            throw new LeapException($"An error occured while loading the local development certificate '{Constants.LocalCertificateCrtFilePath}' and its key '{Constants.LocalCertificateKeyFilePath}': {ex.Message}", ex);
+            throw new LeapException($"An error occurred while loading the local development certificate '{Constants.LocalCertificateCrtFilePath}' and its key '{Constants.LocalCertificateKeyFilePath}': {ex.Message}", ex);
         }
 
         return null;
@@ -197,7 +197,7 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
 
         if (certAuthorityInstallResult.ExitCode != 0)
         {
-            throw new LeapException("An error occured while installing the local certificate authority, please try again or run 'mkcert -install' manually, or follow the installation steps here: https://github.com/FiloSottile/mkcert");
+            throw new LeapException("An error occurred while installing the local certificate authority, please try again or run 'mkcert -install' manually, or follow the installation steps here: https://github.com/FiloSottile/mkcert");
         }
 
         logger.LogDebug("Creating the local development certificate...");
@@ -208,7 +208,27 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
 
         if (crtCreateResult.ExitCode != 0)
         {
-            throw new LeapException($"An error occured while creating the local certificate, mkcert returned exit code {crtCreateResult.ExitCode}");
+            throw new LeapException($"An error occurred while creating the local certificate, mkcert returned exit code {crtCreateResult.ExitCode}");
+        }
+
+        if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
+        {
+            // Docker containers started by Leap may run as another user (root-less). We need to make the certificate files readable by everyone, so they can be loaded from the containers.
+            TryUpdateCertificateFilePermissions(Constants.LocalCertificateCrtFilePath);
+            TryUpdateCertificateFilePermissions(Constants.LocalCertificateKeyFilePath);
+            TryUpdateCertificateFilePermissions(Constants.LeapCertificateAuthorityFilePath);
+
+            static void TryUpdateCertificateFilePermissions(string path)
+            {
+                try
+                {
+                    File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead | UnixFileMode.OtherRead);
+                }
+                catch
+                {
+                    // Ignore any errors
+                }
+            }
         }
 
         logger.LogInformation("Local development certificate created. Use it for HTTPS in your services:");

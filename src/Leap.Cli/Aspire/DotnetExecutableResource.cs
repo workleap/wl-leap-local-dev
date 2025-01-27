@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Reflection;
 using Aspire.Hosting.Lifecycle;
 using Leap.Cli.Platform.Telemetry;
@@ -75,7 +75,7 @@ internal static class DotnetExecutableResourceExtensions
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occured while trying to reflect on the 'Aspire.Hosting.Dcp.ApplicationExecutor' type");
+                logger.LogError(ex, "An error occurred while trying to reflect on the 'Aspire.Hosting.Dcp.ApplicationExecutor' type");
                 throw;
             }
         }

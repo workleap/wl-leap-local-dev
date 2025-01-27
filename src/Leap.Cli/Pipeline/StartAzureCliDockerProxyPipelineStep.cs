@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -204,7 +204,7 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occured while starting Azure CLI credentials proxy for Docker");
+                logger.LogError(ex, "An error occurred while starting Azure CLI credentials proxy for Docker");
 
                 await notificationService.PublishUpdateAsync(proxyResource, state => state with
                 {
