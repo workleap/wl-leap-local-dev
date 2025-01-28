@@ -9,9 +9,9 @@ internal sealed class DockerComposeYaml
     {
         this.Networks = new Dictionary<string, DockerComposeNetworkYaml?>
         {
-            [DockerComposeConstants.DefaultNetworkName] = new DockerComposeNetworkYaml
+            [DockerComposeConstants.LeapNetworkName] = new DockerComposeNetworkYaml
             {
-                Name = "leap",
+                Name = DockerComposeConstants.LeapNetworkName,
                 Driver = DockerComposeConstants.Driver.Bridge,
             },
         };
