@@ -3,6 +3,7 @@ using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
+using Leap.Cli.Platform.Telemetry;
 using Leap.Cli.Yaml;
 
 namespace Leap.Cli.Pipeline;
@@ -20,6 +21,7 @@ internal sealed class PrepareServiceRunnersPipelineStep(
         foreach (var service in state.Services.Values)
         {
             this.PrepareService(state, service, cancellationToken);
+            TelemetryMeters.TrackServiceStartWithName(service.Name);
         }
 
         return Task.CompletedTask;

@@ -22,7 +22,8 @@ public static class TelemetryMeters
     private static readonly Counter<long> AzuriteStartCounter = LeapMeter.CreateCounter<long>("dependency.azurite.starts");
     private static readonly Counter<long> FusionAuthStartCounter = LeapMeter.CreateCounter<long>("dependency.fusionauth.starts");
     private static readonly Counter<long> FusionAuthResetCounter = LeapMeter.CreateCounter<long>("dependency.fusionauth.resets");
-    private static readonly Counter<long> LeapServicesStartCounter = LeapMeter.CreateCounter<long>("leap.services.count");
+    private static readonly Counter<long> LeapServicesCounter = LeapMeter.CreateCounter<long>("leap.services.count");
+    private static readonly Counter<long> LeapServiceStartWithNameCounter = LeapMeter.CreateCounter<long>("leap.services.name.starts");
     private static readonly Counter<long> LeapPreferencesCommandCounter = LeapMeter.CreateCounter<long>("leap.preferences.command");
     private static readonly Counter<long> WaitForDebuggerCounter = LeapMeter.CreateCounter<long>("leap.waitfordebugger.command");
     private static readonly Counter<long> DockerResourceCommandCounter = LeapMeter.CreateCounter<long>("leap.docker.resource.command");
@@ -50,7 +51,14 @@ public static class TelemetryMeters
             tags.Add(key, value);
         }
 
-        LeapServicesStartCounter.Add(servicesCount, tags);
+        LeapServicesCounter.Add(servicesCount, tags);
+    }
+
+    public static void TrackServiceStartWithName(string serviceName)
+    {
+        var tags = GetTagsWithDefault();
+        tags.Add("serviceName", serviceName);
+        LeapServiceStartWithNameCounter.Add(1, tags);
     }
 
     public static void TrackPreferencesCommand() => LeapPreferencesCommandCounter.Add(1, Tags);
