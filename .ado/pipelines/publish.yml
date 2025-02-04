@@ -33,6 +33,12 @@ steps:
       packageType: "sdk"
       useGlobalJson: true
 
+  - task: UseDotNet@2
+        displayName: "Install .NET 8.0 SDK"
+        inputs:
+          packageType: sdk
+          version: "8.0.x"
+
   - pwsh: "./Build.ps1"
     displayName: "Build"
 
