@@ -74,6 +74,9 @@ internal sealed class PrepareServiceRunnersPipelineStep(
             case OpenApiRunner openApiRunner:
                 this.HandleOpenApiRunner(state, service, openApiRunner, dependencyResourceNames);
                 break;
+            case RemoteRunner:
+                this.HandleRemoteRunner(service);
+                break;
         }
 
         var serviceUrlEnvVarName = $"Services__{service.Name}__BaseUrl";
@@ -273,8 +276,25 @@ internal sealed class PrepareServiceRunnersPipelineStep(
         }
     }
 
+    private void HandleRemoteRunner(Service service)
+    {
+        var resource = new RemoteResource(service.Name);
+        aspire.Builder.AddResource(resource)
+            .WithEndpoint(name: EndpointNameHelper.GetLocalhostEndpointName(), isProxied: false)
+            .WithReverseProxyUrl(service.GetPrimaryUrl())
+            .WithConfigurePreferredRunnerCommand(service)
+            .WithInitialState(new CustomResourceSnapshot
+            {
+                ResourceType = "Remote",
+                State = KnownResourceStates.Running,
+                Properties = [],
+            });
+    }
+
     public Task StopAsync(ApplicationState state, CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
     }
+
+    private sealed class RemoteResource(string name) : Resource(name), IResourceWithEndpoints, IResourceWithWaitSupport;
 }

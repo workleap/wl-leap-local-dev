@@ -14,6 +14,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
     ILeapYamlAccessor leapYamlAccessor,
     IPortManager portManager,
     PreferencesSettingsManager preferencesManager,
+    LeapConfigManager leapConfigManager,
     IOptions<LeapGlobalOptions> options,
     ILogger<PopulateServicesFromYamlPipelineStep> logger)
     : IPipelineStep
@@ -63,7 +64,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
                     continue;
                 }
 
-                var service = new ServiceYamlConverter(logger, portManager, options.Value, preferences, leapYaml, serviceYaml).Convert(serviceName);
+                var service = new ServiceYamlConverter(logger, portManager, options.Value, preferences, leapYaml, serviceYaml, leapConfigManager).Convert(serviceName);
 
                 if (service != null && this.ShouldStartService(service))
                 {
@@ -91,7 +92,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
         return Task.CompletedTask;
     }
 
-    private sealed class ServiceYamlConverter(ILogger logger, IPortManager portManager, LeapGlobalOptions options, PreferencesSettings preferences, LeapYamlFile leapYaml, ServiceYaml serviceYaml)
+    private sealed class ServiceYamlConverter(ILogger logger, IPortManager portManager, LeapGlobalOptions options, PreferencesSettings preferences, LeapYamlFile leapYaml, ServiceYaml serviceYaml, LeapConfigManager leapConfigManager)
     {
         public Service? Convert(string serviceName)
         {
@@ -204,6 +205,19 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
             foreach (var runnerYaml in serviceYaml.Runners)
             {
                 this.ConvertRunnerFromYaml(service, runnerYaml);
+            }
+
+            if (leapConfigManager.EnvironmentName is not null)
+            {
+                logger.LogInformation("Remote-env option is set. Setting Active Runner to remote");
+                var remoteRunner = service.Runners.FirstOrDefault(runner => runner.Type == RemoteRunnerYaml.YamlDiscriminator);
+                if (remoteRunner is null)
+                {
+                    throw new LeapYamlConversionException($"A service '{service.Name}' is missing a remote runner in the configuration file '{leapYaml.Path}' and will be ignored.");
+                }
+
+                service.ActiveRunner = remoteRunner;
+                return;
             }
 
             if (preferences.GetPreferredRunnerForService(service.Name) is { } preferredRunnerName)
@@ -398,15 +412,45 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
 
         private Runner ConvertRemoteRunner(Service service, RemoteRunnerYaml remoteRunnerYaml)
         {
-            if (!Uri.TryCreate(remoteRunnerYaml.Url, UriKind.Absolute, out var url))
+            var dict = new Dictionary<string, Uri>();
+
+            if (!string.IsNullOrEmpty(remoteRunnerYaml.Url))
             {
-                throw new LeapYamlConversionException($"A remote runner has an invalid URL '{remoteRunnerYaml.Url}' in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
+                var url = ParseUri(remoteRunnerYaml.Url);
+                dict[""] = url;
             }
 
-            return new RemoteRunner
+            if (remoteRunnerYaml.Environments != null)
             {
-                Url = url.OriginalString,
-            };
+                foreach (var (key, value) in remoteRunnerYaml.Environments)
+                {
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        var url = ParseUri(value);
+                        dict[key] = url;
+                    }
+                }
+            }
+
+            if (dict.TryGetValue(leapConfigManager.EnvironmentName ?? string.Empty, out var environmentUrl))
+            {
+                return new RemoteRunner
+                {
+                    Url = environmentUrl.OriginalString,
+                };
+            }
+
+            throw new LeapYamlConversionException($"Remote-env environment '{leapConfigManager.EnvironmentName}' was not found in any configuration files '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
+
+            Uri ParseUri(string url)
+            {
+                if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+                {
+                    throw new LeapYamlConversionException($"A remote runner has an invalid URL '{url}' in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
+                }
+
+                return uri;
+            }
         }
 
         private static string EnsureAbsolutePath(string path, LeapYamlFile leapYaml)

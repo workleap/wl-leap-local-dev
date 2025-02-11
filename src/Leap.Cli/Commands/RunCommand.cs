@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.CommandLine.Parsing;
 using Leap.Cli.Configuration;
 using Leap.Cli.Platform;
 using Leap.Cli.Pipeline;
@@ -18,13 +19,32 @@ internal sealed class RunCommand : Command<RunCommandOptions, RunCommandHandler>
             IsRequired = false
         };
 
+        var remoteEnvOption = new Option<string>("--remote-env", parseArgument: ParseRemoteEnvArgument)
+        {
+            Description = "The remote environment for Leap services",
+            Arity = ArgumentArity.ZeroOrOne,
+            IsRequired = false
+        };
+
         this.AddOption(fileOption);
+        this.AddOption(remoteEnvOption);
+    }
+
+    private static string ParseRemoteEnvArgument(ArgumentResult result)
+    {
+        if (result.Tokens.Count == 0)
+        {
+            return "";
+        }
+
+        return result.Tokens[0].Value;
     }
 }
 
 internal sealed class RunCommandOptions : ICommandOptions
 {
     public string[] File { get; init; } = [];
+    public string? RemoteEnv { get; init; }
 }
 
 internal sealed class RunCommandHandler(LeapPipeline pipeline, LeapConfigManager leapConfigManager)
@@ -34,6 +54,8 @@ internal sealed class RunCommandHandler(LeapPipeline pipeline, LeapConfigManager
     {
         TelemetryMeters.TrackLeapRun();
         leapConfigManager.SetConfigurationFilesAsync(runCommandOptions.File);
+
+        leapConfigManager.SetEnvironmentName(runCommandOptions.RemoteEnv);
 
         await pipeline.RunAsync(cancellationToken);
 

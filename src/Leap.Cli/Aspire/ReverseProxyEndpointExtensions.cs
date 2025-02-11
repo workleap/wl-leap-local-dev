@@ -13,7 +13,7 @@ internal static class ReverseProxyEndpointExtensions
         return !service.Ingress.Host.IsLocalhost ? WithReverseProxyUrl(builder, service.ReverseProxyUrl) : builder;
     }
 
-    private static IResourceBuilder<T> WithReverseProxyUrl<T>(this IResourceBuilder<T> builder, string url)
+    public static IResourceBuilder<T> WithReverseProxyUrl<T>(this IResourceBuilder<T> builder, string url)
         where T : IResource
     {
         builder.ApplicationBuilder.Services.TryAddLifecycleHook<ReverseProxyEndpointLifecycleHook>();

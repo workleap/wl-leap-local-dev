@@ -19,6 +19,8 @@ internal sealed class LeapConfigManager : ILeapYamlAccessor, IDisposable
     private HashSet<string>? _leapYamlPaths;
     private LeapYamlFile[]? _cachedLeapYamls;
 
+    public string? EnvironmentName;
+
     public LeapConfigManager(IFileSystem fileSystem, IPlatformHelper platformHelper, ILogger<LeapConfigManager> logger)
     {
         this._fileSystem = fileSystem;
@@ -35,6 +37,11 @@ internal sealed class LeapConfigManager : ILeapYamlAccessor, IDisposable
         }
 
         this._leapYamlPaths = this.NormalizeFilePaths(configFilePaths);
+    }
+
+    public void SetEnvironmentName(string? environmentName)
+    {
+        this.EnvironmentName = environmentName;
     }
 
     [SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code", Justification = "This is a classic double-checked lock pattern.")]
