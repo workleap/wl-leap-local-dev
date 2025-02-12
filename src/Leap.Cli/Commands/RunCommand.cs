@@ -19,7 +19,7 @@ internal sealed class RunCommand : Command<RunCommandOptions, RunCommandHandler>
             IsRequired = false
         };
 
-        var remoteEnvOption = new Option<string>("--remote-env", parseArgument: ParseRemoteEnvArgument)
+        var remoteEnvOption = new Option<string?>("--remote-env", parseArgument: ParseRemoteEnvArgument)
         {
             Description = "The remote environment for Leap services",
             Arity = ArgumentArity.ZeroOrOne,
@@ -30,7 +30,7 @@ internal sealed class RunCommand : Command<RunCommandOptions, RunCommandHandler>
         this.AddOption(remoteEnvOption);
     }
 
-    private static string ParseRemoteEnvArgument(ArgumentResult result)
+    private static string? ParseRemoteEnvArgument(ArgumentResult result)
     {
         if (result.Tokens.Count == 0)
         {

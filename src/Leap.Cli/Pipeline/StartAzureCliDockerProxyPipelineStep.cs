@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Aspire.Hosting.Lifecycle;
 using CliWrap;
 using Leap.Cli.Aspire;
+using Leap.Cli.Configuration;
 using Leap.Cli.Model;
 using Leap.Cli.Model.Traits;
 using Leap.Cli.Platform;
@@ -21,35 +22,24 @@ namespace Leap.Cli.Pipeline;
 // Same concept as our Azure CLI credentials proxy for Docker containers,
 // but applied everywhere to speed-up the aquisition of Azure CLI tokens.
 // https://github.com/gsoft-inc/azure-cli-credentials-proxy
-internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
+internal sealed class StartAzureCliDockerProxyPipelineStep(
+    ICliWrap cliWrap,
+    IAspireManager aspireManager,
+    IConfigureEnvironmentVariables environmentVariables,
+    LeapConfigManager leapConfigManager,
+    ILogger<StartAzureCliDockerProxyPipelineStep> logger)
+    : IPipelineStep
 {
-    private readonly ICliWrap _cliWrap;
-    private readonly IAspireManager _aspireManager;
-    private readonly IConfigureEnvironmentVariables _environmentVariables;
-    private readonly ILogger _logger;
-
-    public StartAzureCliDockerProxyPipelineStep(
-        ICliWrap cliWrap,
-        IAspireManager aspireManager,
-        IConfigureEnvironmentVariables environmentVariables,
-        ILogger<StartAzureCliDockerProxyPipelineStep> logger)
-    {
-        this._aspireManager = aspireManager;
-        this._cliWrap = cliWrap;
-        this._environmentVariables = environmentVariables;
-        this._logger = logger;
-    }
-
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
         var isAzureCliInstalled = await this.IsAzureCliInstalledAsync(cancellationToken);
         if (!isAzureCliInstalled)
         {
-            this._logger.LogTrace("Azure CLI is not installed, skipping setup of Azure CLI proxy for Docker containers...");
+            logger.LogTrace("Azure CLI is not installed, skipping setup of Azure CLI proxy for Docker containers...");
             return;
         }
 
-        this._logger.LogDebug("Checking if logged in to Azure CLI...");
+        logger.LogDebug("Checking if logged in to Azure CLI...");
 
         var isAzureCliLoggedIn = await this.IsAzureCliLoggedInAsync(cancellationToken);
         if (!isAzureCliLoggedIn)
@@ -60,7 +50,7 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
         var hasNoServiceToRun = state.Services.Count == 0;
         var hasDependenciesNeedingCliProxy = state.Dependencies.Any(x => x is IRequireAzCLIProxy);
 
-        if (hasNoServiceToRun && !hasDependenciesNeedingCliProxy)
+        if (hasNoServiceToRun && !hasDependenciesNeedingCliProxy || leapConfigManager.RemoteEnvironmentName is not null)
         {
             return;
         }
@@ -73,7 +63,7 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
         try
         {
             var command = new Command("az").WithArguments("version").WithValidation(CommandResultValidation.ZeroExitCode);
-            await this._cliWrap.ExecuteBufferedAsync(command, cancellationToken);
+            await cliWrap.ExecuteBufferedAsync(command, cancellationToken);
             return true;
         }
         catch (Exception)
@@ -88,7 +78,7 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
         {
             var args = new[] { "account", "show", "--output", "json" };
             var command = new Command("az").WithArguments(args).WithValidation(CommandResultValidation.ZeroExitCode);
-            await this._cliWrap.ExecuteBufferedAsync(command, cancellationToken);
+            await cliWrap.ExecuteBufferedAsync(command, cancellationToken);
             return true;
         }
         catch (Exception)
@@ -99,10 +89,10 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
 
     private void AddAzureCliCredentialsProxyAspireResource()
     {
-        this._aspireManager.Builder.Services.TryAddLifecycleHook<HostAzureCliDockerProxyInAspireLifecycleHook>();
-        this._aspireManager.Builder.Services.TryAddSingleton(this._cliWrap);
+        aspireManager.Builder.Services.TryAddLifecycleHook<HostAzureCliDockerProxyInAspireLifecycleHook>();
+        aspireManager.Builder.Services.TryAddSingleton(cliWrap);
 
-        this._aspireManager.Builder.AddResource(new AzureCliDockerProxyResource())
+        aspireManager.Builder.AddResource(new AzureCliDockerProxyResource())
             .WithInitialState(new CustomResourceSnapshot
             {
                 ResourceType = Constants.LeapDependencyAspireResourceType,
@@ -111,7 +101,7 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
                 Properties = [new ResourcePropertySnapshot(CustomResourceKnownProperties.Source, "leap")]
             });
 
-        this._environmentVariables.Configure(x =>
+        environmentVariables.Configure(x =>
         {
             var proxyTokenEndpointUrl = $"http://127.0.0.1:{Constants.LeapAzureCliProxyPort}/token";
             const string dummyIdmsEndpoint = "dummy_required_value";
@@ -182,11 +172,11 @@ internal sealed class StartAzureCliDockerProxyPipelineStep : IPipelineStep
                 this._app.MapGet("/", static async (HttpContext context, CancellationToken requestCancellationToken) =>
                 {
                     const string htmlHelp = /*lang=html*/"""
-                        This service enables containerized applications to access your Azure CLI developer credentials
-                        when authenticating against Azure services using RBAC with your identity,
-                        without requiring the installation of the Azure CLI in the container.
-                        Learn more at <a href="https://github.com/gsoft-inc/azure-cli-credentials-proxy">https://github.com/gsoft-inc/azure-cli-credentials-proxy</a>.
-                        """;
+                                                         This service enables containerized applications to access your Azure CLI developer credentials
+                                                         when authenticating against Azure services using RBAC with your identity,
+                                                         without requiring the installation of the Azure CLI in the container.
+                                                         Learn more at <a href="https://github.com/gsoft-inc/azure-cli-credentials-proxy">https://github.com/gsoft-inc/azure-cli-credentials-proxy</a>.
+                                                         """;
 
                     context.Response.ContentType = MediaTypeNames.Text.Html;
                     await context.Response.WriteAsync(htmlHelp, cancellationToken: requestCancellationToken);

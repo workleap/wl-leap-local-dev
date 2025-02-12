@@ -36,6 +36,10 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
     {
         var leapYamls = await leapYamlAccessor.GetAllAsync(cancellationToken);
         var preferences = await preferencesManager.GetLeapUserPreferencesAsync(cancellationToken);
+        if (leapConfigManager.RemoteEnvironmentName is not null)
+        {
+            logger.LogInformation("Remote-env option is set. Setting Active Runner for services to remote");
+        }
 
         foreach (var leapYaml in leapYamls)
         {
@@ -207,9 +211,8 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
                 this.ConvertRunnerFromYaml(service, runnerYaml);
             }
 
-            if (leapConfigManager.EnvironmentName is not null)
+            if (leapConfigManager.RemoteEnvironmentName is not null)
             {
-                logger.LogInformation("Remote-env option is set. Setting Active Runner to remote");
                 var remoteRunner = service.Runners.FirstOrDefault(runner => runner.Type == RemoteRunnerYaml.YamlDiscriminator);
                 if (remoteRunner is null)
                 {
@@ -432,7 +435,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
                 }
             }
 
-            if (dict.TryGetValue(leapConfigManager.EnvironmentName ?? string.Empty, out var environmentUrl))
+            if (dict.TryGetValue(leapConfigManager.RemoteEnvironmentName ?? string.Empty, out var environmentUrl))
             {
                 return new RemoteRunner
                 {
@@ -440,7 +443,16 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
                 };
             }
 
-            throw new LeapYamlConversionException($"Remote-env environment '{leapConfigManager.EnvironmentName}' was not found in any configuration files '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
+            // The user has not defined a url field in the runner and has not defined the --remote-env option. Thus, we are setting the default to empty string;
+            if (leapConfigManager.RemoteEnvironmentName is null)
+            {
+                return new RemoteRunner
+                {
+                    Url = "",
+                };
+            }
+
+            throw new LeapYamlConversionException($"Remote-env environment '{leapConfigManager.RemoteEnvironmentName}' was not found in the configuration file '{leapYaml.Path}'. The service '{service.Name}' will be ignored.");
 
             Uri ParseUri(string url)
             {

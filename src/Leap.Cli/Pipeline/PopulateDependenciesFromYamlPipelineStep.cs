@@ -4,23 +4,21 @@ using Leap.Cli.Dependencies;
 using Leap.Cli.Dependencies.Azurite;
 using Leap.Cli.Model;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Pipeline;
 
-internal sealed class PopulateDependenciesFromYamlPipelineStep : IPipelineStep
+internal sealed class PopulateDependenciesFromYamlPipelineStep(ILeapYamlAccessor leapYamlAccessor, IServiceProvider serviceProvider, LeapConfigManager leapConfigManager, ILogger<PopulateDependenciesFromYamlPipelineStep> logger) : IPipelineStep
 {
-    private readonly ILeapYamlAccessor _leapYamlAccessor;
-    private readonly IServiceProvider _serviceProvider;
-
-    public PopulateDependenciesFromYamlPipelineStep(ILeapYamlAccessor leapYamlAccessor, IServiceProvider serviceProvider)
-    {
-        this._leapYamlAccessor = leapYamlAccessor;
-        this._serviceProvider = serviceProvider;
-    }
-
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
-        var leapConfigs = await this._leapYamlAccessor.GetAllAsync(cancellationToken);
+        if (leapConfigManager.RemoteEnvironmentName is not null)
+        {
+            logger.LogInformation("Remote-env option is set, skipping dependencies..");
+            return;
+        }
+
+        var leapConfigs = await leapYamlAccessor.GetAllAsync(cancellationToken);
 
         var allDependenciesYaml = leapConfigs.SelectMany(x => x.Content.Dependencies?.OfType<DependencyYaml>() ?? []).ToArray();
 
@@ -42,7 +40,7 @@ internal sealed class PopulateDependenciesFromYamlPipelineStep : IPipelineStep
             return;
         }
 
-        var dependencyHandler = this._serviceProvider.GetRequiredService<IDependencyYamlHandler<TYaml>>();
+        var dependencyHandler = serviceProvider.GetRequiredService<IDependencyYamlHandler<TYaml>>();
 
         var aggregatedDependencyYaml = typedDependenciesYaml.Aggregate(new TYaml(), dependencyHandler.Merge);
         var dependency = dependencyHandler.ToDependencyModel(aggregatedDependencyYaml);
