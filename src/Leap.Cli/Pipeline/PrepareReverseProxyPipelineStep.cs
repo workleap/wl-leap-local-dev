@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Aspire.Hosting.Lifecycle;
 using Leap.Cli.Aspire;
+using Leap.Cli.Configuration;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
 using Microsoft.AspNetCore.Builder;
@@ -14,10 +15,15 @@ using Yarp.ReverseProxy.Transforms;
 
 namespace Leap.Cli.Pipeline;
 
-internal sealed class PrepareReverseProxyPipelineStep(IAspireManager aspireManager) : IPipelineStep
+internal sealed class PrepareReverseProxyPipelineStep(IAspireManager aspireManager, LeapConfigManager leapConfigManager) : IPipelineStep
 {
     public Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
+        if (leapConfigManager.RemoteEnvironmentName is not null)
+        {
+            return Task.CompletedTask;
+        }
+
         var hasNoServiceToRun = state.Services.Count == 0;
         if (hasNoServiceToRun)
         {
