@@ -1,5 +1,6 @@
 using CliWrap;
 using CliWrap.Buffered;
+using Leap.Cli.Configuration;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
@@ -9,10 +10,16 @@ namespace Leap.Cli.Pipeline;
 
 internal sealed class LoginAzureAcrPipelineStep(
     ICliWrap cliWrap,
+    LeapConfigManager leapConfigManager,
     ILogger<LoginAzureAcrPipelineStep> logger) : IPipelineStep
 {
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
+        if (leapConfigManager.RemoteEnvironmentName is not null)
+        {
+            return;
+        }
+
         var acrNames = state.Services.Values
             .Select(x => x.ActiveRunner)
             .OfType<DockerRunner>()
