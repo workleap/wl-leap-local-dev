@@ -32,6 +32,11 @@ internal sealed class StartAzureCliDockerProxyPipelineStep(
 {
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
+        if (leapConfigManager.RemoteEnvironmentName is not null)
+        {
+            return;
+        }
+
         var isAzureCliInstalled = await this.IsAzureCliInstalledAsync(cancellationToken);
         if (!isAzureCliInstalled)
         {
@@ -50,7 +55,7 @@ internal sealed class StartAzureCliDockerProxyPipelineStep(
         var hasNoServiceToRun = state.Services.Count == 0;
         var hasDependenciesNeedingCliProxy = state.Dependencies.Any(x => x is IRequireAzCLIProxy);
 
-        if (hasNoServiceToRun && !hasDependenciesNeedingCliProxy || leapConfigManager.RemoteEnvironmentName is not null)
+        if (hasNoServiceToRun && !hasDependenciesNeedingCliProxy)
         {
             return;
         }

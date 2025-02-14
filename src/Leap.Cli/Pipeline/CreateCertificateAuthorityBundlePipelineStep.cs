@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using Leap.Cli.Configuration;
 using Leap.Cli.Model;
 using Microsoft.Extensions.Logging;
 
@@ -10,11 +11,18 @@ namespace Leap.Cli.Pipeline;
 /// Mkcert's self-signed CA will also be part of this bundle, so containers can trust
 /// local HTTPS endpoints protected with any certificate issued by mkcert.
 /// </summary>
-internal sealed class CreateCertificateAuthorityBundlePipelineStep(ILogger<CreateCertificateAuthorityBundlePipelineStep> logger)
+internal sealed class CreateCertificateAuthorityBundlePipelineStep(
+    ILogger<CreateCertificateAuthorityBundlePipelineStep> logger,
+    LeapConfigManager leapConfigManager)
     : IPipelineStep
 {
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
+        if (leapConfigManager.RemoteEnvironmentName is not null)
+        {
+            return;
+        }
+
         logger.LogDebug("Creating a certificate authority bundle for Docker containers at location '{Path}'", Constants.LeapCertificateAuthorityFilePath);
 
         try

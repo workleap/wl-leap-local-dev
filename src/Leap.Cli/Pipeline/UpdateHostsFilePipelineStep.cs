@@ -1,4 +1,5 @@
 ﻿using Leap.Cli.Commands;
+using Leap.Cli.Configuration;
 using Leap.Cli.Dependencies;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
@@ -6,25 +7,22 @@ using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Pipeline;
 
-internal sealed class UpdateHostsFilePipelineStep : IPipelineStep
+internal sealed class UpdateHostsFilePipelineStep(
+    IPlatformHelper platformHelper,
+    IHostsFileManager hostsFileManager,
+    LeapConfigManager leapConfigManager,
+    ILogger<UpdateHostsFilePipelineStep> logger) : IPipelineStep
 {
-    private readonly IPlatformHelper _platformHelper;
-    private readonly IHostsFileManager _hostsFileManager;
-    private readonly ILogger _logger;
-
-    public UpdateHostsFilePipelineStep(
-        IPlatformHelper platformHelper,
-        IHostsFileManager hostsFileManager,
-        ILogger<UpdateHostsFilePipelineStep> logger)
-    {
-        this._platformHelper = platformHelper;
-        this._hostsFileManager = hostsFileManager;
-        this._logger = logger;
-    }
+    private readonly ILogger _logger = logger;
 
     public async Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
     {
-        var existingHostnames = await this._hostsFileManager.GetLeapManagedHostnamesAsync(cancellationToken);
+        if (leapConfigManager.RemoteEnvironmentName is not null)
+        {
+            return;
+        }
+
+        var existingHostnames = await hostsFileManager.GetLeapManagedHostnamesAsync(cancellationToken);
         if (existingHostnames == null)
         {
             return;
@@ -49,21 +47,17 @@ internal sealed class UpdateHostsFilePipelineStep : IPipelineStep
         var finalUniqueHostnames = existingHostnames.Concat(requiredHostnames).ToArray();
         this._logger.LogTrace("Updating hosts file to add the following hostnames: {Hostnames}", string.Join(", ", missingHostnames));
 
-        if (this._platformHelper.IsCurrentProcessElevated)
+        if (platformHelper.IsCurrentProcessElevated)
         {
-            await this._hostsFileManager.UpdateLeapManagedHostnamesAsync(finalUniqueHostnames, cancellationToken);
+            await hostsFileManager.UpdateLeapManagedHostnamesAsync(finalUniqueHostnames, cancellationToken);
         }
         else
         {
             this._logger.LogWarning("Please accept to elevate the process to update the hosts file");
 
-            var leapArgs = new[]
-            {
-                UpdateHostsFileCommand.CommandName,
-                string.Join(UpdateHostsFileCommand.HostSeparator, finalUniqueHostnames),
-            };
+            var leapArgs = new[] { UpdateHostsFileCommand.CommandName, string.Join(UpdateHostsFileCommand.HostSeparator, finalUniqueHostnames), };
 
-            await this._platformHelper.StartLeapElevatedAsync(leapArgs, cancellationToken);
+            await platformHelper.StartLeapElevatedAsync(leapArgs, cancellationToken);
         }
     }
 

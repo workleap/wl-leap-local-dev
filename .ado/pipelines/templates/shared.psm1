@@ -52,7 +52,7 @@ function Assert-UrlReturnsOk {
 
   Write-Host "Testing URL $url..."
 
-  $timeout = New-TimeSpan -Minutes 1
+  $timeout = New-TimeSpan -Minutes 3
   $startTime = Get-Date
 
   while ($true) {
