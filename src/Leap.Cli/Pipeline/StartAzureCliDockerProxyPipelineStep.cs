@@ -21,7 +21,7 @@ namespace Leap.Cli.Pipeline;
 
 // Same concept as our Azure CLI credentials proxy for Docker containers,
 // but applied everywhere to speed-up the aquisition of Azure CLI tokens.
-// https://github.com/gsoft-inc/azure-cli-credentials-proxy
+// https://github.com/workleap/azure-cli-credentials-proxy
 internal sealed class StartAzureCliDockerProxyPipelineStep(
     ICliWrap cliWrap,
     IAspireManager aspireManager,
@@ -167,7 +167,7 @@ internal sealed class StartAzureCliDockerProxyPipelineStep(
                 this._app = builder.Build();
 
                 // See our Azure CLI credentials proxy which is distributed as a Docker image:
-                // https://github.com/gsoft-inc/azure-cli-credentials-proxy/blob/1.0.1/Program.cs
+                // https://github.com/workleap/azure-cli-credentials-proxy/blob/1.0.1/Program.cs
                 this._app.MapGet("/token", async (string resource, CancellationToken requestCancellationToken) =>
                 {
                     return await this.GetAccessTokenAsync(resource, requestCancellationToken);
@@ -180,7 +180,7 @@ internal sealed class StartAzureCliDockerProxyPipelineStep(
                                                          This service enables containerized applications to access your Azure CLI developer credentials
                                                          when authenticating against Azure services using RBAC with your identity,
                                                          without requiring the installation of the Azure CLI in the container.
-                                                         Learn more at <a href="https://github.com/gsoft-inc/azure-cli-credentials-proxy">https://github.com/gsoft-inc/azure-cli-credentials-proxy</a>.
+                                                         Learn more at <a href="https://github.com/workleap/azure-cli-credentials-proxy">https://github.com/workleap/azure-cli-credentials-proxy</a>.
                                                          """;
 
                     context.Response.ContentType = MediaTypeNames.Text.Html;
