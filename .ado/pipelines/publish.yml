@@ -38,12 +38,19 @@ steps:
     inputs:
       packageType: sdk
       version: "8.0.x"
-
-  - pwsh: "./Build.ps1"
-    displayName: "Build"
-
+      
   - task: NuGetAuthenticate@1
     displayName: "NuGet authenticate"
+    
+  - template: templates/install-mkcert.yml
+  
+  - task: AzureCLI@2
+    displayName: "build and test"
+    inputs:
+      azureSubscription: "ARM - gsoft-idp-dev"
+      scriptType: pscore
+      scriptLocation: scriptPath
+      scriptPath: "./Build.ps1"
 
   - task: NuGetCommand@2
     displayName: "NuGet Push"
