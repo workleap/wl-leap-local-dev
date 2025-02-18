@@ -1,4 +1,4 @@
-﻿using Leap.Cli.Commands;
+using Leap.Cli.Commands;
 using Leap.Cli.Configuration;
 using Leap.Cli.Dependencies;
 using Leap.Cli.Model;
@@ -47,18 +47,21 @@ internal sealed class UpdateHostsFilePipelineStep(
         var finalUniqueHostnames = existingHostnames.Concat(requiredHostnames).ToArray();
         this._logger.LogTrace("Updating hosts file to add the following hostnames: {Hostnames}", string.Join(", ", missingHostnames));
 
-        if (platformHelper.IsCurrentProcessElevated)
+        try
         {
             await hostsFileManager.UpdateLeapManagedHostnamesAsync(finalUniqueHostnames, cancellationToken);
+            return;
         }
-        else
+        catch when (!platformHelper.IsCurrentProcessElevated)
         {
-            this._logger.LogWarning("Please accept to elevate the process to update the hosts file");
-
-            var leapArgs = new[] { UpdateHostsFileCommand.CommandName, string.Join(UpdateHostsFileCommand.HostSeparator, finalUniqueHostnames), };
-
-            await platformHelper.StartLeapElevatedAsync(leapArgs, cancellationToken);
+            // Ignore, will try to elevate the process
         }
+
+        this._logger.LogWarning("Please accept to elevate the process to update the hosts file");
+
+        var leapArgs = new[] { UpdateHostsFileCommand.CommandName, string.Join(UpdateHostsFileCommand.HostSeparator, finalUniqueHostnames), };
+
+        await platformHelper.StartLeapElevatedAsync(leapArgs, cancellationToken);
     }
 
     public Task StopAsync(ApplicationState state, CancellationToken cancellationToken)

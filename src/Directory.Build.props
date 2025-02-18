@@ -4,14 +4,14 @@
     <Authors>Workleap</Authors>
     <Owners>Workleap</Owners>
     <PackageProjectUrl>https://dev.azure.com/gsoft/Shared-Assets/_git/Leap</PackageProjectUrl>
-    <LangVersion>12</LangVersion>
+    <LangVersion>13</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Description>Local Environment Application Proxy</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Workleap.DotNet.CodingStandards" Version="1.0.0">
+    <PackageReference Include="Workleap.DotNet.CodingStandards" Version="1.0.2">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

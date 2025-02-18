@@ -6,7 +6,7 @@ trigger:
 jobs:
   - job: build
     pool:
-      vmImage: "ubuntu-latest"
+      vmImage: ubuntu-latest
 
     steps:
       - checkout: self
@@ -25,8 +25,15 @@ jobs:
           packageType: sdk
           version: "8.0.x"
 
-      - pwsh: "./Build.ps1"
-        displayName: "Build"
+      - template: templates/install-mkcert.yml
+
+      - task: AzureCLI@2
+        displayName: "build and test"
+        inputs:
+          azureSubscription: "ARM - gsoft-idp-dev"
+          scriptType: pscore
+          scriptLocation: scriptPath
+          scriptPath: "./Build.ps1"
 
       - task: NuGetAuthenticate@1
         displayName: "NuGet authenticate"

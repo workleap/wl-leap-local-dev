@@ -1,18 +1,23 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.35806.103 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Leap.Cli", "Leap.Cli\Leap.Cli.csproj", "{EF73C3A9-4E0D-4181-B323-EE338B945276}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Leap.Cli.Tests", "Leap.Cli.Tests\Leap.Cli.Tests.csproj", "{4B7DA5F6-B9A2-4924-90F0-B2F28BFCECC3}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "files", "files", "{048CE887-816E-4630-BF2C-9FA972F57422}"
 	ProjectSection(SolutionItems) = preProject
-		Directory.Build.props = Directory.Build.props
 		..\.editorconfig = ..\.editorconfig
+		Directory.Build.props = Directory.Build.props
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Workleap.Extensions.Leap", "Workleap.Extensions.Leap\Workleap.Extensions.Leap.csproj", "{DB43C913-BBDD-4349-BAA6-2FE9D4F7DBC3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Leap.StartupHook", "Leap.StartupHook\Leap.StartupHook.csproj", "{3FA26757-5631-4E91-94C0-098C07F663D5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Leap.Testing", "Leap.Testing\Leap.Testing.csproj", "{88455992-5BB5-4806-AE21-B0B177F977C7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -36,5 +41,15 @@ Global
 		{3FA26757-5631-4E91-94C0-098C07F663D5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3FA26757-5631-4E91-94C0-098C07F663D5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3FA26757-5631-4E91-94C0-098C07F663D5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{88455992-5BB5-4806-AE21-B0B177F977C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{88455992-5BB5-4806-AE21-B0B177F977C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{88455992-5BB5-4806-AE21-B0B177F977C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{88455992-5BB5-4806-AE21-B0B177F977C7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B48BA758-9D04-47CF-BA26-5D34EB31EF3C}
 	EndGlobalSection
 EndGlobal
