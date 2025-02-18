@@ -6,8 +6,8 @@
     "Shared-Assets/Leap"
   ],
   "extends": [
-    "github>gsoft-inc/renovate-config",
-    "github>gsoft-inc/renovate-config:all-automerge.json"
+    "github>workleap/renovate-config",
+    "github>workleap/renovate-config:all-automerge.json"
   ],
   "customManagers": [
     {
