@@ -98,10 +98,21 @@ public sealed class LeapTestContext : IAsyncDisposable
             {
                 throw new InvalidOperationException("leap is still running after killing it");
             }
-            else if (await this.IsHealthy())
+            else
             {
-                await OnLeapStarted();
-                return;
+                try
+                {
+                    await this.InitializeDcpResourceUrls();
+                    if (await this.IsHealthy())
+                    {
+                        await OnLeapStarted();
+                        return;
+                    }
+                }
+                catch
+                {
+                    // ignore errors, continue with the slower path
+                }
             }
         }
 
@@ -157,6 +168,11 @@ public sealed class LeapTestContext : IAsyncDisposable
             await Policy.Handle<Exception>()
                 .WaitAndRetryAsync(retryCount: 10, i => TimeSpan.FromSeconds(i))
                 .ExecuteAsync(this.InitializeDcpResourceUrls);
+
+            if (this._serviceUrls.IsEmpty)
+            {
+                throw new InvalidOperationException("No service URL found");
+            }
 
             this._logger.LogInformation("Leap started and healthy");
         }
