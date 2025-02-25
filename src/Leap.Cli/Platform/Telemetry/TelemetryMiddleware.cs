@@ -2,7 +2,6 @@ using System.CommandLine.Builder;
 using System.CommandLine.Invocation;
 using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
-using OpenTelemetry.Trace;
 
 namespace Leap.Cli.Platform.Telemetry;
 
@@ -39,7 +38,7 @@ internal static class TelemetryMiddleware
         catch (Exception ex)
         {
             rootActivity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-            rootActivity?.RecordException(ex);
+            rootActivity?.AddException(ex);
 
             throw;
         }

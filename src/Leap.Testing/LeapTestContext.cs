@@ -180,7 +180,7 @@ public sealed class LeapTestContext : IAsyncDisposable
 
     private async Task KillLeap()
     {
-        foreach (var processName in (string[])["Workleap.Leap", "leap", "dcp", "dcpctrl", "dcpproc"])
+        foreach (var processName in (string[])["Workleap.Leap", "leap", "dcp", "dcpctrl", "dcpproc", "aspire.dashboard"])
         {
             var processes = Process.GetProcessesByName(processName);
             foreach (var process in processes)

@@ -51,7 +51,7 @@ internal static class DotnetExecutableResourceExtensions
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<DotnetExecutableLifecycleHook> _logger;
 
-        private readonly Type _applicationExecutorType;
+        private readonly Type _applicationOrchestratorType;
         private readonly MethodInfo _startResourceAsyncMethodInfo;
         private readonly MethodInfo _stopResourceAsyncMethodInfo;
 
@@ -62,20 +62,21 @@ internal static class DotnetExecutableResourceExtensions
             this._serviceProvider = serviceProvider;
             this._logger = logger;
 
+            const string typeName = "Aspire.Hosting.Orchestrator.ApplicationOrchestrator";
             try
             {
-                this._applicationExecutorType = typeof(DistributedApplication).Assembly.GetType("Aspire.Hosting.Dcp.ApplicationExecutor")
-                    ?? throw new InvalidOperationException("Type 'Aspire.Hosting.Dcp.ApplicationExecutor' not found, check if it still exists in .NET Aspire's recent code: https://github.com/dotnet/aspire/blob/v9.0.0-rc.1.24511.1/src/Aspire.Hosting/Dcp/ApplicationExecutor.cs");
+                this._applicationOrchestratorType = typeof(DistributedApplication).Assembly.GetType(typeName)
+                    ?? throw new InvalidOperationException($"Type '{typeName}' not found, check if it still exists in .NET Aspire's recent code: https://github.com/dotnet/aspire/blob/8896123261cb54a75cef50b3579be067ccc8bf73/src/Aspire.Hosting/Orchestrator/ApplicationOrchestrator.cs#L15");
 
-                this._startResourceAsyncMethodInfo = this._applicationExecutorType.GetMethod("StartResourceAsync", BindingFlags.NonPublic | BindingFlags.Instance, [typeof(string), typeof(CancellationToken)])
-                    ?? throw new InvalidOperationException("Method 'StartResourceAsync' not found on type 'Aspire.Hosting.Dcp.ApplicationExecutor', check if it still exists in .NET Aspire's recent code: https://github.com/dotnet/aspire/blob/v9.0.0-rc.1.24511.1/src/Aspire.Hosting/Dcp/ApplicationExecutor.cs#L2050");
+                this._startResourceAsyncMethodInfo = this._applicationOrchestratorType.GetMethod("StartResourceAsync", BindingFlags.Public | BindingFlags.Instance, [typeof(string), typeof(CancellationToken)])
+                    ?? throw new InvalidOperationException($"Method 'StartResourceAsync' not found on type '{typeName}', check if it still exists in .NET Aspire's recent code: https://github.com/dotnet/aspire/blob/8896123261cb54a75cef50b3579be067ccc8bf73/src/Aspire.Hosting/Orchestrator/ApplicationOrchestrator.cs#L195");
 
-                this._stopResourceAsyncMethodInfo = this._applicationExecutorType.GetMethod("StopResourceAsync", BindingFlags.NonPublic | BindingFlags.Instance, [typeof(string), typeof(CancellationToken)])
-                    ?? throw new InvalidOperationException("Method 'StopResourceAsync' not found on type 'Aspire.Hosting.Dcp.ApplicationExecutor', check if it still exists in .NET Aspire's recent code: https://github.com/dotnet/aspire/blob/v9.0.0-rc.1.24511.1/src/Aspire.Hosting/Dcp/ApplicationExecutor.cs#L2013");
+                this._stopResourceAsyncMethodInfo = this._applicationOrchestratorType.GetMethod("StopResourceAsync", BindingFlags.Public | BindingFlags.Instance, [typeof(string), typeof(CancellationToken)])
+                    ?? throw new InvalidOperationException($"Method 'StopResourceAsync' not found on type '{typeName}', check if it still exists in .NET Aspire's recent code: https://github.com/dotnet/aspire/blob/8896123261cb54a75cef50b3579be067ccc8bf73/src/Aspire.Hosting/Orchestrator/ApplicationOrchestrator.cs#L224");
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred while trying to reflect on the 'Aspire.Hosting.Dcp.ApplicationExecutor' type");
+                logger.LogError(ex, $"An error occurred while trying to reflect on the '{typeName}' type");
                 throw;
             }
         }
@@ -85,7 +86,7 @@ internal static class DotnetExecutableResourceExtensions
             try
             {
                 // We copied the "Restart" logic from the built-in "Restart" command:
-                // https://github.com/dotnet/aspire/blob/v9.0.0-rc.1.24511.1/src/Aspire.Hosting/ApplicationModel/CommandsConfigurationExtensions.cs#L93-L94
+                // https://github.com/dotnet/aspire/blob/v9.1.0/src/Aspire.Hosting/ApplicationModel/CommandsConfigurationExtensions.cs#L92-L93
                 await (Task)this._stopResourceAsyncMethodInfo.Invoke(this._applicationExecutor, [resourceName, cancellationToken])!;
                 await (Task)this._startResourceAsyncMethodInfo.Invoke(this._applicationExecutor, [resourceName, cancellationToken])!;
             }
@@ -97,7 +98,7 @@ internal static class DotnetExecutableResourceExtensions
 
         public Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
         {
-            this._applicationExecutor = this._serviceProvider.GetRequiredService(this._applicationExecutorType);
+            this._applicationExecutor = this._serviceProvider.GetRequiredService(this._applicationOrchestratorType);
 
             foreach (var dotnetExecutable in appModel.Resources.OfType<DotnetExecutableResource>())
             {
