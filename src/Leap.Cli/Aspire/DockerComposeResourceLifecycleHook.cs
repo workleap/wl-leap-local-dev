@@ -60,7 +60,7 @@ internal sealed class DockerComposeResourceLifecycleHook(
         var resourceLogger = loggerService.GetLogger(resource);
         this._getContainerLogsSince[resource.ContainerName] = DateTimeOffset.Now;
 
-        if (resource.InitialState != KnownResourceStates.Finished)
+        if (!resource.HasAnnotationOfType<ExplicitStartupAnnotation>())
         {
             await this.StartContainerAsync(resource, resourceLogger, cancellationToken);
         }

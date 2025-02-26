@@ -54,12 +54,9 @@ internal class FusionAuthDependencyHandler(
         this.AddResetFusionAuthCommand(fusionAuthResource);
 
         aspireManager.Builder.AddDockerComposeResource(fusionAuthResource);
-        aspireManager.Builder.AddDockerComposeResource(
-            new DockerComposeResource(Constants.FusionAuthProvisioningServiceName, ProvisioningContainerName)
-            {
-                InitialState = KnownResourceStates.Finished
-            })
-        .WaitFor([AppServiceName]);
+        aspireManager.Builder.AddDockerComposeResource(new DockerComposeResource(Constants.FusionAuthProvisioningServiceName, ProvisioningContainerName))
+            .WithExplicitStart()
+            .WaitFor([AppServiceName]);
 
         return Task.CompletedTask;
     }
