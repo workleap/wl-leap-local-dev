@@ -1,4 +1,5 @@
 using Leap.Cli.Aspire;
+using Leap.Cli.Configuration;
 using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Model;
@@ -13,7 +14,8 @@ internal sealed class PrepareServiceRunnersPipelineStep(
     IConfigureEnvironmentVariables environmentVariables,
     IPortManager portManager,
     IConfigureAppSettingsJson appSettingsJson,
-    IConfigureDockerCompose dockerCompose)
+    IConfigureDockerCompose dockerCompose,
+    LeapConfigManager leapConfiguration)
     : IPipelineStep
 {
     public Task StartAsync(ApplicationState state, CancellationToken cancellationToken)
@@ -113,13 +115,14 @@ internal sealed class PrepareServiceRunnersPipelineStep(
             .WithOtlpExporter()
             .WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables())
             .WithConfigurePreferredRunnerCommand(service)
+            .WithExplicitStart(leapConfiguration)
             .WaitFor(dependencyResourceNames);
     }
 
     private void HandleDockerRunner(Service service, DockerRunner dockerRunner, string[] dependencyResourceNames)
     {
         // .NET Aspire has shown to be unstable with a large number of containers at startup, so we use Docker Compose for now
-        // It provides long-running (persistant) containers, which is useful for services that need to be up all the time
+        // It provides long-running (persistent) containers, which is useful for services that need to be up all the time
         var dockerComposeServiceYaml = new DockerComposeServiceYaml
         {
             Image = new DockerComposeImageName(dockerRunner.ImageAndTag),
@@ -199,7 +202,7 @@ internal sealed class PrepareServiceRunnersPipelineStep(
             })
             .WithReverseProxyUrl(service)
             .WithConfigurePreferredRunnerCommand(service)
-            .WaitFor(dependencyResourceNames);
+            .WithExplicitStart(leapConfiguration);
     }
 
     private static IEnumerable<string> GetDockerExtraHostsRuntimeArgs(ApplicationState state)
@@ -242,6 +245,7 @@ internal sealed class PrepareServiceRunnersPipelineStep(
             .WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables())
             .WithRestartAndWaitForDebuggerCommand()
             .WithConfigurePreferredRunnerCommand(service)
+            .WithExplicitStart(leapConfiguration)
             .WaitFor(dependencyResourceNames);
     }
 
@@ -256,7 +260,8 @@ internal sealed class PrepareServiceRunnersPipelineStep(
         var builder = aspire.Builder.AddContainer(service.Name, "stoplight/prism", tag: "5")
             .WithEndpoint(name: EndpointNameHelper.GetLocalhostEndpointName(), scheme: "http", port: service.Ingress.LocalhostPort, targetPort: prismContainerPort)
             .WithReverseProxyUrl(service)
-            .WithContainerRuntimeArgs([.. GetDockerExtraHostsRuntimeArgs(state)]);
+            .WithContainerRuntimeArgs([.. GetDockerExtraHostsRuntimeArgs(state)])
+            .WithExplicitStart(leapConfiguration);
 
         if (openApiRunner.IsUrl)
         {
@@ -297,4 +302,17 @@ internal sealed class PrepareServiceRunnersPipelineStep(
     }
 
     private sealed class RemoteResource(string name) : Resource(name), IResourceWithEndpoints, IResourceWithWaitSupport;
+}
+
+file static class Extensions
+{
+    public static IResourceBuilder<T> WithExplicitStart<T>(this IResourceBuilder<T> builder, LeapConfigManager configManager) where T : IResource
+    {
+        if (configManager.StartServicesExplicitly)
+        {
+            builder.WithExplicitStart();
+        }
+
+        return builder;
+    }
 }

@@ -33,7 +33,7 @@ Process {
 
         Exec { & dotnet clean -c Release }
         Exec { & dotnet build -c Release /p:Version=$version }
-        Exec { & dotnet test  -c Release --no-build --results-directory "$outputDir" --no-restore --logger "trx" --logger "console;verbosity=detailed" }
+        Exec { & dotnet test  -c Release --no-build --results-directory "$outputDir" --no-restore --logger "trx" --logger "console;verbosity=detailed" --blame-hang-timeout 10m }
         Exec { & dotnet pack  -c Release --no-build --output "$outputDir" /p:Version=$version }
     }
     finally {

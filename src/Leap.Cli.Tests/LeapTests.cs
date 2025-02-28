@@ -1,13 +1,14 @@
 #pragma warning disable CA1849 // Call async methods when in an async method (CreateTextFile doesn't need to be async)
-using Workleap.Leap.Testing;
 using Meziantou.Extensions.Logging.Xunit;
 using Meziantou.Framework;
 using Microsoft.Extensions.Logging;
+using Polly;
+using Workleap.Leap.Testing;
 
 namespace Leap.Cli.Tests;
 public sealed class LeapTests(ITestOutputHelper testOutputHelper)
 {
-    private LeapTestContext CreateContext(string? remoteEnvironmentName = null)
+    private LeapTestContext CreateContext(string? remoteEnvironmentName = null, CancellationToken cancellationToken = default)
     {
         // Find local Leap executable
         var leapExecutablePath = FullPath.FromPath(typeof(LeapTests).Assembly.Location).Parent / "Workleap.Leap" + (OperatingSystem.IsWindows() ? ".exe" : "");
@@ -16,8 +17,13 @@ public sealed class LeapTests(ITestOutputHelper testOutputHelper)
             throw new InvalidOperationException($"Cannot find Leap executable at '{leapExecutablePath}'");
         }
 
-        var factory = LoggerFactory.Create(builder => builder.AddProvider(new XUnitLoggerProvider(testOutputHelper)));
-        return new LeapTestContext(factory, remoteEnvironmentName, CancellationToken.None)
+        var factory = LoggerFactory.Create(builder =>
+        {
+            builder.AddProvider(new XUnitLoggerProvider(testOutputHelper));
+            builder.SetMinimumLevel(LogLevel.Trace);
+        });
+
+        return new LeapTestContext(factory, remoteEnvironmentName, cancellationToken)
         {
             KillExistingLeapInstancesOnStart = true,
             KillLeapInstanceOnStop = true,
@@ -108,5 +114,65 @@ public sealed class LeapTests(ITestOutputHelper testOutputHelper)
 
         Assert.Throws<InvalidOperationException>(() => context.GetUrl("app2"));
         Assert.Throws<InvalidOperationException>(() => context.GetUrl("mongo"));
+    }
+
+    [Fact]
+    public async Task StartServicesExplicitly()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+        await using var context = this.CreateContext(cancellationToken: cts.Token);
+
+        await using var tempFolder = TemporaryDirectory.Create();
+        await CliWrap.Cli.Wrap("dotnet")
+            .WithArguments(["new", "webapi", "--name", "aspnetcorewebapi", "--output", tempFolder.FullPath])
+            .ExecuteAsync();
+
+        var csprojPath = tempFolder.FullPath / "aspnetcorewebapi.csproj";
+
+        context.AddConfigurationFiles(tempFolder.CreateTextFile("leap.yaml", $$"""
+            services:
+              app:
+                ingress:
+                  host: app.workleap.localhost
+                runners:
+                - type: dotnet
+                  project: {{csprojPath}}
+            dependencies:
+            - type: mongo
+            """));
+
+        context.ExtraLeapRunArguments = ["--start-services-explicitly"];
+        await context.Start();
+
+        testOutputHelper.WriteLine("Checking services are not accessible");
+        var url = context.GetUrl("app", "weatherforecast");
+        Assert.False(await IsUrlAccessible(url, cts.Token));
+
+        // Cannot set health status is leap.yaml file (yet?), so we need to wait for the service to be accessible
+        testOutputHelper.WriteLine("Starting services explicitly");
+        await context.StartService("app");
+
+        testOutputHelper.WriteLine("Checking services are accessible");
+        Assert.True(await Policy.HandleResult<bool>(isAccessible => !isAccessible).WaitAndRetryAsync(retryCount: 10, _ => TimeSpan.FromSeconds(1)).ExecuteAsync(() => IsUrlAccessible(url, cts.Token)));
+
+        testOutputHelper.WriteLine("Stopping services explicitly");
+        await context.StopService("app");
+
+        testOutputHelper.WriteLine("Checking services are not accessible");
+        Assert.False(await IsUrlAccessible(url, cts.Token));
+    }
+
+    private static readonly HttpClient HttpClient = new();
+    private static async Task<bool> IsUrlAccessible(Uri url, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var response = await HttpClient.GetAsync(url, cancellationToken);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

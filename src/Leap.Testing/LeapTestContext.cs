@@ -39,6 +39,7 @@ public sealed class LeapTestContext : IAsyncDisposable
     public bool KillExistingLeapInstancesOnStart { get; set; }
     public bool KillLeapInstanceOnStop { get; set; }
     public string LeapExecutablePath { get; set; } = "leap";
+    public IEnumerable<string?>? ExtraLeapRunArguments { get; set; }
 
     public LeapTestContext(ILoggerFactory loggerFactory, CancellationToken cancellationToken = default)
         : this(loggerFactory, remoteEnvironmentName: null, cancellationToken)
@@ -120,10 +121,11 @@ public sealed class LeapTestContext : IAsyncDisposable
         bool HasTimedOut() => stopwatch.Elapsed > this.StartLeapTimeout;
 
         string[] remoteEnvArgs = !string.IsNullOrEmpty(this.RemoteEnvironmentName) ? ["--remote-env", this.RemoteEnvironmentName] : [];
+        var extraArgs = this.ExtraLeapRunArguments?.Where(value => value is not null) ?? [];
         var isReady = new TaskCompletionSource();
         this._logger.LogInformation("Starting leap");
         var command = Cli.Wrap(this.LeapExecutablePath)
-            .WithArguments(["--skip-version-check", "run", .. remoteEnvArgs, "--file", .. this._configurationFiles])
+            .WithArguments(["--skip-version-check", "run", .. remoteEnvArgs, "--file", .. this._configurationFiles, .. extraArgs!])
             .WithStandardOutputPipe(PipeTarget.ToDelegate(line =>
             {
                 this._logger.LogInformation("leap: {StdOut}", line);
@@ -321,6 +323,15 @@ public sealed class LeapTestContext : IAsyncDisposable
 
     private async Task<bool> IsHealthy()
     {
+        var resources = await this.GetAspireResources();
+        foreach (var resource in resources)
+        {
+            if (!resource.IsHealthy)
+            {
+                return false;
+            }
+        }
+
         foreach (var uriFunc in this._healthCheckUris)
         {
             Uri uri;
@@ -445,6 +456,72 @@ public sealed class LeapTestContext : IAsyncDisposable
         }
     }
 
+    private async Task<AspireResourceStatus> GetServiceStatus(string leapServiceName)
+    {
+        var resources = await this.GetAspireResources();
+        return resources.Single(r => r.Name == leapServiceName);
+    }
+
+    private async Task<bool> IsServiceHealthy(string leapServiceName)
+    {
+        var status = await this.GetServiceStatus(leapServiceName);
+        this._logger.LogDebug("Service status of '{LeapServiceName}': {Status}; IsHealthy: {IsHealthy}", leapServiceName, status.Status, status.IsHealthy);
+        return status is { IsHealthy: true, Status: KnownResourceState.Running };
+    }
+
+    public async Task StartService(string leapServiceName)
+    {
+        await this.ExecuteLifecycleCommand(leapServiceName, KnownResourceCommands.StartCommand);
+
+        while (!await this.IsServiceHealthy(leapServiceName))
+        {
+            await Task.Delay(1000, this._cancellationToken);
+        }
+    }
+
+    public async Task StopService(string leapServiceName)
+    {
+        await this.ExecuteLifecycleCommand(leapServiceName, KnownResourceCommands.StopCommand);
+
+        while (true)
+        {
+            var status = await this.GetServiceStatus(leapServiceName);
+            this._logger.LogDebug("Service status of '{LeapServiceName}': {Status}; IsHealthy: {IsHealthy}", leapServiceName, status.Status, status.IsHealthy);
+            if (status.Status is KnownResourceState.Finished or KnownResourceState.NotStarted or KnownResourceState.Exited or KnownResourceState.Unknown)
+            {
+                return;
+            }
+
+            await Task.Delay(1000, this._cancellationToken);
+        }
+    }
+
+    public async Task RestartService(string leapServiceName)
+    {
+        await this.ExecuteLifecycleCommand(leapServiceName, KnownResourceCommands.RestartCommand);
+        while (!await this.IsServiceHealthy(leapServiceName))
+        {
+            await Task.Delay(1000, this._cancellationToken);
+        }
+    }
+
+    private async Task ExecuteLifecycleCommand(string leapServiceName, string commandName)
+    {
+        var resource = await this.GetServiceStatus(leapServiceName);
+
+        var response = await this._dashboardServiceClient.ExecuteResourceCommandAsync(new ResourceCommandRequest
+        {
+            ResourceName = resource.ResourceName,
+            CommandName = commandName,
+            ResourceType = resource.ResourceType,
+        }, headers: DcpHeaders, cancellationToken: this._cancellationToken);
+
+        if (response.Kind is not ResourceCommandResponseKind.Succeeded)
+        {
+            throw new InvalidOperationException($"Cannot start resource '{leapServiceName}': {response.ErrorMessage}");
+        }
+    }
+
     private async Task<IReadOnlyCollection<AspireResourceStatus>> GetAspireResources()
     {
         var result = new List<AspireResourceStatus>();
@@ -469,8 +546,15 @@ public sealed class LeapTestContext : IAsyncDisposable
 
                         var urls = resource.Urls?.Select(url => url.FullUrl).ToArray() ?? [];
 
+                        var isHealthy = resource.HealthReports.Count == 0 || resource.HealthReports.All(report => report.Status is HealthStatus.Healthy);
+
+                        if (!Enum.TryParse<KnownResourceState>(resource.State, out var resourceState))
+                        {
+                            resourceState = KnownResourceState.Unknown;
+                        }
+
                         // Use display name. Name may contain a hash at the end of the name.
-                        var resourceStatus = new AspireResourceStatus(resource.DisplayName, resource.ResourceType, resource.State, urls, []);
+                        var resourceStatus = new AspireResourceStatus(resource.DisplayName, resource.Name, resource.ResourceType, resource.State, resourceState, urls, isHealthy, []);
                         result.Add(resourceStatus);
                     }
                 }
@@ -572,7 +656,7 @@ public sealed class LeapTestContext : IAsyncDisposable
 
     private sealed record AspireStatus(string ApplicationName, List<AspireResourceStatus> Resources);
 
-    private sealed record AspireResourceStatus(string Name, string ResourceType, string Status, string[] Endpoints, List<LogEntry> Logs);
+    private sealed record AspireResourceStatus(string Name, string ResourceName, string ResourceType, string RawStatus, KnownResourceState Status, string[] Endpoints, bool IsHealthy, List<LogEntry> Logs);
 
     private sealed record LogEntry(string Text, bool IsStdErr, int LineNumber);
 }

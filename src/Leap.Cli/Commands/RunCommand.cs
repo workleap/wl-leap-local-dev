@@ -26,8 +26,16 @@ internal sealed class RunCommand : Command<RunCommandOptions, RunCommandHandler>
             IsRequired = false
         };
 
+        var startServicesExplicitlyOption = new Option<bool>("--start-services-explicitly")
+        {
+            Description = "Let users start services explicitly using the dashboard",
+            Arity = ArgumentArity.ZeroOrOne,
+            IsRequired = false
+        };
+
         this.AddOption(fileOption);
         this.AddOption(remoteEnvOption);
+        this.AddOption(startServicesExplicitlyOption);
     }
 
     private static string? ParseRemoteEnvArgument(ArgumentResult result)
@@ -45,6 +53,7 @@ internal sealed class RunCommandOptions : ICommandOptions
 {
     public string[] File { get; init; } = [];
     public string? RemoteEnv { get; init; }
+    public bool StartServicesExplicitly { get; init; }
 }
 
 internal sealed class RunCommandHandler(LeapPipeline pipeline, LeapConfigManager leapConfigManager)
@@ -56,6 +65,7 @@ internal sealed class RunCommandHandler(LeapPipeline pipeline, LeapConfigManager
         leapConfigManager.SetConfigurationFilesAsync(runCommandOptions.File);
 
         leapConfigManager.SetEnvironmentName(runCommandOptions.RemoteEnv);
+        leapConfigManager.SetStartServicesExplicitly(runCommandOptions.StartServicesExplicitly);
 
         await pipeline.RunAsync(cancellationToken);
 

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -19,7 +19,8 @@ internal sealed class LeapConfigManager : ILeapYamlAccessor, IDisposable
     private HashSet<string>? _leapYamlPaths;
     private LeapYamlFile[]? _cachedLeapYamls;
 
-    public string? RemoteEnvironmentName;
+    public string? RemoteEnvironmentName { get; private set; }
+    public bool StartServicesExplicitly { get; private set; }
 
     public LeapConfigManager(IFileSystem fileSystem, IPlatformHelper platformHelper, ILogger<LeapConfigManager> logger)
     {
@@ -42,6 +43,11 @@ internal sealed class LeapConfigManager : ILeapYamlAccessor, IDisposable
     public void SetEnvironmentName(string? environmentName)
     {
         this.RemoteEnvironmentName = environmentName;
+    }
+
+    public void SetStartServicesExplicitly(bool startServicesExplicitly)
+    {
+        this.StartServicesExplicitly = startServicesExplicitly;
     }
 
     [SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code", Justification = "This is a classic double-checked lock pattern.")]
