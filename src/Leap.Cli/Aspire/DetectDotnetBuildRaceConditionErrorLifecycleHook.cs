@@ -60,6 +60,7 @@ internal sealed class DetectDotnetBuildRaceConditionErrorLifecycleHook(
                 {
                     if (logLine.Content.Contains("error CS2012:", StringComparison.OrdinalIgnoreCase))
                     {
+                        // CS2012 docs: https://learn.microsoft.com/en-us/dotnet/csharp/misc/cs2012
                         await this.HandleCs2012BuildRaceCondition(resource, cancellationToken);
                     }
                 }
@@ -77,17 +78,34 @@ internal sealed class DetectDotnetBuildRaceConditionErrorLifecycleHook(
 
     private async Task HandleCs2012BuildRaceCondition(ExecutableResource resource, CancellationToken cancellationToken)
     {
-        // CS2012 docs: https://learn.microsoft.com/en-us/dotnet/csharp/misc/cs2012
-        // .NET Aspire restart GitHub issue: https://github.com/dotnet/aspire/issues/295
-        lifecycleHookLogger.LogError(
-            "Service '{ServiceName}' failed to build, likely due to a CS2012 race condition caused by another service currently being built that uses a same shared class library.",
-            resource.Name);
-
         var modifiedCsprojToTriggerDotnetWatch = false;
 
+        var dotnetArgs = await GetExecutableArgumentsAsync(resource, cancellationToken);
+
+        if (dotnetArgs is ["watch", "--project", { } csprojPath, ..])
+        {
+            try
+            {
+                File.SetLastWriteTimeUtc(csprojPath, DateTime.UtcNow);
+                modifiedCsprojToTriggerDotnetWatch = true;
+                lifecycleHookLogger.LogDebug("Modified '{CsprojPath}' to force 'dotnet watch' to restart the compilation.", csprojPath);
+            }
+            catch (IOException)
+            {
+                // That's OK. Maybe an IDE is holding a lock on it. Users can individually restart the impacted service from the dashboard.
+            }
+        }
+
+        if (!modifiedCsprojToTriggerDotnetWatch)
+        {
+            lifecycleHookLogger.LogError("Service '{ServiceName}' failed to build due to a race condition with another service referencing a same class library. Restart it from the dashboard.", resource.Name);
+        }
+    }
+
+    private static async Task<string[]> GetExecutableArgumentsAsync(ExecutableResource resource, CancellationToken cancellationToken)
+    {
         // Accessing the executable arguments based on:
         // https://github.com/dotnet/aspire/blob/v8.1.0/src/Aspire.Hosting/Dcp/ApplicationExecutor.cs#L1176-L1184
-        string[] stringArgs = [];
         if (resource.TryGetAnnotationsOfType<CommandLineArgsCallbackAnnotation>(out var exeArgsCallbacks))
         {
             var objectArgs = new List<object>();
@@ -98,27 +116,10 @@ internal sealed class DetectDotnetBuildRaceConditionErrorLifecycleHook(
                 await exeArgsCallback.Callback(commandLineContext);
             }
 
-            stringArgs = objectArgs.OfType<string>().ToArray();
+            return [.. objectArgs.OfType<string>()];
         }
 
-        if (stringArgs is ["watch", "--project", { } csprojPath, ..])
-        {
-            try
-            {
-                File.SetLastWriteTimeUtc(csprojPath, DateTime.UtcNow);
-                modifiedCsprojToTriggerDotnetWatch = true;
-                lifecycleHookLogger.LogInformation("Modified '{CsprojPath}' to force 'dotnet watch' to restart the compilation.", csprojPath);
-            }
-            catch (IOException)
-            {
-                // That's OK. Maybe an IDE is holding a lock on it. Users can manually restart Leap.
-            }
-        }
-
-        if (!modifiedCsprojToTriggerDotnetWatch)
-        {
-            lifecycleHookLogger.LogError("Please restart Leap until failed services can be manually restarted from the dashboard.");
-        }
+        return [];
     }
 
     public async ValueTask DisposeAsync()

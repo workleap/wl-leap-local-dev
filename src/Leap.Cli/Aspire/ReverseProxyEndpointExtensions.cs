@@ -59,20 +59,28 @@ internal static class ReverseProxyEndpointExtensions
                     continue;
                 }
 
-                var reverseProxyEndpointAlreadyAdded = evt.Snapshot.Urls.Any(x => x.Url == reverseProxyEndpoint.ReverseProxyUrl);
-                if (reverseProxyEndpointAlreadyAdded)
+                if (IsReverseProxyEndpointAlreadyAdded(evt.Snapshot, reverseProxyEndpoint))
                 {
                     await this.ReplaceLocalhostWithIpAddressIfNeededAsync(evt);
                     continue;
                 }
 
-                await notificationService.PublishUpdateAsync(evt.Resource, snapshot => snapshot with
+                await notificationService.PublishUpdateAsync(evt.Resource, snapshot =>
                 {
-                    Urls =
-                    [
-                        new UrlSnapshot(EndpointNameHelper.GetReverseProxyEndpointName(), reverseProxyEndpoint.ReverseProxyUrl, IsInternal: false),
-                        ..snapshot.Urls.Select(ReplaceLocalhostHostWithIpAddress)
-                    ],
+                    if (IsReverseProxyEndpointAlreadyAdded(snapshot, reverseProxyEndpoint))
+                    {
+                        // There was a race condition as the resource has already been updated by the time we execute this delegate
+                        return snapshot;
+                    }
+
+                    return snapshot with
+                    {
+                        Urls =
+                        [
+                            new UrlSnapshot(EndpointNameHelper.GetReverseProxyEndpointName(), reverseProxyEndpoint.ReverseProxyUrl, IsInternal: false),
+                            ..snapshot.Urls.Select(ReplaceLocalhostHostWithIpAddress)
+                        ],
+                    };
                 });
             }
         }
@@ -97,6 +105,11 @@ internal static class ReverseProxyEndpointExtensions
         {
             Url = url.Url.Replace(LocalhostPartialUrlToReplace, IpAddressPartialUrlReplacement)
         };
+
+        private static bool IsReverseProxyEndpointAlreadyAdded(CustomResourceSnapshot snapshot, ReverseProxyEndpointAnnotation reverseProxyEndpoint)
+        {
+            return snapshot.Urls.Any(x => x.Url == reverseProxyEndpoint.ReverseProxyUrl);
+        }
 
         public async ValueTask DisposeAsync()
         {
