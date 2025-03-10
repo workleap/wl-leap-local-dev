@@ -6,6 +6,7 @@ using Leap.Cli.Model;
 using Leap.Cli.Platform;
 using Leap.Cli.Platform.Telemetry;
 using Leap.Cli.Yaml;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Leap.Cli.Pipeline;
 
@@ -116,7 +117,8 @@ internal sealed class PrepareServiceRunnersPipelineStep(
             .WithEnvironment(service.GetServiceAndRunnerEnvironmentVariables())
             .WithConfigurePreferredRunnerCommand(service)
             .WithExplicitStart(leapConfiguration)
-            .WaitFor(dependencyResourceNames);
+            .WaitFor(dependencyResourceNames)
+            .WithHttpHealthCheck(service);
     }
 
     private void HandleDockerRunner(Service service, DockerRunner dockerRunner, string[] dependencyResourceNames)
@@ -202,7 +204,9 @@ internal sealed class PrepareServiceRunnersPipelineStep(
             })
             .WithReverseProxyUrl(service)
             .WithConfigurePreferredRunnerCommand(service)
-            .WithExplicitStart(leapConfiguration);
+            .WithExplicitStart(leapConfiguration)
+            .WaitFor(dependencyResourceNames)
+            .WithHttpHealthCheck(service);
     }
 
     private static IEnumerable<string> GetDockerExtraHostsRuntimeArgs(ApplicationState state)
@@ -246,7 +250,8 @@ internal sealed class PrepareServiceRunnersPipelineStep(
             .WithRestartAndWaitForDebuggerCommand()
             .WithConfigurePreferredRunnerCommand(service)
             .WithExplicitStart(leapConfiguration)
-            .WaitFor(dependencyResourceNames);
+            .WaitFor(dependencyResourceNames)
+            .WithHttpHealthCheck(service);
     }
 
     private void HandleOpenApiRunner(ApplicationState state, Service service, OpenApiRunner openApiRunner, string[] dependencyResourceNames)
@@ -312,6 +317,29 @@ file static class Extensions
         {
             builder.WithExplicitStart();
         }
+
+        return builder;
+    }
+
+    public static IResourceBuilder<T> WithHttpHealthCheck<T>(this IResourceBuilder<T> builder, Service service)
+        where T : IResource
+    {
+        var healthCheckUrl = service.GetHealthCheckUrl();
+        if (healthCheckUrl == null)
+        {
+            return builder;
+        }
+
+        // Inspired from:
+        // https://github.com/dotnet/aspire/blob/v9.1.0/src/Aspire.Hosting/ResourceBuilderExtensions.cs#L953-L1004
+        var healthCheckKey = $"{service.Name}_check";
+
+        builder.ApplicationBuilder.Services.AddHealthChecks().AddUrlGroup(options =>
+        {
+            options.AddUri(healthCheckUrl, x => x.ExpectHttpCode(200));
+        }, healthCheckKey);
+
+        builder.WithHealthCheck(healthCheckKey);
 
         return builder;
     }

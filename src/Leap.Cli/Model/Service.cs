@@ -21,6 +21,8 @@ internal sealed class Service
 
     public string ContainerName { get; }
 
+    public string? HealthCheckPath { get; set; }
+
     public string PreferredRunner { get; set; } = string.Empty;
 
     public List<Runner> Runners { get; } = [];
@@ -78,5 +80,15 @@ internal sealed class Service
         return this.Runners
             .Select(runner => runner.Type)
             .ToList();
+    }
+
+    public Uri? GetHealthCheckUrl()
+    {
+        if (this.HealthCheckPath == null)
+        {
+            return null;
+        }
+
+        return new Uri($"{this.GetPrimaryUrl().TrimEnd('/')}/{this.HealthCheckPath.TrimStart('/')}", UriKind.Absolute);
     }
 }

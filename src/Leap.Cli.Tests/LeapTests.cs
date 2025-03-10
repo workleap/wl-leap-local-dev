@@ -2,7 +2,6 @@
 using Meziantou.Extensions.Logging.Xunit;
 using Meziantou.Framework;
 using Microsoft.Extensions.Logging;
-using Polly;
 using Workleap.Leap.Testing;
 
 namespace Leap.Cli.Tests;
@@ -43,6 +42,7 @@ public sealed class LeapTests(ITestOutputHelper testOutputHelper)
               app:
                 ingress:
                   host: app.workleap.localhost
+                healthcheck: /
                 runners:
                 - type: docker
                   image: mcr.microsoft.com/dotnet/samples:aspnetapp
@@ -72,6 +72,7 @@ public sealed class LeapTests(ITestOutputHelper testOutputHelper)
               app:
                 ingress:
                   host: app.workleap.localhost
+                healthcheck: /weatherforecast
                 runners:
                 - type: dotnet
                   project: {{csprojPath}}
@@ -134,6 +135,7 @@ public sealed class LeapTests(ITestOutputHelper testOutputHelper)
               app:
                 ingress:
                   host: app.workleap.localhost
+                healthcheck: /weatherforecast
                 runners:
                 - type: dotnet
                   project: {{csprojPath}}
@@ -148,12 +150,8 @@ public sealed class LeapTests(ITestOutputHelper testOutputHelper)
         var url = context.GetUrl("app", "weatherforecast");
         Assert.False(await IsUrlAccessible(url, cts.Token));
 
-        // Cannot set health status is leap.yaml file (yet?), so we need to wait for the service to be accessible
         testOutputHelper.WriteLine("Starting services explicitly");
         await context.StartService("app");
-
-        testOutputHelper.WriteLine("Checking services are accessible");
-        Assert.True(await Policy.HandleResult<bool>(isAccessible => !isAccessible).WaitAndRetryAsync(retryCount: 10, _ => TimeSpan.FromSeconds(1)).ExecuteAsync(() => IsUrlAccessible(url, cts.Token)));
 
         testOutputHelper.WriteLine("Stopping services explicitly");
         await context.StopService("app");

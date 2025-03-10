@@ -471,6 +471,23 @@ public sealed class LeapTestContext : IAsyncDisposable
 
     public async Task StartService(string leapServiceName)
     {
+        while (true)
+        {
+            var status = await this.GetServiceStatus(leapServiceName);
+
+            if (status.CanResourceBeStarted())
+            {
+                break;
+            }
+
+            if (status.Status is KnownResourceState.Starting or KnownResourceState.Running)
+            {
+                return;
+            }
+
+            await Task.Delay(1000, this._cancellationToken);
+        }
+
         await this.ExecuteLifecycleCommand(leapServiceName, KnownResourceCommands.StartCommand);
 
         while (!await this.IsServiceHealthy(leapServiceName))
@@ -656,7 +673,13 @@ public sealed class LeapTestContext : IAsyncDisposable
 
     private sealed record AspireStatus(string ApplicationName, List<AspireResourceStatus> Resources);
 
-    private sealed record AspireResourceStatus(string Name, string ResourceName, string ResourceType, string RawStatus, KnownResourceState Status, string[] Endpoints, bool IsHealthy, List<LogEntry> Logs);
+    private sealed record AspireResourceStatus(string Name, string ResourceName, string ResourceType, string RawStatus, KnownResourceState Status, string[] Endpoints, bool IsHealthy, List<LogEntry> Logs)
+    {
+        public bool CanResourceBeStarted()
+        {
+            return this.Status is KnownResourceState.Finished or KnownResourceState.Exited or KnownResourceState.FailedToStart or KnownResourceState.NotStarted;
+        }
+    }
 
     private sealed record LogEntry(string Text, bool IsStdErr, int LineNumber);
 }

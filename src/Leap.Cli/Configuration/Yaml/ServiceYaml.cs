@@ -8,6 +8,9 @@ internal sealed class ServiceYaml
     [YamlMember(Alias = "ingress", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
     public IngressYaml? Ingress { get; set; }
 
+    [YamlMember(Alias = "healthcheck", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
+    public string? HealthCheckPath { get; set; }
+
     [YamlMember(Alias = "runners", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
     public RunnerYaml?[]? Runners { get; set; }
 

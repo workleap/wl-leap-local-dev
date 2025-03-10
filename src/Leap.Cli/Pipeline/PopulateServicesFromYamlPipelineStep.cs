@@ -106,6 +106,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
                 var service = new Service(serviceName, leapYaml);
 
                 this.ConvertIngress(service);
+                this.ConvertHealthCheck(service);
                 this.ConvertEnvironmentVariables(service);
                 this.ConvertRunners(service);
                 this.ConvertProfiles(service);
@@ -176,6 +177,24 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
             {
                 throw new LeapYamlConversionException($"A service '{service.Name}' has a malformed ingress path: '{ingressYaml.Path}' in the configuration file '{leapYaml.Path}'. The service will be ignored.");
             }
+        }
+
+        private void ConvertHealthCheck(Service service)
+        {
+            // This healthcheck path will work for 80% of the cases. Otherwise, developers can override it in the yaml file.
+            const string defaultWorkleapHealthPath = "/health";
+
+            serviceYaml.HealthCheckPath ??= defaultWorkleapHealthPath;
+
+            if (serviceYaml.HealthCheckPath.Length == 0)
+            {
+                // We agreed to consider empty strings as a way to disable the health check.
+                return;
+            }
+
+            service.HealthCheckPath = Uri.IsWellFormedUriString(serviceYaml.HealthCheckPath, UriKind.Relative)
+                ? serviceYaml.HealthCheckPath
+                : throw new LeapYamlConversionException($"A service '{service.Name}' has an invalid health check URL path '{serviceYaml.HealthCheckPath}' in the configuration file '{leapYaml.Path}'. The service will be ignored.");
         }
 
         private void ConvertEnvironmentVariables(Service service)

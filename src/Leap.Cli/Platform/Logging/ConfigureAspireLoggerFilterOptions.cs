@@ -28,5 +28,8 @@ internal sealed class ConfigureAspireLoggerFilterOptions(IOptions<LeapGlobalOpti
                 options.AddFilter<ColoredConsoleLoggerProvider>("Aspire.Hosting.Dashboard.ResourceServiceApiKeyAuthenticationHandler", LogLevel.Warning);
                 break;
         }
+
+        // Remove noise from unsuccessful healthchecks in CLI console output
+        options.AddFilter<ColoredConsoleLoggerProvider>("Microsoft.Extensions.Diagnostics.HealthChecks", LogLevel.Critical);
     }
 }
