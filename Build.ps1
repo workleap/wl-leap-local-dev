@@ -35,6 +35,10 @@ Process {
         Exec { & dotnet build -c Release /p:Version=$version }
         Exec { & dotnet test  -c Release --no-build --results-directory "$outputDir" --no-restore --logger "trx" --logger "console;verbosity=detailed" --blame-hang-timeout 10m }
         Exec { & dotnet pack  -c Release --no-build --output "$outputDir" /p:Version=$version }
+
+        if (($null -ne $env:NUGET_SOURCE ) -and ($null -ne $env:NUGET_API_KEY)) {
+            Exec { & dotnet nuget push "$nupkgsPath" -s $env:NUGET_SOURCE -k $env:NUGET_API_KEY --skip-duplicate }
+        }
     }
     finally {
         Pop-Location

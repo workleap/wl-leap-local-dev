@@ -1,0 +1,125 @@
+name: Build and test Leap local dev
+
+on:
+  push:
+    branches:
+      - renovate/*
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  leap-build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 8.0 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          source-url: ${{ secrets.NUGET_GSOFTDEV_FEED_URL }}
+          global-json-file: global.json
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GSOFT_FEED_API_KEY }}
+
+      - name: Install mkcert
+        uses: ./.github/actions/install-mkcert.yml
+
+      - name: Install Azure CLI
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build and test
+        run: ./Build.ps1 # add the nuget push stage in the script
+        shell: pwsh
+        env:
+          NUGET_SOURCE: ${{ secrets.NUGET_GSOFTDEV_FEED_URL }}
+          NUGET_API_KEY: ${{ secrets.GSOFT_NUGET_API_KEY }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: LeapNugetPackage
+          path: ./.output/
+          retention-days: 2
+
+  leap-test:
+    timeout-minutes: 10
+    needs: [leap-build]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Setup .NET 8.0 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Download built artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: LeapNugetPackage
+          path: ./.output/
+
+      - name: Install Leap local dev
+        run: ./Install.ps1
+        shell: pwsh
+
+      - name: Install mkcert
+        uses: ./.github/actions/install-mkcert.yml
+
+      # On macOS, update hosts file
+      - name: macOS - Update hosts file
+        if: runner.os == 'macOS'
+        run: |
+          set -x
+          sudo sh -c 'echo "# Begin lines managed by Leap CLI" >> /etc/hosts' && \
+          sudo sh -c 'echo "127.0.0.1 aspnetcorewebapi.workleap.localhost" >> /etc/hosts' && \
+          sudo sh -c 'echo "127.0.0.1 containerapp.workleap.localhost" >> /etc/hosts' && \
+          sudo sh -c 'echo "127.0.0.1 mongo" >> /etc/hosts' && \
+          sudo sh -c 'echo "# End lines managed by Leap CLI" >> /etc/hosts'
+
+      # Install and configure Azure CLI (available on all platforms)
+      - name: Install Azure CLI
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Execute leap run for Linux
+      - name: Linux - Execute leap run
+        if: runner.os == 'Linux'
+        run: |
+          pwsh -File ./.github/workflows/scripts/leap-run-linux.ps1
+
+      # Execute leap run for macOS
+      - name: macOS - Execute leap run
+        if: runner.os == 'macOS'
+        run: |
+          pwsh -File ./.github/workflows/scripts/leap-run-macos.ps1
+
+      # Execute leap run for Windows
+      - name: Windows - Execute leap run
+        if: runner.os == 'Windows'
+        run: |
+          pwsh -File ./.github/workflows/scripts/leap-run-windows.ps1
