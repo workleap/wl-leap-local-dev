@@ -62,7 +62,7 @@
     <PackageReference Include="System.Formats.Asn1" Version="9.0.2" />
     <PackageReference Include="System.IO.Abstractions" Version="22.0.10" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
-    <PackageReference Include="Yarp.ReverseProxy" Version="2.2.0" />
+    <PackageReference Include="Yarp.ReverseProxy" Version="2.3.0" />
   </ItemGroup>
 
   <ItemGroup>
