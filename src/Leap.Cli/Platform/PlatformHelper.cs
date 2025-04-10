@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -72,7 +72,7 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
 
     private static bool IsCurrentProcessElevatedInternal()
     {
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (OperatingSystem.IsWindows())
         {
             // https://github.com/dotnet/sdk/blob/v6.0.100/src/Cli/dotnet/Installer/Windows/WindowsUtils.cs#L38
             using var identity = WindowsIdentity.GetCurrent();
