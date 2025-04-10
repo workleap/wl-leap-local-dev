@@ -2,6 +2,13 @@ trigger:
   branches:
     include:
       - renovate/*
+      
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: Shared-Assets/Pipeline-Library
+      ref: refs/tags/1.9.1
 
 jobs:
   - job: build
@@ -95,3 +102,13 @@ jobs:
       - template: templates/install-mkcert.yml
 
       - template: templates/leap-run.yml
+
+  - job: linearb
+    pool: idp
+    variables:
+      - group: LinearB
+    dependsOn: test
+    steps:
+    - template: steps/linearb/linearb-deployment.yaml@templates
+      parameters:
+        Environment: developement
