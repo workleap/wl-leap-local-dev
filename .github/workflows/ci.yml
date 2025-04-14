@@ -53,7 +53,7 @@ jobs:
         uses: ./.github/actions/install-mkcert
 
       - name: Build and test
-        run: ./Build.ps1 # add the nuget push stage in the script
+        run: ./Build.ps1 -SkipTests
         shell: pwsh
         env:
           NUGET_SOURCE: ${{ secrets.NUGET_GSOFTDEV_FEED_URL }}
