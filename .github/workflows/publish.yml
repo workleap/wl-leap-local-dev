@@ -30,24 +30,28 @@ jobs:
       - name: Get Secrets from Azure Key Vault
         id: get_secrets
         run: |
-          # Set env.WORKLEAP_NUGET_API_KEY
-          WORKLEAP_NUGET_API_KEY=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "nuget-org-workleap-api-key" --query value -o tsv)
-          echo "::add-mask::$WORKLEAP_NUGET_API_KEY"
-          echo "workleap_nuget_api_key=$WORKLEAP_NUGET_API_KEY" >> $GITHUB_OUTPUT
+          # Set env.ADO_PAT
+          ADO_PAT=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "gsoft-nuget-feed-ado-pat" --query value -o tsv)
+          echo "::add-mask::$ADO_PAT"
+          echo "ado_pat=$ADO_PAT" >> $GITHUB_OUTPUT
 
-      - name: Install mkcert
-        uses: ./.github/workflows/scripts/templates/install-mkcert.yml
-
-      - uses: actions/setup-dotnet@v4
-
-      - uses: actions/setup-dotnet@v4
+      - name: Setup .NET 8.0 SDK
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: '8.0.x'
 
-      - run: ./Build.ps1
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          source-url: ${{ secrets.NUGET_GSOFT_FEED_URL }}
+          global-json-file: global.json
+        env:
+          NUGET_AUTH_TOKEN: ${{ steps.get_secrets.outputs.ado_pat }}
+
+      - run: ./Build.ps1 -SkipTests
         shell: pwsh
         env:
-          NUGET_SOURCE: ${{ secrets.NUGET_SOURCE }}
+          NUGET_SOURCE: ${{ secrets.NUGET_GSOFT_FEED_URL }}
           NUGET_API_KEY: ${{ steps.get_secrets.outputs.workleap_nuget_api_key }}
 
   linearb:
