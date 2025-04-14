@@ -31,9 +31,6 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Install mkcert
-        uses: ./.github/actions/install-mkcert
-
       - name: Build
         run: ./Build.ps1
         shell: pwsh
@@ -118,6 +115,7 @@ jobs:
           pwsh -File ./.github/workflows/scripts/leap-run-windows.ps1
 
   leap-publish-dev:
+    needs: [leap-test]
     runs-on: [self-hosted, idp]
     steps:
       - name: Checkout code
