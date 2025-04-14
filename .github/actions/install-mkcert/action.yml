@@ -10,9 +10,9 @@ runs:
     if: runner.os == 'Linux'
     run: |
       set -x
-      sudo apt update && \
-      sudo apt install libnss3-tools -y && \
-      sudo apt install mkcert -y && \
+      apt update && \
+      apt install libnss3-tools -y && \
+      apt install mkcert -y && \
       mkcert -install
     shell: bash
 
