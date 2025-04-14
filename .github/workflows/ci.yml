@@ -98,7 +98,7 @@ jobs:
         shell: pwsh
 
       - name: Install mkcert
-        uses: ./.github/actions/install-mkcert.yml
+        uses: ./.github/workflows/scripts/templates/install-mkcert.yml
 
       # On macOS, update hosts file
       - name: macOS - Update hosts file
