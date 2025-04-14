@@ -10,10 +10,10 @@ runs:
     if: runner.os == 'Linux'
     run: |
       set -x
-      apt update && \
-      apt install libnss3-tools -y && \
-      apt install mkcert -y && \
-      mkcert -install
+      sudo apt update && \
+      sudo apt install libnss3-tools -y && \
+      sudo apt install mkcert -y && \
+      sudo mkcert -install
     shell: bash
 
   - name: Install mkcert on macOS
