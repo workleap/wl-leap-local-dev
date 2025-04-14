@@ -129,7 +129,7 @@ public sealed class LeapTestContext : IAsyncDisposable
             .WithStandardOutputPipe(PipeTarget.ToDelegate(line =>
             {
                 this._logger.LogInformation("leap: {StdOut}", line);
-                if (line.Contains("Press Ctrl+C to stop Leap"))
+                if (line.Contains("Press Ctrl+C to stop Leap", StringComparison.Ordinal))
                 {
                     isReady.SetResult();
                 }
@@ -282,7 +282,7 @@ public sealed class LeapTestContext : IAsyncDisposable
         {
             if (!File.Exists(path))
             {
-                throw new ArgumentException($"File '{path}' does not exist");
+                throw new ArgumentException($"File '{path}' does not exist", nameof(paths));
             }
 
             this._configurationFiles.Add(path);

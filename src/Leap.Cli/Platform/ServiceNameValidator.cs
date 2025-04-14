@@ -54,7 +54,7 @@ internal static class ServiceNameValidator
             return false;
         }
 
-        if (name[name.Length - 1] == '-')
+        if (name[^1] == '-')
         {
             validationMessage = $"Name '{name}' is invalid. Name cannot end with a hyphen.";
             return false;
