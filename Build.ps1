@@ -18,6 +18,7 @@ Process {
 
     $workingDir = Join-Path $PSScriptRoot "src"
     $outputDir = Join-Path $PSScriptRoot ".output"
+    $nupkgsPath = Join-Path $outputDir "*.nupkg"
 
     try {
         Push-Location $workingDir
