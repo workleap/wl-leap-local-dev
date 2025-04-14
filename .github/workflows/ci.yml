@@ -13,28 +13,13 @@ permissions:
   contents: read
 
 jobs:
-  leap-build:
-    runs-on: [self-hosted, idp]
+  leap-build-and-test:
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: 'Azuze CLI login'
-        uses: azure/login@v2
-        with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Get Secrets from Azure Key Vault
-        id: get_secrets
-        run: |
-          # Set env.ADO_PAT
-          ADO_PAT=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "gsoft-nuget-feed-ado-pat" --query value -o tsv)
-          echo "::add-mask::$ADO_PAT"
-          echo "ado_pat=$ADO_PAT" >> $GITHUB_OUTPUT
 
       - name: Setup .NET 8.0 SDK
         uses: actions/setup-dotnet@v4
@@ -44,20 +29,14 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          source-url: ${{ secrets.NUGET_GSOFTDEV_FEED_URL }}
           global-json-file: global.json
-        env:
-          NUGET_AUTH_TOKEN: ${{ steps.get_secrets.outputs.ado_pat }}
 
       - name: Install mkcert
         uses: ./.github/actions/install-mkcert
 
-      - name: Build and test
-        run: ./Build.ps1 -SkipTests
+      - name: Build
+        run: ./Build.ps1
         shell: pwsh
-        env:
-          NUGET_SOURCE: ${{ secrets.NUGET_GSOFTDEV_FEED_URL }}
-          NUGET_API_KEY: ${{ steps.get_secrets.outputs.ado_pat }}
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -68,7 +47,7 @@ jobs:
 
   leap-test:
     timeout-minutes: 10
-    needs: [leap-build]
+    needs: [leap-build-and-test]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -137,3 +116,49 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           pwsh -File ./.github/workflows/scripts/leap-run-windows.ps1
+
+  leap-publish-dev:
+    runs-on: [self-hosted, idp]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 'Azuze CLI login'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get Secrets from Azure Key Vault
+        id: get_secrets
+        run: |
+          # Set env.ADO_PAT
+          ADO_PAT=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "gsoft-nuget-feed-ado-pat" --query value -o tsv)
+          echo "::add-mask::$ADO_PAT"
+          echo "ado_pat=$ADO_PAT" >> $GITHUB_OUTPUT
+
+      - name: Setup .NET 8.0 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          source-url: ${{ secrets.NUGET_GSOFTDEV_FEED_URL }}
+          global-json-file: global.json
+        env:
+          NUGET_AUTH_TOKEN: ${{ steps.get_secrets.outputs.ado_pat }}
+
+      - name: Install mkcert
+        uses: ./.github/actions/install-mkcert
+
+      - name: Build
+        run: ./Build.ps1 -SkipTests
+        shell: pwsh
+        env:
+          NUGET_SOURCE: ${{ secrets.NUGET_GSOFTDEV_FEED_URL }}
+          NUGET_API_KEY: ${{ steps.get_secrets.outputs.ado_pat }}
