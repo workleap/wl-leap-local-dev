@@ -42,21 +42,14 @@ jobs:
         uses: ./.github/actions/install-mkcert
 
       - name: Build
-        run: ./Build.ps1
+        run: ./Build.ps1 -SkipTests
         shell: pwsh
-
-      - name: Debug directory contents
-        run: |
-          mkdir -p ./.output  # Create directory if it doesn't exist
-          ls -la ./.output/   # List contents
-          pwd
-        shell: bash
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: LeapNugetPackage
-          path: ${{ github.workspace }}/.output
+          path: ${{ github.workspace }}/.output/
           retention-days: 2
 
   leap-test:
