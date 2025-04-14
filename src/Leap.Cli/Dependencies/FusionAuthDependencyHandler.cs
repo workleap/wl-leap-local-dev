@@ -65,7 +65,7 @@ internal class FusionAuthDependencyHandler(
     {
         var fusionAuthApp = new DockerComposeServiceYaml()
         {
-            Image = new DockerComposeImageName("fusionauth/fusionauth-app:1.56.0"),
+            Image = new DockerComposeImageName("fusionauth/fusionauth-app:1.57.0"),
             ContainerName = AppContainerName,
             DependsOn = [DbServiceName, ProxyServiceName],
             Environment = new KeyValueCollectionYaml()
