@@ -53,12 +53,13 @@ jobs:
           pwd
         shell: bash
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: LeapNugetPackage
-          path: ${{ github.workspace }}/.output/*.nupkg
-          retention-days: 2
+      # - name: Upload build artifacts
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: LeapNugetPackage
+      #     path: ${{ github.workspace }}/.output/*.nupkg
+      #     if-no-files-found: error
+      #     retention-days: 2
 
   leap-test:
     timeout-minutes: 10
@@ -91,12 +92,15 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Download built artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: LeapNugetPackage
-          path: ./.output/
+      # - name: Download built artifacts
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: LeapNugetPackage
+      #     path: ./.output/
 
+      - name: Build
+        run: ./Build.ps1 -SkipTests
+        shell: pwsh
       - name: Install Leap local dev
         run: ./Install.ps1
         shell: pwsh
