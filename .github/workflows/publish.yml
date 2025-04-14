@@ -52,7 +52,7 @@ jobs:
         shell: pwsh
         env:
           NUGET_SOURCE: ${{ secrets.NUGET_GSOFT_FEED_URL }}
-          NUGET_API_KEY: ${{ steps.get_secrets.outputs.workleap_nuget_api_key }}
+          NUGET_API_KEY: ${{ steps.get_secrets.outputs.ado_pat }}
 
   linearb:
     needs: [main]
