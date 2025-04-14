@@ -101,6 +101,7 @@ jobs:
       - name: Build
         run: ./Build.ps1 -SkipTests
         shell: pwsh
+
       - name: Install Leap local dev
         run: ./Install.ps1
         shell: pwsh
@@ -118,12 +119,6 @@ jobs:
           sudo sh -c 'echo "127.0.0.1 containerapp.workleap.localhost" >> /etc/hosts' && \
           sudo sh -c 'echo "127.0.0.1 mongo" >> /etc/hosts' && \
           sudo sh -c 'echo "# End lines managed by Leap CLI" >> /etc/hosts'
-
-      # Install and configure Azure CLI (available on all platforms)
-      - name: Install Azure CLI
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       # Execute leap run for Linux
       - name: Linux - Execute leap run
