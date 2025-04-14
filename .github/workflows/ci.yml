@@ -57,7 +57,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: LeapNugetPackage
-          path: Workleap.Leap.*.nupkg
+          path: ${{ github.workspace }}/.output/*.nupkg
           retention-days: 2
 
   leap-test:
