@@ -106,11 +106,17 @@ internal sealed class EventGridDependencyHandler(
 
         return () =>
         {
-            cancellationTokenSource?.Cancel();
+            var previousCancellationTokenSource = cancellationTokenSource;
+            if (previousCancellationTokenSource != null)
+            {
+                previousCancellationTokenSource.Cancel();
+                previousCancellationTokenSource.Dispose();
+            }
+
             cancellationTokenSource = new CancellationTokenSource();
 
             var reasonableFileEventDebounceDelay = TimeSpan.FromMilliseconds(100);
-            Task.Delay(reasonableFileEventDebounceDelay, cancellationTokenSource.Token)
+            _ = Task.Delay(reasonableFileEventDebounceDelay, cancellationTokenSource.Token)
                 .ContinueWith(async task =>
                 {
                     if (task.IsCompletedSuccessfully)
