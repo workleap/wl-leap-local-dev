@@ -1,0 +1,174 @@
+name: Build and test Leap local dev
+
+on:
+  push:
+    branches:
+      - renovate/*
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  leap-build-and-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 'Azure CLI login'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup .NET 8.0 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Install mkcert
+        uses: ./.github/actions/install-mkcert
+
+      - name: Build
+        run: ./Build.ps1 -SkipTests
+        shell: pwsh
+
+      - name: Debug directory contents
+        run: |
+          mkdir -p ./.output  # Create directory if it doesn't exist
+          ls -la ./.output/   # List contents
+          ls -la ${{ github.workspace }}/.output/   # List contents
+          pwd
+        shell: bash
+
+  leap-publish-dev:
+    needs: [leap-build-and-test]
+    runs-on: [self-hosted, idp]
+    environment: ci
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get gsoft-nuget-feed secret
+        id: get_gsoft_nuget_feed_secret
+        uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
+        with:
+          azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+          azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
+          secret-name: "gsoft-nuget-feed-ado-pat"
+
+      - name: Setup .NET 8.0 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          source-url: ${{ secrets.NUGET_GSOFTDEV_FEED_URL }}
+          global-json-file: global.json
+        env:
+          NUGET_AUTH_TOKEN: ${{ steps.get_gsoft_nuget_feed_secret.outputs.secret }}
+
+      - name: Build
+        run: ./Build.ps1 -SkipTests
+        shell: pwsh
+        env:
+          NUGET_SOURCE: ${{ secrets.NUGET_GSOFTDEV_FEED_URL }}
+          NUGET_API_KEY: ${{ steps.get_gsoft_nuget_feed_secret.outputs.secret }}
+
+  leap-system-test:
+    timeout-minutes: 10
+    environment: ci
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 'Azure CLI login'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Setup .NET 8.0 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build
+        run: ./Build.ps1 -SkipTests
+        shell: pwsh
+
+      - name: Install Leap local dev
+        run: ./Install.ps1
+        shell: pwsh
+
+      - name: Install mkcert
+        uses: ./.github/actions/install-mkcert
+
+      # On macOS, update hosts file
+      - name: macOS - Update hosts file
+        if: runner.os == 'macOS'
+        run: |
+          set -x
+          sudo sh -c 'echo "# Begin lines managed by Leap CLI" >> /etc/hosts' && \
+          sudo sh -c 'echo "127.0.0.1 aspnetcorewebapi.workleap.localhost" >> /etc/hosts' && \
+          sudo sh -c 'echo "127.0.0.1 containerapp.workleap.localhost" >> /etc/hosts' && \
+          sudo sh -c 'echo "127.0.0.1 mongo" >> /etc/hosts' && \
+          sudo sh -c 'echo "# End lines managed by Leap CLI" >> /etc/hosts'
+
+      # Execute leap run for Linux
+      - name: Linux - Execute leap run
+        if: runner.os == 'Linux'
+        run: |
+          pwsh -File ./.github/workflows/scripts/leap-run-linux.ps1
+
+      # Execute leap run for macOS
+      - name: macOS - Execute leap run
+        if: runner.os == 'macOS'
+        run: |
+          pwsh -File ./.github/workflows/scripts/leap-run-macos.ps1
+
+      # Execute leap run for Windows
+      - name: Windows - Execute leap run
+        if: runner.os == 'Windows'
+        run: |
+          pwsh -File ./.github/workflows/scripts/leap-run-windows.ps1
+
+  linearb:
+    needs: [leap-publish-dev, leap-system-test]
+    uses: workleap/wl-reusable-workflows/.github/workflows/linearb-deployment.yml@main
+    with:
+      environment: development
+    permissions:
+      id-token: write
+      contents: read

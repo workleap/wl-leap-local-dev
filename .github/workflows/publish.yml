@@ -1,0 +1,59 @@
+name: Publish
+
+on:
+  push:
+    branches: ["main"]
+    tags: ["*.*.*"]
+
+# We are using OpenID Connect to authenticate with Azure with secret.
+# https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-azure
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  main:
+    runs-on: [self-hosted, idp]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get gsoft-nuget-feed secret
+        id: get_gsoft_nuget_feed_secret
+        uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
+        with:
+          azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+          azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
+          secret-name: "gsoft-nuget-feed-ado-pat"
+
+      - name: Setup .NET 8.0 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          source-url: ${{ secrets.NUGET_GSOFT_FEED_URL }}
+          global-json-file: global.json
+        env:
+          NUGET_AUTH_TOKEN: ${{ steps.get_gsoft_nuget_feed_secret.outputs.secret }}
+
+      - run: ./Build.ps1 -SkipTests
+        shell: pwsh
+        env:
+          NUGET_SOURCE: ${{ secrets.NUGET_GSOFT_FEED_URL }}
+          NUGET_API_KEY: ${{ steps.get_gsoft_nuget_feed_secret.outputs.secret }}
+
+  linearb:
+    needs: [main]
+    uses: workleap/wl-reusable-workflows/.github/workflows/linearb-deployment.yml@main
+    with:
+      environment: 'release'
+    permissions:
+      id-token: write
+      contents: read
