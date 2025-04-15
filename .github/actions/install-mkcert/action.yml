@@ -20,7 +20,7 @@ runs:
     if: runner.os == 'macOS'
     run: |
       set -x
-      brew install mkcert && \
+      brew install mkcert
       mkcert -install
     shell: bash
 
