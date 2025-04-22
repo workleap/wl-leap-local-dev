@@ -15,6 +15,7 @@ permissions:
 jobs:
   leap-build-and-test:
     runs-on: ubuntu-24.04
+    environment: ci
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
