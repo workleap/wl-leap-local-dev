@@ -27,12 +27,15 @@ internal sealed class LoginAzureAcrPipelineStep(
             .OfType<string>()
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+        if (state.Dependencies.OfType<FusionAuthDependency>().Any())
+        {
+            acrNames.Add(Constants.FusionAuthProvisioningAcrName);
+        }
+
         foreach (var acrName in acrNames)
         {
             await this.LoginToAzureAcrAsync(acrName, cancellationToken);
         }
-
-        await this.LoginToAzureAcrAsync(Constants.FusionAuthProvisioningAcrName, cancellationToken);
     }
 
     private async Task LoginToAzureAcrAsync(string acrName, CancellationToken cancellationToken)
