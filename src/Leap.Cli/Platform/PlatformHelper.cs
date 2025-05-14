@@ -148,7 +148,7 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
 
         foreach (var arg in args)
         {
-            startInfo.ArgumentList.Add(arg);
+            startInfo.ArgumentList.Add(EscapeShellArg(arg));
         }
     }
 
@@ -159,7 +159,7 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
 
         foreach (var arg in args)
         {
-            startInfo.ArgumentList.Add(arg);
+            startInfo.ArgumentList.Add(EscapeShellArg(arg));
         }
     }
 
@@ -167,6 +167,11 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
     {
         startInfo.FileName = "osascript";
         startInfo.ArgumentList.Add("-e");
-        startInfo.ArgumentList.Add($"do shell script \"{processPath} {string.Join(' ', args)}\" with prompt \"Leap\" with administrator privileges");
+        startInfo.ArgumentList.Add($"do shell script \"{processPath} {string.Join(' ', args.Select(EscapeShellArg))}\" with prompt \"Leap\" with administrator privileges");
+    }
+
+    private static string EscapeShellArg(string value)
+    {
+        return $"'{value}'";
     }
 }
