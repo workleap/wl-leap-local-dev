@@ -148,7 +148,7 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
 
         foreach (var arg in args)
         {
-            startInfo.ArgumentList.Add(EscapeShellArg(arg));
+            startInfo.ArgumentList.Add(arg);
         }
     }
 
@@ -159,7 +159,7 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
 
         foreach (var arg in args)
         {
-            startInfo.ArgumentList.Add(EscapeShellArg(arg));
+            startInfo.ArgumentList.Add(arg);
         }
     }
 
