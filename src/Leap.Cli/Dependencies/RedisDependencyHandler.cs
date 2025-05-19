@@ -43,7 +43,7 @@ internal sealed class RedisDependencyHandler(
     {
         var service = new DockerComposeServiceYaml
         {
-            Image = new DockerComposeImageName("redis:8.0.0-alpine"),
+            Image = new DockerComposeImageName("redis:8.0.1-alpine"),
             ContainerName = ContainerName,
             Command =
             [
