@@ -210,7 +210,6 @@ internal sealed class AspireManager : IAspireManager
         await this.VerifyDcpWorksAsync(dcpCliPath, cancellationToken);
 
         // Check if the Aspire dashboard needs code signing on macOS with Apple Silicon
-        // Skip code signing if running on a build agent
         if (this._platformHelper.CurrentOS == OSPlatform.OSX &&
             this._platformHelper.ProcessArchitecture == Architecture.Arm64 &&
             !this._platformHelper.IsRunningOnBuildAgent)
@@ -223,30 +222,28 @@ internal sealed class AspireManager : IAspireManager
 
     private async Task EnsureDashboardIsCodeSignedAsync(string dashboardPath, CancellationToken cancellationToken)
     {
-        this._logger.LogInformation("Checking if Aspire.Dashboard is properly code signed...");
+        this._logger.LogDebug("Checking if Aspire.Dashboard is properly code signed...");
 
         var isCodeSigned = await this._platformHelper.IsCodeSignedAsync(dashboardPath, cancellationToken);
-        if (!isCodeSigned)
+        if (isCodeSigned)
         {
-            this._logger.LogWarning("Aspire.Dashboard is not code signed. This will cause macOS to terminate the process on Apple Silicon.");
-            this._logger.LogInformation("Attempting to code sign Aspire.Dashboard...");
+            this._logger.LogDebug("Aspire.Dashboard is already properly code signed");
+            return;
+        }
 
-            await this._platformHelper.CodeSignBinaryAsync(dashboardPath, cancellationToken);
+        this._logger.LogInformation("Attempting to code sign Aspire.Dashboard...");
 
-            // Verify the signing was successful
-            isCodeSigned = await this._platformHelper.IsCodeSignedAsync(dashboardPath, cancellationToken);
-            if (isCodeSigned)
-            {
-                this._logger.LogInformation("Successfully code signed Aspire.Dashboard");
-            }
-            else
-            {
-                this._logger.LogWarning("Failed to code sign Aspire.Dashboard. The application may be terminated by macOS.");
-            }
+        await this._platformHelper.CodeSignBinaryAsync(dashboardPath, cancellationToken);
+
+        // Verify the signing was successful
+        isCodeSigned = await this._platformHelper.IsCodeSignedAsync(dashboardPath, cancellationToken);
+        if (isCodeSigned)
+        {
+            this._logger.LogInformation("Successfully code signed Aspire.Dashboard");
         }
         else
         {
-            this._logger.LogInformation("Aspire.Dashboard is already properly code signed");
+            this._logger.LogWarning("Failed to code sign Aspire.Dashboard. The application may be terminated by macOS.");
         }
     }
 

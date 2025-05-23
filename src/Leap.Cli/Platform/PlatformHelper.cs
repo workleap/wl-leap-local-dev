@@ -4,6 +4,8 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
+using CliWrap;
+using CliWrap.Buffered;
 using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Platform;
@@ -175,37 +177,30 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
         return $"'{value}'";
     }
 
+    private bool RequiresAppleCodeSigning()
+    {
+        return OperatingSystem.IsMacOS() &&
+               this.ProcessArchitecture == Architecture.Arm64 &&
+               !this.IsRunningOnBuildAgent;
+    }
+
     public async Task<bool> IsCodeSignedAsync(string filePath, CancellationToken cancellationToken)
     {
-        if (!OperatingSystem.IsMacOS() ||
-            this.ProcessArchitecture != Architecture.Arm64 ||
-            this.IsRunningOnBuildAgent)
+        if (!this.RequiresAppleCodeSigning())
         {
             return true; // Skip for non-macOS, non-ARM64, or build agents
         }
 
         try
         {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = "codesign",
-                ArgumentList = { "--verify", filePath },
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
-            };
+            // Note: Using CliWrap directly instead of ICliWrap to avoid circular dependency issues
+            // with the telemetry client (ITelemetryHelper -> IPlatformHelper -> ICliWrap -> ITelemetryHelper)
+            var result = await CliWrap.Cli.Wrap("codesign")
+                .WithArguments(new[] { "--verify", filePath })
+                .WithValidation(CommandResultValidation.None)
+                .ExecuteBufferedAsync(cancellationToken);
 
-            using var process = Process.Start(startInfo);
-            if (process == null)
-            {
-                logger.LogWarning("Failed to start codesign process for verification");
-                return false;
-            }
-
-            await process.WaitForExitAsync(cancellationToken);
-
-            return process.ExitCode == 0;
+            return result.ExitCode == 0;
         }
         catch (Exception ex)
         {
@@ -216,9 +211,7 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
 
     public async Task CodeSignBinaryAsync(string filePath, CancellationToken cancellationToken)
     {
-        if (!OperatingSystem.IsMacOS() ||
-            this.ProcessArchitecture != Architecture.Arm64 ||
-            this.IsRunningOnBuildAgent)
+        if (!this.RequiresAppleCodeSigning())
         {
             return; // Skip for non-macOS, non-ARM64, or build agents
         }
@@ -231,7 +224,7 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
         {
             logger.LogInformation("Elevating privileges to sign binary at {FilePath}", filePath);
 
-            // Run the elevated command to code sign the binary
+            // Keep using Process for osascript with elevated privileges because it's a special case
             var startInfo = new ProcessStartInfo
             {
                 FileName = "osascript",
@@ -260,28 +253,16 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
 
     private async Task ExecuteCodeSignCommandAsync(string filePath, CancellationToken cancellationToken)
     {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = "codesign",
-            ArgumentList = { "-s", "-", filePath },
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
+        // Note: Using CliWrap directly instead of ICliWrap to avoid circular dependency issues
+        // with the telemetry client (ITelemetryHelper -> IPlatformHelper -> ICliWrap -> ITelemetryHelper)
+        var result = await CliWrap.Cli.Wrap("codesign")
+            .WithArguments(new[] { "-s", "-", filePath })
+            .WithValidation(CommandResultValidation.None)
+            .ExecuteBufferedAsync(cancellationToken);
 
-        using var process = Process.Start(startInfo);
-        if (process == null)
+        if (result.ExitCode != 0)
         {
-            throw new InvalidOperationException("Could not start codesign process.");
-        }
-
-        await process.WaitForExitAsync(cancellationToken);
-
-        if (process.ExitCode != 0)
-        {
-            var stderr = await process.StandardError.ReadToEndAsync(cancellationToken);
-            throw new InvalidOperationException($"Failed to sign binary. Error: {stderr}");
+            throw new InvalidOperationException($"Failed to sign binary. Error: {result.StandardError}");
         }
     }
 }
