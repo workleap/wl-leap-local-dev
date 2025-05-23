@@ -177,7 +177,7 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
 
     public async Task<bool> IsCodeSignedAsync(string filePath, CancellationToken cancellationToken)
     {
-        if (!OperatingSystem.IsMacOS() || ProcessArchitecture != Architecture.Arm64)
+        if (!OperatingSystem.IsMacOS() || this.ProcessArchitecture != Architecture.Arm64)
         {
             return true; // Only macOS on ARM64 needs code signing verification
         }
@@ -214,7 +214,7 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
 
     public async Task CodeSignBinaryAsync(string filePath, CancellationToken cancellationToken)
     {
-        if (!OperatingSystem.IsMacOS() || ProcessArchitecture != Architecture.Arm64)
+        if (!OperatingSystem.IsMacOS() || this.ProcessArchitecture != Architecture.Arm64)
         {
             return; // Only macOS on ARM64 needs code signing
         }
