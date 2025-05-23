@@ -239,14 +239,14 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
             using var process = Process.Start(startInfo);
             if (process == null)
             {
-                throw new InvalidOperationException("Could not start process to sign binary.");
+                throw new InvalidOperationException($"Could not start process to sign binary at '{filePath}'.");
             }
 
             await process.WaitForExitAsync(cancellationToken);
 
             if (process.ExitCode != 0)
             {
-                throw new InvalidOperationException($"Failed to sign binary. Exit code: {process.ExitCode}");
+                throw new InvalidOperationException($"Failed to sign binary at '{filePath}'. Exit code: {process.ExitCode}");
             }
         }
     }
@@ -262,7 +262,7 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
 
         if (result.ExitCode != 0)
         {
-            throw new InvalidOperationException($"Failed to sign binary. Error: {result.StandardError}");
+            throw new InvalidOperationException($"Failed to sign binary at '{filePath}'. Error: {result.StandardError}");
         }
     }
 }
