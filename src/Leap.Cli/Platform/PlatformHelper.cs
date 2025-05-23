@@ -177,9 +177,11 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
 
     public async Task<bool> IsCodeSignedAsync(string filePath, CancellationToken cancellationToken)
     {
-        if (!OperatingSystem.IsMacOS() || this.ProcessArchitecture != Architecture.Arm64)
+        if (!OperatingSystem.IsMacOS() ||
+            this.ProcessArchitecture != Architecture.Arm64 ||
+            this.IsRunningOnBuildAgent)
         {
-            return true; // Only macOS on ARM64 needs code signing verification
+            return true; // Skip for non-macOS, non-ARM64, or build agents
         }
 
         try
@@ -214,9 +216,11 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
 
     public async Task CodeSignBinaryAsync(string filePath, CancellationToken cancellationToken)
     {
-        if (!OperatingSystem.IsMacOS() || this.ProcessArchitecture != Architecture.Arm64)
+        if (!OperatingSystem.IsMacOS() ||
+            this.ProcessArchitecture != Architecture.Arm64 ||
+            this.IsRunningOnBuildAgent)
         {
-            return; // Only macOS on ARM64 needs code signing
+            return; // Skip for non-macOS, non-ARM64, or build agents
         }
 
         if (this.IsCurrentProcessElevated)
