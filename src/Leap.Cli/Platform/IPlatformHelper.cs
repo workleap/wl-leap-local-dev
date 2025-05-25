@@ -23,4 +23,5 @@ internal interface IPlatformHelper
     Task<bool> IsCodeSignedAsync(string filePath, CancellationToken cancellationToken);
 
     Task CodeSignBinaryAsync(string filePath, CancellationToken cancellationToken);
+    bool RequiresAppleCodeSigning();
 }

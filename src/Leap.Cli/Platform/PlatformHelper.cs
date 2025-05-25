@@ -177,7 +177,7 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
         return $"'{value}'";
     }
 
-    private bool RequiresAppleCodeSigning()
+    public bool RequiresAppleCodeSigning()
     {
         return OperatingSystem.IsMacOS() &&
                this.ProcessArchitecture == Architecture.Arm64 &&

@@ -210,9 +210,7 @@ internal sealed class AspireManager : IAspireManager
         await this.VerifyDcpWorksAsync(dcpCliPath, cancellationToken);
 
         // Check if the Aspire dashboard needs code signing on macOS with Apple Silicon
-        if (this._platformHelper.CurrentOS == OSPlatform.OSX &&
-            this._platformHelper.ProcessArchitecture == Architecture.Arm64 &&
-            !this._platformHelper.IsRunningOnBuildAgent)
+        if (this._platformHelper.RequiresAppleCodeSigning())
         {
             await this.EnsureDashboardIsCodeSignedAsync(dashboardPath, cancellationToken);
         }
