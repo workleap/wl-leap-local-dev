@@ -4,6 +4,8 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text.RegularExpressions;
+using CliWrap;
+using CliWrap.Buffered;
 using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Platform;
@@ -173,5 +175,94 @@ internal sealed class PlatformHelper(ILogger<PlatformHelper> logger) : IPlatform
     private static string EscapeShellArg(string value)
     {
         return $"'{value}'";
+    }
+
+    public bool RequiresAppleCodeSigning()
+    {
+        return OperatingSystem.IsMacOS() &&
+               this.ProcessArchitecture == Architecture.Arm64 &&
+               !this.IsRunningOnBuildAgent;
+    }
+
+    public async Task<bool> IsCodeSignedAsync(string filePath, CancellationToken cancellationToken)
+    {
+        if (!this.RequiresAppleCodeSigning())
+        {
+            return true; // Skip for non-macOS, non-ARM64, or build agents
+        }
+
+        try
+        {
+            // Note: Using CliWrap directly instead of ICliWrap to avoid circular dependency issues
+            // with the telemetry client (ITelemetryHelper -> IPlatformHelper -> ICliWrap -> ITelemetryHelper)
+            var result = await CliWrap.Cli.Wrap("codesign")
+                .WithArguments(new[] { "--verify", filePath })
+                .WithValidation(CommandResultValidation.None)
+                .ExecuteBufferedAsync(cancellationToken);
+
+            return result.ExitCode == 0;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error checking code signing for {FilePath}", filePath);
+            return false;
+        }
+    }
+
+    public async Task CodeSignBinaryAsync(string filePath, CancellationToken cancellationToken)
+    {
+        if (!this.RequiresAppleCodeSigning())
+        {
+            return; // Skip for non-macOS, non-ARM64, or build agents
+        }
+
+        if (this.IsCurrentProcessElevated)
+        {
+            await this.ExecuteCodeSignCommandAsync(filePath, cancellationToken);
+        }
+        else
+        {
+            logger.LogInformation("Elevating privileges to sign binary at {FilePath}", filePath);
+
+            // Keep using Process for osascript with elevated privileges because it's a special case
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "osascript",
+                ArgumentList =
+                {
+                    "-e",
+                    $"do shell script \"codesign -s - {EscapeShellArg(filePath)}\" with prompt \"Leap needs to sign Aspire.Dashboard for macOS security\" with administrator privileges"
+                },
+                UseShellExecute = true
+            };
+
+            using var process = Process.Start(startInfo);
+            if (process == null)
+            {
+                throw new InvalidOperationException($"Could not start process to sign binary at '{filePath}'.");
+            }
+
+            await process.WaitForExitAsync(cancellationToken);
+
+            if (process.ExitCode != 0)
+            {
+                throw new InvalidOperationException($"Failed to sign binary at '{filePath}'. Exit code: {process.ExitCode}");
+            }
+        }
+    }
+
+    private async Task ExecuteCodeSignCommandAsync(string filePath, CancellationToken cancellationToken)
+    {
+        // Note: Using CliWrap directly instead of ICliWrap to avoid circular dependency issues
+        // with the telemetry client (ITelemetryHelper -> IPlatformHelper -> ICliWrap -> ITelemetryHelper)
+        var result = await CliWrap.Cli.Wrap("codesign")
+            .WithArguments(new[] { "-s", "-", filePath })
+            .WithValidation(CommandResultValidation.None)
+            .ExecuteBufferedAsync(cancellationToken);
+
+        if (result.ExitCode != 0)
+        {
+            throw new InvalidOperationException($"Failed to sign binary at '{filePath}'. Error: {result.StandardError}");
+        }
     }
 }

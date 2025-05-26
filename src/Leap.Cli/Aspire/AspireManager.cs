@@ -209,7 +209,40 @@ internal sealed class AspireManager : IAspireManager
 
         await this.VerifyDcpWorksAsync(dcpCliPath, cancellationToken);
 
+        // Check if the Aspire dashboard needs code signing on macOS with Apple Silicon
+        if (this._platformHelper.RequiresAppleCodeSigning())
+        {
+            await this.EnsureDashboardIsCodeSignedAsync(dashboardPath, cancellationToken);
+        }
+
         this.Builder.UseCustomAspireWorkload(new AspireWorkloadOptions(dcpBinPath, dcpCliPath, dashboardPath));
+    }
+
+    private async Task EnsureDashboardIsCodeSignedAsync(string dashboardPath, CancellationToken cancellationToken)
+    {
+        this._logger.LogDebug("Checking if Aspire.Dashboard is properly code signed...");
+
+        var isCodeSigned = await this._platformHelper.IsCodeSignedAsync(dashboardPath, cancellationToken);
+        if (isCodeSigned)
+        {
+            this._logger.LogDebug("Aspire.Dashboard is already properly code signed");
+            return;
+        }
+
+        this._logger.LogInformation("Attempting to code sign Aspire.Dashboard...");
+
+        await this._platformHelper.CodeSignBinaryAsync(dashboardPath, cancellationToken);
+
+        // Verify the signing was successful
+        isCodeSigned = await this._platformHelper.IsCodeSignedAsync(dashboardPath, cancellationToken);
+        if (isCodeSigned)
+        {
+            this._logger.LogInformation("Successfully code signed Aspire.Dashboard");
+        }
+        else
+        {
+            this._logger.LogWarning("Failed to code sign Aspire.Dashboard. The application may be terminated by macOS.");
+        }
     }
 
     private async Task VerifyDcpWorksAsync(string dcpCliPath, CancellationToken cancellationToken)

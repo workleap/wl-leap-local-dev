@@ -19,4 +19,9 @@ internal interface IPlatformHelper
     string CurrentApplicationVersion { get; }
 
     Task StartLeapElevatedAsync(string[] args, CancellationToken cancellationToken);
+
+    Task<bool> IsCodeSignedAsync(string filePath, CancellationToken cancellationToken);
+
+    Task CodeSignBinaryAsync(string filePath, CancellationToken cancellationToken);
+    bool RequiresAppleCodeSigning();
 }
