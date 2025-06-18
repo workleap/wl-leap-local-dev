@@ -56,7 +56,7 @@ jobs:
 
   leap-publish-dev:
     needs: [leap-build-and-test]
-    runs-on: [self-hosted, idp]
+    runs-on: [idp]
     environment: ci
     steps:
       - name: Checkout code
