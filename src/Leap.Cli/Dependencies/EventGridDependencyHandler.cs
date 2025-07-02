@@ -201,7 +201,7 @@ internal sealed class EventGridDependencyHandler(
     {
         var service = new DockerComposeServiceYaml
         {
-            Image = new DockerComposeImageName("workleap/eventgridemulator:0.6.12"),
+            Image = new DockerComposeImageName("workleap/eventgridemulator:0.6.13"),
             ContainerName = ContainerName,
             Restart = DockerComposeConstants.Restart.UnlessStopped,
             Ports =
