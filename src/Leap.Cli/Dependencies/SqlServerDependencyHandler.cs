@@ -48,7 +48,7 @@ internal sealed class SqlServerDependencyHandler(
         // TODO Users with M1 chips have complained that mcr.microsoft.com/mssql/server doesn't work on their machines. Validate this.
         var image = platformHelper.ProcessArchitecture == Architecture.Arm64 && platformHelper.CurrentOS == OSPlatform.OSX
             ? new DockerComposeImageName("mcr.microsoft.com/azure-sql-edge:2.0.0")
-            : new DockerComposeImageName("mcr.microsoft.com/mssql/server:2022-latest");
+            : new DockerComposeImageName("mcr.microsoft.com/mssql/server:2025-latest");
 
         var service = new DockerComposeServiceYaml
         {
