@@ -55,6 +55,7 @@ jobs:
     uses: workleap/wl-reusable-workflows/.github/workflows/linearb-deployment.yml@main
     with:
       environment: 'release'
+      cortexEntityIdOrTag: service-leap-local-dev
     permissions:
       id-token: write
       contents: read
