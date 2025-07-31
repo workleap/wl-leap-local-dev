@@ -66,21 +66,13 @@ jobs:
 
       - uses: workleap/wl-reusable-workflows/az-artifact-authenticate@main
         with:
-          feed-url: "https://pkgs.dev.azure.com/workleap/_packaging/your-feed/nuget/v3/index.json"
+          feed-url: ${{ vars.GSOFTDEV_NUGET_SOURCE }}
           variables: ${{ toJSON(vars) }}
 
       - name: Setup .NET 8.0 SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          source-url: ${{ vars.GSOFTDEV_NUGET_SOURCE }}
-          global-json-file: global.json
-        env:
-          NUGET_AUTH_TOKEN: ${{ steps.get_gsoft_nuget_feed_secret.outputs.secret }}
 
       - name: Build
         run: ./Build.ps1 -SkipTests
