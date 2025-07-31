@@ -87,13 +87,6 @@ jobs:
         shell: pwsh
         env:
           NUGET_SOURCE: ${{ vars.GSOFTDEV_NUGET_SOURCE }}
-      
-      - name: Build
-        run: ./Build.ps1 -SkipTests
-        shell: pwsh
-        env:
-          NUGET_SOURCE: ${{ vars.GSOFT_NUGET_SOURCE }}
-          NUGET_API_KEY: ${{ steps.get_gsoft_nuget_feed_secret.outputs.secret }}
 
   leap-system-test:
     timeout-minutes: 10
