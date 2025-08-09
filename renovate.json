@@ -13,8 +13,8 @@
     {
       "description": "Docker images referenced in C# code",
       "customType": "regex",
-      "fileMatch": [
-        "\\.cs$"
+      "managerFilePatterns": [
+        "/\\.cs$/"
       ],
       "matchStringsStrategy": "any",
       "matchStrings": [
