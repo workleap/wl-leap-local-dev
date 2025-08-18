@@ -61,7 +61,7 @@ internal sealed class PrepareServiceRunnersPipelineStep(
         service.EnvironmentVariables["LOGGING__CONSOLE__FORMATTERNAME"] = "simple";
         service.EnvironmentVariables["LOGGING__CONSOLE__FORMATTEROPTIONS__TIMESTAMPFORMAT"] = "yyyy-MM-ddTHH:mm:ss.fffffff ";
 
-        string[] dependencyResourceNames = [.. state.Dependencies.Select(x => x.Name), Constants.LeapAzureCliProxyResourceName];
+        string[] dependencyResourceNames = [.. state.Dependencies.Select(x => x.Name)];
 
         switch (runner)
         {

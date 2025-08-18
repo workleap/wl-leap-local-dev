@@ -61,6 +61,8 @@ internal sealed class StartAzureCliDockerProxyPipelineStep(
         }
 
         this.AddAzureCliCredentialsProxyAspireResource();
+
+        state.Dependencies.Add(new AzureCliDockerProxyDependency());
     }
 
     private async Task<bool> IsAzureCliInstalledAsync(CancellationToken cancellationToken)
