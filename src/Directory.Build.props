@@ -3,7 +3,7 @@
     <Copyright>Copyright © Workleap $([System.DateTime]::UtcNow.ToString(yyyy))</Copyright>
     <Authors>Workleap</Authors>
     <Owners>Workleap</Owners>
-    <PackageProjectUrl>https://dev.azure.com/gsoft/Shared-Assets/_git/Leap</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/workleap/wl-leap-local-dev</PackageProjectUrl>
     <LangVersion>13</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
