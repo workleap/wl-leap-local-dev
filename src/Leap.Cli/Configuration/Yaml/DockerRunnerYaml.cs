@@ -1,4 +1,4 @@
-﻿using Leap.Cli.Model.Traits;
+using Leap.Cli.Model.Traits;
 using YamlDotNet.Serialization;
 
 namespace Leap.Cli.Configuration.Yaml;
@@ -25,6 +25,9 @@ internal sealed class DockerRunnerYaml : RunnerYaml, IHasProtocol, IHasPort
 
     [YamlMember(Alias = "volumes", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
     public DockerRunnerVolumeMappingYaml?[]? Volumes { get; set; }
+
+    [YamlMember(Alias = "envFiles", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
+    public string?[]? EnvironmentFiles { get; set; }
 
     [YamlIgnore]
     public int? Port { get; set; }

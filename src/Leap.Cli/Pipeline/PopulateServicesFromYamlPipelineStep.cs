@@ -369,6 +369,7 @@ internal sealed class PopulateServicesFromYamlPipelineStep(
                 ImageAndTag = dockerRunnerYaml.ImageAndTag,
                 ContainerPort = containerPort.Value,
                 Volumes = [.. dockerVolumeMappings],
+                EnvironmentFiles = dockerRunnerYaml.EnvironmentFiles,
             };
         }
 

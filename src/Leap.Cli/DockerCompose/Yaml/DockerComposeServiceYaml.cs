@@ -44,6 +44,9 @@ internal sealed class DockerComposeServiceYaml
     [YamlMember(Alias = "environment", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
     public KeyValueCollectionYaml Environment { get; set; } = [];
 
+    [YamlMember(Alias = "env_file", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
+    public string[] EnvironmentFiles { get; set; } = [];
+
     [YamlMember(Alias = "ports", DefaultValuesHandling = DefaultValuesHandling.OmitEmptyCollections)]
     public List<DockerComposePortMappingYaml> Ports { get; set; } = [];
 
