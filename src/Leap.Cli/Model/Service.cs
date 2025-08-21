@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using Leap.Cli.Configuration;
 
@@ -11,11 +11,14 @@ internal sealed class Service
     public Service(string name, LeapYamlFile leapYaml)
     {
         this.Name = name;
+        this.LeapYaml = leapYaml;
 
         var filePathHash = SHA256.HashData(Encoding.UTF8.GetBytes(leapYaml.Path));
         var containerNameSuffix = Convert.ToHexString(filePathHash).ToLowerInvariant()[..8];
         this.ContainerName = $"{this.Name.ToLowerInvariant()}-{containerNameSuffix}";
     }
+
+    public LeapYamlFile LeapYaml { get; }
 
     public string Name { get; }
 

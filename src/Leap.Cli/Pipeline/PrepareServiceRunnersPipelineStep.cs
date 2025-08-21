@@ -134,6 +134,7 @@ internal sealed class PrepareServiceRunnersPipelineStep(
             PullPolicy = dockerRunner.ImageAndTag.Contains("azurecr.io/")
                 ? DockerComposeConstants.PullPolicy.Always // Developers are expecting to use their latest images
                 : DockerComposeConstants.PullPolicy.Missing,
+            EnvironmentFiles = MapEnvFiles(),
             Environment = new KeyValueCollectionYaml
             {
                 ["ASPNETCORE_URLS"] = dockerRunner.Protocol + "://*:" + dockerRunner.ContainerPort,
@@ -207,6 +208,26 @@ internal sealed class PrepareServiceRunnersPipelineStep(
             .WithExplicitStart(leapConfiguration)
             .WaitFor(dependencyResourceNames)
             .WithHttpHealthCheck(service);
+
+        string[] MapEnvFiles()
+        {
+            if (dockerRunner.EnvironmentFiles is null)
+            {
+                return [];
+            }
+
+            var rootPath = Path.GetDirectoryName(service.LeapYaml.Path)!;
+            var result = new List<string>();
+            foreach (var envFile in dockerRunner.EnvironmentFiles)
+            {
+                if (!string.IsNullOrWhiteSpace(envFile))
+                {
+                    result.Add(Path.GetFullPath(Path.Combine(rootPath, envFile)));
+                }
+            }
+
+            return [.. result];
+        }
     }
 
     private static IEnumerable<string> GetDockerExtraHostsRuntimeArgs(ApplicationState state)
