@@ -61,7 +61,7 @@ internal sealed class PrepareServiceRunnersPipelineStep(
         service.EnvironmentVariables["LOGGING__CONSOLE__FORMATTERNAME"] = "simple";
         service.EnvironmentVariables["LOGGING__CONSOLE__FORMATTEROPTIONS__TIMESTAMPFORMAT"] = "yyyy-MM-ddTHH:mm:ss.fffffff ";
 
-        string[] dependencyResourceNames = [.. state.Dependencies.Select(x => x.Name), Constants.LeapAzureCliProxyResourceName];
+        string[] dependencyResourceNames = [.. state.Dependencies.Select(x => x.Name)];
 
         switch (runner)
         {
@@ -134,6 +134,7 @@ internal sealed class PrepareServiceRunnersPipelineStep(
             PullPolicy = dockerRunner.ImageAndTag.Contains("azurecr.io/")
                 ? DockerComposeConstants.PullPolicy.Always // Developers are expecting to use their latest images
                 : DockerComposeConstants.PullPolicy.Missing,
+            EnvironmentFiles = MapEnvFiles(),
             Environment = new KeyValueCollectionYaml
             {
                 ["ASPNETCORE_URLS"] = dockerRunner.Protocol + "://*:" + dockerRunner.ContainerPort,
@@ -207,6 +208,26 @@ internal sealed class PrepareServiceRunnersPipelineStep(
             .WithExplicitStart(leapConfiguration)
             .WaitFor(dependencyResourceNames)
             .WithHttpHealthCheck(service);
+
+        string[] MapEnvFiles()
+        {
+            if (dockerRunner.EnvironmentFiles is null)
+            {
+                return [];
+            }
+
+            var rootPath = Path.GetDirectoryName(service.LeapYaml.Path)!;
+            var result = new List<string>();
+            foreach (var envFile in dockerRunner.EnvironmentFiles)
+            {
+                if (!string.IsNullOrWhiteSpace(envFile))
+                {
+                    result.Add(Path.GetFullPath(Path.Combine(rootPath, envFile)));
+                }
+            }
+
+            return [.. result];
+        }
     }
 
     private static IEnumerable<string> GetDockerExtraHostsRuntimeArgs(ApplicationState state)

@@ -13,8 +13,8 @@
     {
       "description": "Docker images referenced in C# code",
       "customType": "regex",
-      "fileMatch": [
-        "\\.cs$"
+      "managerFilePatterns": [
+        "/\\.cs$/"
       ],
       "matchStringsStrategy": "any",
       "matchStrings": [
@@ -44,6 +44,17 @@
       "matchPackageNames": [
         "/^Microsoft\\.Extensions\\./"
       ]
+    },
+    {
+      "matchManagers": [
+        "nuget"
+      ],
+      "matchPackageNames": [
+        "System.CommandLine",
+        "System.CommandLine.*"
+      ],
+      "allowedVersions": "<= 2.0.0-beta4.22272.1",
+      "description": "Breaking changes are still being introduced, we'll wait for a stable release before updating."
     }
   ]
 }

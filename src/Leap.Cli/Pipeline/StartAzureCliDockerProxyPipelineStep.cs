@@ -20,7 +20,7 @@ using Microsoft.Extensions.Logging;
 namespace Leap.Cli.Pipeline;
 
 // Same concept as our Azure CLI credentials proxy for Docker containers,
-// but applied everywhere to speed-up the aquisition of Azure CLI tokens.
+// but applied everywhere to speed-up the acquisition of Azure CLI tokens.
 // https://github.com/workleap/azure-cli-credentials-proxy
 internal sealed class StartAzureCliDockerProxyPipelineStep(
     ICliWrap cliWrap,
@@ -61,6 +61,8 @@ internal sealed class StartAzureCliDockerProxyPipelineStep(
         }
 
         this.AddAzureCliCredentialsProxyAspireResource();
+
+        state.Dependencies.Add(new AzureCliDockerProxyDependency());
     }
 
     private async Task<bool> IsAzureCliInstalledAsync(CancellationToken cancellationToken)

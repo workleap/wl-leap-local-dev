@@ -51,7 +51,7 @@ internal sealed partial class AzuriteDependencyHandler(
     {
         var service = new DockerComposeServiceYaml
         {
-            Image = new DockerComposeImageName("mcr.microsoft.com/azure-storage/azurite:3.34.0"),
+            Image = new DockerComposeImageName("mcr.microsoft.com/azure-storage/azurite:3.35.0"),
             ContainerName = ContainerName,
             Command =
             [
