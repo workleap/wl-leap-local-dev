@@ -5,6 +5,7 @@ namespace Leap.Cli.Tests;
 public class PopulateServicesFromYamlPipelineStepTests
 {
     [Theory]
+    [InlineData("a.barley.localhost")]
     [InlineData("a.officevibe.localhost")]
     [InlineData("a.sharegate.localhost")]
     [InlineData("a.workleap.localhost")]

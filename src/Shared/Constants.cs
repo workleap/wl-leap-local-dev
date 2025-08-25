@@ -1,4 +1,4 @@
-﻿namespace Leap.Cli;
+namespace Leap.Cli;
 
 internal static class Constants
 {
@@ -35,6 +35,7 @@ internal static class Constants
     // https://www.reddit.com/r/sysadmin/comments/gdeggi/
     public static readonly string[] SupportedWildcardLocalhostDomainNames =
     [
+        "*.barley.localhost",
         "*.officevibe.localhost",
         "*.sharegate.localhost",
         "*.workleap.localhost",
