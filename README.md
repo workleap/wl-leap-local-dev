@@ -83,7 +83,7 @@ You can specify arbitrary environment variables. It is best to double quote the 
 
 This runner is specialized in starting services that are dotnet projects. It is meant to point at a `csproj` on the local file system. When used, Leap will execute the following command:
 
-`dotnet run --project <path_to_your_csproj> --no-lanch-profile`
+`dotnet run --project <path_to_your_csproj> --no-launch-profile`
 
 | **Property** | **Status** | **Description** |
 | --- | --- | --- |
