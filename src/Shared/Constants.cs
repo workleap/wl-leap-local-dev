@@ -35,6 +35,10 @@ internal static class Constants
     // https://www.reddit.com/r/sysadmin/comments/gdeggi/
     public static readonly string[] SupportedWildcardLocalhostDomainNames =
     [
+        // ⚠️⚠️⚠️
+        // The project is open-source, don't leak internal product name here.
+        // ⚠️⚠️⚠️
+
         "*.barley.localhost",
         "*.officevibe.localhost",
         "*.sharegate.localhost",
