@@ -16,7 +16,7 @@ namespace Workleap.Leap.Testing;
 
 public sealed class LeapTestContext : IAsyncDisposable
 {
-    // Authenticate to the DCP. The password is hardcoded in Leap (https://dev.azure.com/gsoft/Shared-Assets/_git/Leap?path=/src/Leap.Cli/Aspire/AspireManager.cs&version=GBmain&_a=contents).
+    // Authenticate to the DCP. The password is hardcoded in Leap (https://github.com/workleap/wl-leap-local-dev/blob/a01e615088ff37af99def9b759e162190a158892/src/Leap.Cli/Aspire/AspireManager.cs#L29).
     private static readonly Metadata DcpHeaders = new Metadata
     {
         { "x-resource-service-api-key", "leap" }
