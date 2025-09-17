@@ -32,12 +32,12 @@ jobs:
           secret-name: "gsoft-nuget-feed-ado-pat"
 
       - name: Setup .NET 8.0 SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '8.0.x'
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           source-url: ${{ vars.ADO_GSOFT_NUGET_SOURCE }}
           global-json-file: global.json
