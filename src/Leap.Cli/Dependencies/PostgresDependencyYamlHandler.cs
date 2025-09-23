@@ -1,4 +1,5 @@
-﻿using Leap.Cli.Model;
+using Leap.Cli.DockerCompose.Yaml;
+using Leap.Cli.Model;
 
 namespace Leap.Cli.Dependencies;
 
@@ -11,6 +12,7 @@ internal sealed class PostgresDependencyYamlHandler : IDependencyYamlHandler<Pos
 
     public Dependency ToDependencyModel(PostgresDependencyYaml yaml)
     {
-        return new PostgresDependency();
+        var imageName = yaml.ImageName is not null ? new DockerComposeImageName(yaml.ImageName) : null;
+        return new PostgresDependency(imageName);
     }
 }
