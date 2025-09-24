@@ -21,10 +21,10 @@ internal sealed class PostgresDependencyHandler(
     private const string ServiceName = PostgresDependencyYaml.YamlDiscriminator;
     private const string ContainerName = "leap-postgres";
     private const string VolumeName = "leap_postgres_data";
+    private const string DefaultComposeImageName = "postgres:17.6-alpine";
 
     private static readonly string HostConnectionString = $"postgresql://127.0.0.1:{HostPostgresPort}/postgres?user=postgres&password=localpassword";
     private static readonly string ContainerConnectionString = $"postgresql://host.docker.internal:{ContainerPostgresPort}/postgres?user=postgres&password=localpassword";
-    private static readonly DockerComposeImageName DefaultComposeImageName = new("postgres:17.6-alpine");
 
     protected override Task HandleAsync(PostgresDependency dependency, CancellationToken cancellationToken)
     {
@@ -42,7 +42,7 @@ internal sealed class PostgresDependencyHandler(
         return Task.CompletedTask;
     }
 
-    private static void ConfigureDockerCompose(DockerComposeYaml dockerComposeYaml, DockerComposeImageName imageName)
+    private static void ConfigureDockerCompose(DockerComposeYaml dockerComposeYaml, string imageName)
     {
         const string dbName = "postgres";
         const string pgUser = "postgres";
@@ -50,7 +50,7 @@ internal sealed class PostgresDependencyHandler(
 
         var service = new DockerComposeServiceYaml
         {
-            Image = imageName,
+            Image = new DockerComposeImageName(imageName),
             ContainerName = ContainerName,
             Restart = DockerComposeConstants.Restart.UnlessStopped,
             Environment = new KeyValueCollectionYaml
