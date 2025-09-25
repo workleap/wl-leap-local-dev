@@ -7,6 +7,6 @@ internal sealed class PostgresDependencyYaml : DependencyYaml
 {
     public const string YamlDiscriminator = "postgres";
 
-    [YamlMember(Alias = "imagename", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
-    public string? ImageName { get; set; }
+    [YamlMember(Alias = "imagetag", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
+    public string? ImageTag { get; set; }
 }

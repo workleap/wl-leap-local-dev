@@ -8,7 +8,7 @@ internal sealed class PostgresDependencyYamlHandler : IDependencyYamlHandler<Pos
     {
         return new PostgresDependencyYaml
         {
-            ImageName = leftYaml.ImageName ?? rightYaml.ImageName,
+            ImageTag = leftYaml.ImageTag ?? rightYaml.ImageTag,
         };
     }
 
@@ -16,7 +16,7 @@ internal sealed class PostgresDependencyYamlHandler : IDependencyYamlHandler<Pos
     {
         return new PostgresDependency
         {
-            ImageName = yaml.ImageName
+            ImageTag = yaml.ImageTag
         };
     }
 }

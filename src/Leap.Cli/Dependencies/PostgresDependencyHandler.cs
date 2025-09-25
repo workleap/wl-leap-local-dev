@@ -21,7 +21,6 @@ internal sealed class PostgresDependencyHandler(
     private const string ServiceName = PostgresDependencyYaml.YamlDiscriminator;
     private const string ContainerName = "leap-postgres";
     private const string VolumeName = "leap_postgres_data";
-    private const string DefaultComposeImageName = "postgres:17.6-alpine";
 
     private static readonly string HostConnectionString = $"postgresql://127.0.0.1:{HostPostgresPort}/postgres?user=postgres&password=localpassword";
     private static readonly string ContainerConnectionString = $"postgresql://host.docker.internal:{ContainerPostgresPort}/postgres?user=postgres&password=localpassword";
@@ -29,7 +28,7 @@ internal sealed class PostgresDependencyHandler(
     protected override Task HandleAsync(PostgresDependency dependency, CancellationToken cancellationToken)
     {
         TelemetryMeters.TrackPostgresStart();
-        ConfigureDockerCompose(dockerCompose.Configuration, dependency.ImageName ?? DefaultComposeImageName);
+        ConfigureDockerCompose(dockerCompose.Configuration, dependency.ImageTag);
         environmentVariables.Configure(ConfigureEnvironmentVariables);
         ConfigureAppSettingsJson(appSettingsJson.Configuration);
 
@@ -42,7 +41,7 @@ internal sealed class PostgresDependencyHandler(
         return Task.CompletedTask;
     }
 
-    private static void ConfigureDockerCompose(DockerComposeYaml dockerComposeYaml, string imageName)
+    private static void ConfigureDockerCompose(DockerComposeYaml dockerComposeYaml, string? imageTag)
     {
         const string dbName = "postgres";
         const string pgUser = "postgres";
@@ -50,7 +49,7 @@ internal sealed class PostgresDependencyHandler(
 
         var service = new DockerComposeServiceYaml
         {
-            Image = new DockerComposeImageName(imageName),
+            Image = imageTag != null ? new DockerComposeImageName($"postgres:{imageTag}") : new DockerComposeImageName("postgres:17.6-alpine"),
             ContainerName = ContainerName,
             Restart = DockerComposeConstants.Restart.UnlessStopped,
             Environment = new KeyValueCollectionYaml
