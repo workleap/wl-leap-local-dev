@@ -1,4 +1,4 @@
-﻿using Leap.Cli.Model;
+using Leap.Cli.Model;
 
 namespace Leap.Cli.Dependencies;
 
@@ -6,11 +6,17 @@ internal sealed class PostgresDependencyYamlHandler : IDependencyYamlHandler<Pos
 {
     public PostgresDependencyYaml Merge(PostgresDependencyYaml leftYaml, PostgresDependencyYaml rightYaml)
     {
-        return leftYaml;
+        return new PostgresDependencyYaml
+        {
+            ImageTag = leftYaml.ImageTag ?? rightYaml.ImageTag,
+        };
     }
 
     public Dependency ToDependencyModel(PostgresDependencyYaml yaml)
     {
-        return new PostgresDependency();
+        return new PostgresDependency
+        {
+            ImageTag = yaml.ImageTag
+        };
     }
 }
