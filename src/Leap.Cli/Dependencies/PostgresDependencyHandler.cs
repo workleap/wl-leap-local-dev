@@ -22,8 +22,8 @@ internal sealed class PostgresDependencyHandler(
     private const string ContainerName = "leap-postgres";
     private const string VolumeName = "leap_postgres_data";
 
-    private static readonly string HostConnectionString = $"postgresql://127.0.0.1:{HostPostgresPort}/postgres?user=postgres&password=localpassword";
-    private static readonly string ContainerConnectionString = $"postgresql://host.docker.internal:{ContainerPostgresPort}/postgres?user=postgres&password=localpassword";
+    private static readonly string HostConnectionString = $"Host=localhost;Port={HostPostgresPort};Database=postgres;Username=postgres;Password=localpassword";
+    private static readonly string ContainerConnectionString = $"Host=host.docker.internal;Port={ContainerPostgresPort};Database=postgres;Username=postgres;Password=localpassword";
 
     protected override Task HandleAsync(PostgresDependency dependency, CancellationToken cancellationToken)
     {
