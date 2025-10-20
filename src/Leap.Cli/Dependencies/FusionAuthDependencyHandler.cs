@@ -92,7 +92,7 @@ internal class FusionAuthDependencyHandler(
 
         var fusionAuthDb = new DockerComposeServiceYaml()
         {
-            Image = new DockerComposeImageName("postgres:17-alpine"),
+            Image = new DockerComposeImageName("postgres:18-alpine"),
             ContainerName = DbContainerName,
             Environment = new KeyValueCollectionYaml()
             {
