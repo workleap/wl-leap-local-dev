@@ -42,6 +42,10 @@ internal static class DotnetExecutableResourceExtensions
             context.EnvironmentVariables["DOTNET_STARTUP_HOOKS"] = typeof(StartupHookAssemblyHandle).Assembly.Location;
             context.EnvironmentVariables["LEAP_SERVICE_NAME"] = builder.Resource.Name;
             context.EnvironmentVariables["LEAP_STARTUP_HOOK_SIGNAL_FILE_PATH"] = builder.Resource.DebuggingSignalFilePath;
+
+            // Reduce build time to improve feedback loop
+            context.EnvironmentVariables["RunAnalyzers"] = "false";
+            context.EnvironmentVariables["NuGetAudit"] = "false";
         });
     }
 
