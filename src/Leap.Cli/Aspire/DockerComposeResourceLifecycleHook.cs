@@ -1,13 +1,14 @@
 using System.Collections.Concurrent;
-using Aspire.Hosting.Lifecycle;
-using Microsoft.Extensions.Logging;
-using Docker.DotNet;
-using Docker.DotNet.Models;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using Aspire.Hosting.Eventing;
+using Aspire.Hosting.Lifecycle;
+using Docker.DotNet;
+using Docker.DotNet.Models;
 using Leap.Cli.DockerCompose;
 using Leap.Cli.Platform.Telemetry;
+using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Aspire;
 
@@ -18,16 +19,22 @@ internal sealed class DockerComposeResourceLifecycleHook(
     IDockerComposeManager dockerComposeManager,
     ResourceNotificationService notificationService,
     ResourceLoggerService loggerService)
-    : IDistributedApplicationLifecycleHook, IAsyncDisposable
+    : IDistributedApplicationEventingSubscriber, IAsyncDisposable
 {
     private readonly CancellationTokenSource _tokenSource = new();
     private readonly DockerClient _dockerClient = new DockerClientConfiguration().CreateClient();
     private readonly ConcurrentDictionary<string, DateTimeOffset> _getContainerLogsSince = new(StringComparer.Ordinal);
     private Task? _mainTask;
 
-    public Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
+    public Task SubscribeAsync(IDistributedApplicationEventing eventing, DistributedApplicationExecutionContext executionContext, CancellationToken cancellationToken)
     {
-        this._mainTask = this.StartAndWatchContainersAsync(appModel, this._tokenSource.Token);
+        eventing.Subscribe<BeforeStartEvent>(this.BeforeStartAsync);
+        return Task.CompletedTask;
+    }
+
+    private Task BeforeStartAsync(BeforeStartEvent @event, CancellationToken cancellationToken = default)
+    {
+        this._mainTask = this.StartAndWatchContainersAsync(@event.Model, this._tokenSource.Token);
 
         return Task.CompletedTask;
     }

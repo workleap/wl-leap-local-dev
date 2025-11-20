@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Aspire.Hosting.Eventing;
 using Aspire.Hosting.Lifecycle;
 using Leap.Cli.Aspire;
 using Leap.Cli.Configuration;
@@ -30,7 +31,7 @@ internal sealed class PrepareReverseProxyPipelineStep(IAspireManager aspireManag
             return Task.CompletedTask;
         }
 
-        aspireManager.Builder.Services.TryAddLifecycleHook<HostYarpInAspireLifecycleHook>();
+        aspireManager.Builder.Services.TryAddEventingSubscriber<HostYarpInAspireLifecycleHook>();
 
         aspireManager.Builder.AddResource(new YarpResource(state))
             .WithInitialState(new CustomResourceSnapshot
@@ -56,13 +57,19 @@ internal sealed class PrepareReverseProxyPipelineStep(IAspireManager aspireManag
     }
 
     private sealed class HostYarpInAspireLifecycleHook(ResourceNotificationService notificationService, ResourceLoggerService loggerService)
-        : IDistributedApplicationLifecycleHook, IAsyncDisposable
+        : IDistributedApplicationEventingSubscriber, IAsyncDisposable
     {
         private WebApplication? _app;
 
-        public async Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
+        public Task SubscribeAsync(IDistributedApplicationEventing eventing, DistributedApplicationExecutionContext executionContext, CancellationToken cancellationToken)
         {
-            var yarpResource = appModel.Resources.OfType<YarpResource>().Single();
+            eventing.Subscribe<BeforeStartEvent>(this.BeforeStartAsync);
+            return Task.CompletedTask;
+        }
+
+        private async Task BeforeStartAsync(BeforeStartEvent @event, CancellationToken cancellationToken = default)
+        {
+            var yarpResource = @event.Model.Resources.OfType<YarpResource>().Single();
             var yarpLogger = loggerService.GetLogger(yarpResource);
 
             try

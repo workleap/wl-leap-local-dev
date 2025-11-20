@@ -175,13 +175,13 @@ internal sealed class AspireManager : IAspireManager
     {
         await this.UseCustomAspireWorkloadAsync(cancellationToken);
 
-        this.Builder.Services.TryAddLifecycleHook<UseLeapCertificateForAspireDashboardLifecycleHook>();
-        this.Builder.Services.TryAddLifecycleHook<DetectDotnetBuildRaceConditionErrorLifecycleHook>();
+        this.Builder.Services.TryAddEventingSubscriber<UseLeapCertificateForAspireDashboardLifecycleHook>();
+        this.Builder.Services.TryAddEventingSubscriber<DetectDotnetBuildRaceConditionErrorLifecycleHook>();
         this.Builder.Services.AddSingleton(this._preferencesSettingsManager);
         this.Builder.Services.AddSingleton(this._dockerComposeManager);
 
         this.Builder.Services.TryAddSingleton<AspireDashboardReadinessAwaiter>();
-        this.Builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDistributedApplicationLifecycleHook, AspireDashboardReadinessAwaiter>(
+        this.Builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDistributedApplicationEventingSubscriber, AspireDashboardReadinessAwaiter>(
             x => x.GetRequiredService<AspireDashboardReadinessAwaiter>()));
 
         this.Builder.IgnoreConsoleTerminationSignals();

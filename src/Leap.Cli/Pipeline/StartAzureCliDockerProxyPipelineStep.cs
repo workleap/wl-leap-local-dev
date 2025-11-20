@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net.Mime;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Aspire.Hosting.Eventing;
 using Aspire.Hosting.Lifecycle;
 using CliWrap;
 using Leap.Cli.Aspire;
@@ -96,7 +97,7 @@ internal sealed class StartAzureCliDockerProxyPipelineStep(
 
     private void AddAzureCliCredentialsProxyAspireResource()
     {
-        aspireManager.Builder.Services.TryAddLifecycleHook<HostAzureCliDockerProxyInAspireLifecycleHook>();
+        aspireManager.Builder.Services.TryAddEventingSubscriber<HostAzureCliDockerProxyInAspireLifecycleHook>();
         aspireManager.Builder.Services.TryAddSingleton(cliWrap);
 
         aspireManager.Builder.AddResource(new AzureCliDockerProxyResource())
@@ -129,14 +130,20 @@ internal sealed class StartAzureCliDockerProxyPipelineStep(
     private sealed class AzureCliDockerProxyResource() : Resource(Constants.LeapAzureCliProxyResourceName);
 
     private sealed class HostAzureCliDockerProxyInAspireLifecycleHook(ILogger<HostAzureCliDockerProxyInAspireLifecycleHook> logger, ICliWrap cliWrap, ResourceNotificationService notificationService, ResourceLoggerService loggerService)
-        : IDistributedApplicationLifecycleHook, IAsyncDisposable
+        : IDistributedApplicationEventingSubscriber, IAsyncDisposable
     {
         private WebApplication? _app;
         private Task? _trackTask;
 
-        public Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
+        public Task SubscribeAsync(IDistributedApplicationEventing eventing, DistributedApplicationExecutionContext executionContext, CancellationToken cancellationToken)
         {
-            this._trackTask = this.TrackAzureCliProxyResource(appModel, cancellationToken);
+            eventing.Subscribe<BeforeStartEvent>(this.BeforeStartAsync);
+            return Task.CompletedTask;
+        }
+
+        private Task BeforeStartAsync(BeforeStartEvent @event, CancellationToken cancellationToken = default)
+        {
+            this._trackTask = this.TrackAzureCliProxyResource(@event.Model, cancellationToken);
             return Task.CompletedTask;
         }
 

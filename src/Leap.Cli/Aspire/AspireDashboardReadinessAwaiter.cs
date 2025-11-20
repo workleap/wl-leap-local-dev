@@ -1,8 +1,9 @@
-﻿using Aspire.Hosting.Lifecycle;
+using Aspire.Hosting.Eventing;
+using Aspire.Hosting.Lifecycle;
 
 namespace Leap.Cli.Aspire;
 
-internal sealed class AspireDashboardReadinessAwaiter(ResourceNotificationService resourceNotificationService) : IDistributedApplicationLifecycleHook, IAsyncDisposable
+internal sealed class AspireDashboardReadinessAwaiter(ResourceNotificationService resourceNotificationService) : IDistributedApplicationEventingSubscriber, IAsyncDisposable
 {
     private readonly TaskCompletionSource<bool> _tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly CancellationTokenSource _cts = new();
@@ -10,7 +11,13 @@ internal sealed class AspireDashboardReadinessAwaiter(ResourceNotificationServic
     private Task? _monitorTask;
     private int _disposed;
 
-    public Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
+    public Task SubscribeAsync(IDistributedApplicationEventing eventing, DistributedApplicationExecutionContext executionContext, CancellationToken cancellationToken)
+    {
+        eventing.Subscribe<BeforeStartEvent>(this.BeforeStartAsync);
+        return Task.CompletedTask;
+    }
+
+    private Task BeforeStartAsync(BeforeStartEvent @event, CancellationToken cancellationToken = default)
     {
         this._monitorTask = this.MonitorDashboardReadinessAsync(this._cts.Token);
         return Task.CompletedTask;

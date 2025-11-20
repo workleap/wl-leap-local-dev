@@ -1,12 +1,19 @@
+using Aspire.Hosting.Eventing;
 using Aspire.Hosting.Lifecycle;
 
 namespace Leap.Cli.Aspire;
 
-internal sealed class UseLeapCertificateForAspireDashboardLifecycleHook : IDistributedApplicationLifecycleHook
+internal sealed class UseLeapCertificateForAspireDashboardLifecycleHook : IDistributedApplicationEventingSubscriber
 {
-    public Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
+    public Task SubscribeAsync(IDistributedApplicationEventing eventing, DistributedApplicationExecutionContext executionContext, CancellationToken cancellationToken)
     {
-        var dashboardResource = appModel.Resources.Single(x => x.Name == "aspire-dashboard");
+        eventing.Subscribe<BeforeStartEvent>(this.BeforeStartAsync);
+        return Task.CompletedTask;
+    }
+
+    private Task BeforeStartAsync(BeforeStartEvent @event, CancellationToken cancellationToken = default)
+    {
+        var dashboardResource = @event.Model.Resources.Single(x => x.Name == "aspire-dashboard");
 
         dashboardResource.Annotations.Add(new EnvironmentCallbackAnnotation(context =>
         {

@@ -99,11 +99,8 @@ internal sealed class TelemetryHelper : ITelemetryHelper, IDisposable
     {
         lock (this._lock)
         {
-            if (this._rootActivity != null)
-            {
-                this._rootActivity.Dispose();
-                this._rootActivity = null;
-            }
+            this._rootActivity?.Dispose();
+            this._rootActivity = null;
         }
     }
 
