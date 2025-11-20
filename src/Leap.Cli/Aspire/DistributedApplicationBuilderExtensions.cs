@@ -33,7 +33,7 @@ internal static class DistributedApplicationBuilderExtensions
 
         if (leapGlobalOptions.Verbosity == LoggerVerbosity.Diagnostic)
         {
-            builder.Services.TryAddLifecycleHook<EnableAspireDashboardDiagnosticLoggingLifecycleHook>();
+            builder.Services.TryAddEventingSubscriber<EnableAspireDashboardDiagnosticLoggingLifecycleHook>();
         }
 
         return builder;

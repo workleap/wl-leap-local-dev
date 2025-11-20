@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Reflection;
+using Aspire.Hosting.Eventing;
 using Aspire.Hosting.Lifecycle;
 using Leap.Cli.Platform.Telemetry;
 using Leap.StartupHook;
@@ -32,7 +33,7 @@ internal static class DotnetExecutableResourceExtensions
 
     public static IResourceBuilder<DotnetExecutableResource> WithRestartAndWaitForDebuggerCommand(this IResourceBuilder<DotnetExecutableResource> builder)
     {
-        builder.ApplicationBuilder.Services.TryAddLifecycleHook<DotnetExecutableLifecycleHook>();
+        builder.ApplicationBuilder.Services.TryAddEventingSubscriber<DotnetExecutableLifecycleHook>();
 
         // .NET hooks are executed before the application starts. Inspired by:
         // https://github.com/dotnet/tye/blob/release/0.11.0/src/Microsoft.Tye.Hosting/ProcessRunner.cs#L223
@@ -49,7 +50,7 @@ internal static class DotnetExecutableResourceExtensions
         });
     }
 
-    private sealed class DotnetExecutableLifecycleHook : IDistributedApplicationLifecycleHook
+    private sealed class DotnetExecutableLifecycleHook : IDistributedApplicationEventingSubscriber
     {
         private readonly ConcurrentDictionary<string, bool> _areResourcesRestartingForDebugging = new(StringComparer.OrdinalIgnoreCase);
         private readonly IServiceProvider _serviceProvider;
@@ -100,11 +101,17 @@ internal static class DotnetExecutableResourceExtensions
             }
         }
 
-        public Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
+        public Task SubscribeAsync(IDistributedApplicationEventing eventing, DistributedApplicationExecutionContext executionContext, CancellationToken cancellationToken)
+        {
+            eventing.Subscribe<BeforeStartEvent>(this.BeforeStartAsync);
+            return Task.CompletedTask;
+        }
+
+        private Task BeforeStartAsync(BeforeStartEvent @event, CancellationToken cancellationToken = default)
         {
             this._applicationExecutor = this._serviceProvider.GetRequiredService(this._applicationOrchestratorType);
 
-            foreach (var dotnetExecutable in appModel.Resources.OfType<DotnetExecutableResource>())
+            foreach (var dotnetExecutable in @event.Model.Resources.OfType<DotnetExecutableResource>())
             {
                 this._areResourcesRestartingForDebugging[dotnetExecutable.Name] = false;
                 this.AddRestartAndWaitForDebuggerCommand(dotnetExecutable);

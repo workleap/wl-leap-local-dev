@@ -6,7 +6,7 @@ internal static class DockerComposeResourceExtensions
 {
     public static IResourceBuilder<DockerComposeResource> AddDockerComposeResource(this IDistributedApplicationBuilder builder, DockerComposeResource resource)
     {
-        builder.Services.TryAddLifecycleHook<DockerComposeResourceLifecycleHook>();
+        builder.Services.TryAddEventingSubscriber<DockerComposeResourceLifecycleHook>();
 
         return builder.AddResource(resource)
             .WithInitialState(new CustomResourceSnapshot

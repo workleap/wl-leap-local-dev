@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Workleap.Leap.Testing;
 
 namespace Leap.Cli.Tests;
+
 public sealed class LeapTests(ITestOutputHelper testOutputHelper)
 {
     private LeapTestContext CreateContext(string? remoteEnvironmentName = null, CancellationToken cancellationToken = default)

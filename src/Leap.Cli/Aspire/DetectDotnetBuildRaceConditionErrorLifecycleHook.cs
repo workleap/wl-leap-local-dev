@@ -1,3 +1,4 @@
+using Aspire.Hosting.Eventing;
 using Aspire.Hosting.Lifecycle;
 using Microsoft.Extensions.Logging;
 
@@ -12,12 +13,18 @@ namespace Leap.Cli.Aspire;
 internal sealed class DetectDotnetBuildRaceConditionErrorLifecycleHook(
     ResourceNotificationService resourceNotificationService,
     ResourceLoggerService resourceLoggerService,
-    ILogger<DetectDotnetBuildRaceConditionErrorLifecycleHook> lifecycleHookLogger) : IDistributedApplicationLifecycleHook, IAsyncDisposable
+    ILogger<DetectDotnetBuildRaceConditionErrorLifecycleHook> lifecycleHookLogger) : IDistributedApplicationEventingSubscriber, IAsyncDisposable
 {
     private readonly CancellationTokenSource _shutdownCts = new();
     private Task? _dotnetLogsTasks;
 
-    public Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
+    public Task SubscribeAsync(IDistributedApplicationEventing eventing, DistributedApplicationExecutionContext executionContext, CancellationToken cancellationToken)
+    {
+        eventing.Subscribe<BeforeStartEvent>(this.BeforeStartAsync);
+        return Task.CompletedTask;
+    }
+
+    private Task BeforeStartAsync(BeforeStartEvent @event, CancellationToken cancellationToken = default)
     {
         this._dotnetLogsTasks = this.WatchDotnetLogsAsync(this._shutdownCts.Token);
         return Task.CompletedTask;

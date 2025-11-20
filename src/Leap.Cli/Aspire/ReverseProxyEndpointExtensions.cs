@@ -1,3 +1,4 @@
+using Aspire.Hosting.Eventing;
 using Aspire.Hosting.Lifecycle;
 using Leap.Cli.Model;
 using Microsoft.Extensions.Logging;
@@ -16,7 +17,7 @@ internal static class ReverseProxyEndpointExtensions
     public static IResourceBuilder<T> WithReverseProxyUrl<T>(this IResourceBuilder<T> builder, string url)
         where T : IResource
     {
-        builder.ApplicationBuilder.Services.TryAddLifecycleHook<ReverseProxyEndpointLifecycleHook>();
+        builder.ApplicationBuilder.Services.TryAddEventingSubscriber<ReverseProxyEndpointLifecycleHook>();
         return builder.WithAnnotation(new ReverseProxyEndpointAnnotation(url), ResourceAnnotationMutationBehavior.Replace);
     }
 
@@ -25,12 +26,18 @@ internal static class ReverseProxyEndpointExtensions
         public string ReverseProxyUrl { get; } = reverseProxyUrl;
     }
 
-    private sealed class ReverseProxyEndpointLifecycleHook(ResourceNotificationService notificationService, ILogger<ReverseProxyEndpointLifecycleHook> logger) : IDistributedApplicationLifecycleHook, IAsyncDisposable
+    private sealed class ReverseProxyEndpointLifecycleHook(ResourceNotificationService notificationService, ILogger<ReverseProxyEndpointLifecycleHook> logger) : IDistributedApplicationEventingSubscriber, IAsyncDisposable
     {
         private readonly CancellationTokenSource _cts = new();
         private Task? _watchTask;
 
-        public Task BeforeStartAsync(DistributedApplicationModel appModel, CancellationToken cancellationToken = default)
+        public Task SubscribeAsync(IDistributedApplicationEventing eventing, DistributedApplicationExecutionContext executionContext, CancellationToken cancellationToken)
+        {
+            eventing.Subscribe<BeforeStartEvent>(this.BeforeStartAsync);
+            return Task.CompletedTask;
+        }
+
+        private Task BeforeStartAsync(BeforeStartEvent @event, CancellationToken cancellationToken = default)
         {
             this._watchTask = this.WatchResourceAndCorrectUrlsAsync(this._cts.Token);
             return Task.CompletedTask;
