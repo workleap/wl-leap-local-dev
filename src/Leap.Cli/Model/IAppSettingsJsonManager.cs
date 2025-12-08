@@ -1,4 +1,4 @@
-namespace Leap.Cli.Model;
+﻿namespace Leap.Cli.Model;
 
 internal interface IAppSettingsJsonManager : IConfigureAppSettingsJson
 {

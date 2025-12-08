@@ -1,4 +1,4 @@
-using YamlDotNet.Core;
+﻿using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 
 namespace Leap.Cli.Configuration.Yaml;

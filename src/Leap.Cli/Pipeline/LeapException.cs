@@ -1,4 +1,4 @@
-namespace Leap.Cli.Pipeline;
+﻿namespace Leap.Cli.Pipeline;
 
 internal sealed class LeapException : Exception
 {

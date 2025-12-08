@@ -1,3 +1,3 @@
-namespace Leap.Cli.Yaml;
+﻿namespace Leap.Cli.Yaml;
 
 internal sealed class InlinedQuotedStringCollectionYaml : List<string>;

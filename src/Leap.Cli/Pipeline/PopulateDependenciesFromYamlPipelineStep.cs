@@ -1,4 +1,4 @@
-using Leap.Cli.Configuration;
+﻿using Leap.Cli.Configuration;
 using Leap.Cli.Configuration.Yaml;
 using Leap.Cli.Dependencies;
 using Leap.Cli.Dependencies.Azurite;

@@ -7,8 +7,9 @@ using NuGet.Packaging.Signing;
 using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
 using NuGet.Versioning;
-using IMsExtLogger = Microsoft.Extensions.Logging.ILogger<Leap.Cli.Platform.NuGetPackageDownloader>;
+
 using INuGetLogger = NuGet.Common.ILogger;
+using IMsExtLogger = Microsoft.Extensions.Logging.ILogger<Leap.Cli.Platform.NuGetPackageDownloader>;
 
 namespace Leap.Cli.Platform;
 

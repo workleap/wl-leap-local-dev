@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using CliWrap;
 using CliWrap.Buffered;
 using CliWrap.Exceptions;

@@ -1,4 +1,4 @@
-using System.Runtime.ExceptionServices;
+﻿using System.Runtime.ExceptionServices;
 using Leap.Cli.Model;
 using Leap.Cli.Platform;
 using Leap.Cli.Platform.Telemetry;

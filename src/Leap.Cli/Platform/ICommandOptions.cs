@@ -1,4 +1,4 @@
-namespace Leap.Cli.Platform;
+﻿namespace Leap.Cli.Platform;
 
 internal interface ICommandOptions
 {

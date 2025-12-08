@@ -1,4 +1,4 @@
-using Leap.Cli.Model.Traits;
+﻿using Leap.Cli.Model.Traits;
 using YamlDotNet.Core;
 using YamlDotNet.Serialization;
 

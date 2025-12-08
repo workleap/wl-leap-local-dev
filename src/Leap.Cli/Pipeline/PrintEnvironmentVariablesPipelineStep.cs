@@ -1,4 +1,4 @@
-using Leap.Cli.Model;
+﻿using Leap.Cli.Model;
 using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Pipeline;

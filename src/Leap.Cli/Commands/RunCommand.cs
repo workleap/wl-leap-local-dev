@@ -1,8 +1,8 @@
 using System.CommandLine;
 using System.CommandLine.Parsing;
 using Leap.Cli.Configuration;
-using Leap.Cli.Pipeline;
 using Leap.Cli.Platform;
+using Leap.Cli.Pipeline;
 using Leap.Cli.Platform.Telemetry;
 
 namespace Leap.Cli.Commands;

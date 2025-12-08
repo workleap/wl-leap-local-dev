@@ -1,4 +1,4 @@
-namespace Leap.Cli.Aspire;
+﻿namespace Leap.Cli.Aspire;
 
 internal sealed class DockerComposeResource(string name, string containerName) : Resource(name), IResourceWithWaitSupport
 {

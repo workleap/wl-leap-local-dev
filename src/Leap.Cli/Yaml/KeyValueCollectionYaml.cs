@@ -1,4 +1,4 @@
-namespace Leap.Cli.Yaml;
+﻿namespace Leap.Cli.Yaml;
 
 internal sealed class KeyValueCollectionYaml : Dictionary<string, string>
 {

@@ -1,4 +1,4 @@
-namespace Leap.Cli.Aspire;
+﻿namespace Leap.Cli.Aspire;
 
 /// <summary>
 /// Helps to set the reverse proxy URL for a service at the first position in the dashboard based on the ordering rules of .NET Aspire:

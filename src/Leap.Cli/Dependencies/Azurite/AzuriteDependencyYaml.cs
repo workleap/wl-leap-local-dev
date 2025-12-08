@@ -1,4 +1,4 @@
-using Leap.Cli.Configuration.Yaml;
+﻿using Leap.Cli.Configuration.Yaml;
 using YamlDotNet.Serialization;
 
 namespace Leap.Cli.Dependencies.Azurite;
