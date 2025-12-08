@@ -128,6 +128,17 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
         return notSupportedWildcardDomainNames;
     }
 
+    private static bool IsCertificateExpiringSoon(X509Certificate2 certificate)
+    {
+        var expirationThreshold = DateTime.UtcNow.AddDays(ExpirationWarningThresholdDays);
+        return certificate.NotAfter.ToUniversalTime() <= expirationThreshold;
+    }
+
+    private static bool IsCertificateNotYetValid(X509Certificate2 certificate)
+    {
+        return certificate.NotBefore.ToUniversalTime() > DateTime.UtcNow;
+    }
+
     private static X509Certificate2? LoadExistingCertificate()
     {
         try
@@ -150,17 +161,6 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
     {
         const string wildcard = "*";
         return domain.Replace(wildcard, "example");
-    }
-
-    private static bool IsCertificateExpiringSoon(X509Certificate2 certificate)
-    {
-        var expirationThreshold = DateTime.UtcNow.AddDays(ExpirationWarningThresholdDays);
-        return certificate.NotAfter.ToUniversalTime() <= expirationThreshold;
-    }
-
-    private static bool IsCertificateNotYetValid(X509Certificate2 certificate)
-    {
-        return certificate.NotBefore.ToUniversalTime() > DateTime.UtcNow;
     }
 
     private async Task<string?> FindMkcertExecutablePathInPathEnv(CancellationToken cancellationToken)
