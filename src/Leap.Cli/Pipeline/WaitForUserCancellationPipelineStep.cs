@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Leap.Cli.Model;
 using Leap.Cli.Platform.Telemetry;
 using Microsoft.Extensions.Logging;

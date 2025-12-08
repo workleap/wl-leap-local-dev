@@ -1,4 +1,4 @@
-﻿using System.Runtime.InteropServices;
+using System.Runtime.InteropServices;
 using System.Text.Json.Nodes;
 using Leap.Cli.Aspire;
 using Leap.Cli.DockerCompose;

@@ -1,4 +1,4 @@
-﻿using Leap.Cli.Platform;
+using Leap.Cli.Platform;
 
 namespace Leap.Cli.Commands;
 

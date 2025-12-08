@@ -1,4 +1,4 @@
-﻿using Leap.Cli;
+using Leap.Cli;
 
 #pragma warning disable IDE0130
 namespace Microsoft.Extensions.Configuration;

@@ -1,4 +1,4 @@
-﻿namespace Leap.StartupHook;
+namespace Leap.StartupHook;
 
 public static class PersistentDotnetExecutableDebuggingState
 {

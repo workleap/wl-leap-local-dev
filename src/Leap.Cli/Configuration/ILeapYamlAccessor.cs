@@ -1,4 +1,4 @@
-﻿namespace Leap.Cli.Configuration;
+namespace Leap.Cli.Configuration;
 
 internal interface ILeapYamlAccessor
 {
