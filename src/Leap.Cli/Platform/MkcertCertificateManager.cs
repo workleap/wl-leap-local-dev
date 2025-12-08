@@ -14,6 +14,8 @@ namespace Leap.Cli.Platform;
 // as well as Google: https://web.dev/articles/how-to-use-local-https
 internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fileSystem, IPlatformHelper platformHelper, ILogger<MkcertCertificateManager> logger)
 {
+    private const int ExpirationWarningThresholdDays = 30;
+
     public async Task EnsureCertificateIsInstalledInLeapDirectoryAsync(CancellationToken cancellationToken)
     {
         this.DeleteExistingCertificateWhenUpdateIsRequired();
@@ -76,21 +78,26 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
             return;
         }
 
-        List<string> notSupportedWildcardDomainNames = [];
+        var notSupportedWildcardDomainNames = GetNotSupportedWildcardDomainNames(existingCertificate);
+        var isExpiringSoon = IsCertificateExpiringSoon(existingCertificate);
+        var isNotYetValid = IsCertificateNotYetValid(existingCertificate);
 
-        foreach (var wildcardDomainName in Constants.SupportedWildcardLocalhostDomainNames)
+        if (notSupportedWildcardDomainNames.Count > 0 || isExpiringSoon || isNotYetValid)
         {
-            var exampleDomainName = ConvertWildcardDomainToConcreteExample(wildcardDomainName);
-
-            if (!existingCertificate.MatchesHostname(exampleDomainName))
+            if (notSupportedWildcardDomainNames.Count > 0)
             {
-                notSupportedWildcardDomainNames.Add(wildcardDomainName);
+                logger.LogDebug("The existing certificate must be recreated because it doesn't support the following domain names: {NotSupportedWildcardDomainNames}", string.Join(", ", notSupportedWildcardDomainNames));
             }
-        }
 
-        if (notSupportedWildcardDomainNames.Count > 0)
-        {
-            logger.LogDebug("The existing certificate must be recreated because it doesn't support the following domain names: {NotSupportedWildcardDomainNames}", string.Join(", ", notSupportedWildcardDomainNames));
+            if (isExpiringSoon)
+            {
+                logger.LogDebug("The existing certificate must be recreated because it is expiring soon (expires on {ExpirationDate})", existingCertificate.NotAfter);
+            }
+
+            if (isNotYetValid)
+            {
+                logger.LogDebug("The existing certificate must be recreated because it is not yet valid (valid from {NotBefore})", existingCertificate.NotBefore);
+            }
 
             try
             {
@@ -99,9 +106,37 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
             }
             catch (IOException ex)
             {
-                throw new LeapException($"An error occurred while deleting the existing local development certificate '{Constants.LocalCertificateCrtFilePath}' and its key '{Constants.LocalCertificateKeyFilePath}' in order to recreate it to support more domains: {ex.Message.TrimEnd('.')}. Please try to delete the files manually.", ex);
+                throw new LeapException($"An error occurred while deleting the existing local development certificate '{Constants.LocalCertificateCrtFilePath}' and its key '{Constants.LocalCertificateKeyFilePath}' in order to recreate it: {ex.Message.TrimEnd('.')}. Please try to delete the files manually.", ex);
             }
         }
+    }
+
+    private static List<string> GetNotSupportedWildcardDomainNames(X509Certificate2 certificate)
+    {
+        List<string> notSupportedWildcardDomainNames = [];
+
+        foreach (var wildcardDomainName in Constants.SupportedWildcardLocalhostDomainNames)
+        {
+            var exampleDomainName = ConvertWildcardDomainToConcreteExample(wildcardDomainName);
+
+            if (!certificate.MatchesHostname(exampleDomainName))
+            {
+                notSupportedWildcardDomainNames.Add(wildcardDomainName);
+            }
+        }
+
+        return notSupportedWildcardDomainNames;
+    }
+
+    private static bool IsCertificateExpiringSoon(X509Certificate2 certificate)
+    {
+        var expirationThreshold = DateTime.UtcNow.AddDays(ExpirationWarningThresholdDays);
+        return certificate.NotAfter.ToUniversalTime() <= expirationThreshold;
+    }
+
+    private static bool IsCertificateNotYetValid(X509Certificate2 certificate)
+    {
+        return certificate.NotBefore.ToUniversalTime() > DateTime.UtcNow;
     }
 
     private static X509Certificate2? LoadExistingCertificate()
