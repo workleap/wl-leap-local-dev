@@ -1,4 +1,4 @@
-﻿using Leap.Cli.Dependencies;
+using Leap.Cli.Dependencies;
 using Leap.Cli.Model;
 
 namespace Leap.Cli.Pipeline;

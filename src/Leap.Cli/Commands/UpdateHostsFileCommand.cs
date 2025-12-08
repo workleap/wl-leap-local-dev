@@ -1,4 +1,4 @@
-﻿using System.CommandLine;
+using System.CommandLine;
 using Leap.Cli.Platform;
 
 namespace Leap.Cli.Commands;

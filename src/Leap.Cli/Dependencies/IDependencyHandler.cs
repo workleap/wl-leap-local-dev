@@ -1,4 +1,4 @@
-﻿using Leap.Cli.Model;
+using Leap.Cli.Model;
 
 namespace Leap.Cli.Dependencies;
 
