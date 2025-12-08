@@ -114,7 +114,7 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
         }
     }
 
-    private static X509Certificate2? LoadExistingCertificate()
+    internal static X509Certificate2? LoadExistingCertificate()
     {
         try
         {
@@ -138,10 +138,12 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
         return domain.Replace(wildcard, "example");
     }
 
-    private static bool IsCertificateExpiringSoon(X509Certificate2 certificate)
+    private const int ExpirationWarningThresholdDays = 30;
+
+    internal static bool IsCertificateExpiringSoon(X509Certificate2 certificate)
     {
-        // Check if the certificate is expiring within 30 days
-        var expirationThreshold = DateTime.UtcNow.AddDays(30);
+        // Check if the certificate is expiring within the threshold
+        var expirationThreshold = DateTime.UtcNow.AddDays(ExpirationWarningThresholdDays);
         return certificate.NotAfter.ToUniversalTime() <= expirationThreshold;
     }
 

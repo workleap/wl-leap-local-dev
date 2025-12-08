@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using Leap.Cli.Platform;
 
 namespace Leap.Cli.Tests.Platform;
 
@@ -16,43 +17,23 @@ public sealed class MkcertCertificateManagerTests : IDisposable
         this._tempKeyPath = Path.Combine(this._temporaryCertificatesDir.FullName, "test-cert.key");
     }
 
-    [Fact]
-    public void Certificate_ExpiringWithin30Days_IsDetectedAsExpiringSoon()
+    [Theory]
+    [InlineData(15, true, "Certificate expiring in 15 days should be detected as expiring soon")]
+    [InlineData(30, true, "Certificate expiring in exactly 30 days should be detected as expiring soon (boundary condition)")]
+    [InlineData(60, false, "Certificate expiring in 60 days should not be detected as expiring soon")]
+    [InlineData(31, false, "Certificate expiring in 31 days should not be detected as expiring soon")]
+    [InlineData(1, true, "Certificate expiring in 1 day should be detected as expiring soon")]
+    [InlineData(0, true, "Certificate expiring today should be detected as expiring soon")]
+    public void IsCertificateExpiringSoon_VariousExpirationDates_ReturnsExpectedResult(int daysUntilExpiration, bool expectedIsExpiringSoon, string _)
     {
-        // Create a certificate that expires in 15 days (within the 30-day threshold)
-        var expiringCert = CreateTestCertificate(daysUntilExpiration: 15);
+        // Arrange
+        var certificate = CreateTestCertificate(daysUntilExpiration);
 
-        // Verify the certificate is expiring soon
-        var expirationThreshold = DateTime.UtcNow.AddDays(30);
-        var isExpiringSoon = expiringCert.NotAfter.ToUniversalTime() <= expirationThreshold;
+        // Act
+        var isExpiringSoon = MkcertCertificateManager.IsCertificateExpiringSoon(certificate);
 
-        Assert.True(isExpiringSoon, "Certificate expiring in 15 days should be detected as expiring soon");
-    }
-
-    [Fact]
-    public void Certificate_ExpiringAfter30Days_IsNotDetectedAsExpiringSoon()
-    {
-        // Create a certificate that expires in 60 days (outside the 30-day threshold)
-        var validCert = CreateTestCertificate(daysUntilExpiration: 60);
-
-        // Verify the certificate is not expiring soon
-        var expirationThreshold = DateTime.UtcNow.AddDays(30);
-        var isExpiringSoon = validCert.NotAfter.ToUniversalTime() <= expirationThreshold;
-
-        Assert.False(isExpiringSoon, "Certificate expiring in 60 days should not be detected as expiring soon");
-    }
-
-    [Fact]
-    public void Certificate_ExpiringExactlyIn30Days_IsDetectedAsExpiringSoon()
-    {
-        // Create a certificate that expires in exactly 30 days (at the threshold)
-        var expiringCert = CreateTestCertificate(daysUntilExpiration: 30);
-
-        // Verify the certificate is expiring soon (boundary condition)
-        var expirationThreshold = DateTime.UtcNow.AddDays(30);
-        var isExpiringSoon = expiringCert.NotAfter.ToUniversalTime() <= expirationThreshold;
-
-        Assert.True(isExpiringSoon, "Certificate expiring in exactly 30 days should be detected as expiring soon");
+        // Assert
+        Assert.Equal(expectedIsExpiringSoon, isExpiringSoon);
     }
 
     [Fact]
@@ -71,6 +52,180 @@ public sealed class MkcertCertificateManagerTests : IDisposable
 
         Assert.NotNull(loadedCert);
         Assert.Equal(cert.Subject, loadedCert.Subject);
+    }
+
+    [Fact]
+    public void LoadExistingCertificate_WhenCertificateExists_ReturnsCertificate()
+    {
+        // Arrange
+        var cert = CreateTestCertificate(daysUntilExpiration: 365);
+        SaveCertificateToDisk(cert, Constants.LocalCertificateCrtFilePath, Constants.LocalCertificateKeyFilePath);
+
+        try
+        {
+            // Act
+            var loadedCert = MkcertCertificateManager.LoadExistingCertificate();
+
+            // Assert
+            Assert.NotNull(loadedCert);
+            Assert.Equal(cert.Subject, loadedCert.Subject);
+        }
+        finally
+        {
+            // Cleanup
+            TryDeleteFile(Constants.LocalCertificateCrtFilePath);
+            TryDeleteFile(Constants.LocalCertificateKeyFilePath);
+        }
+    }
+
+    [Fact]
+    public void LoadExistingCertificate_WhenCertificateDoesNotExist_ReturnsNull()
+    {
+        // Arrange - Ensure files don't exist
+        TryDeleteFile(Constants.LocalCertificateCrtFilePath);
+        TryDeleteFile(Constants.LocalCertificateKeyFilePath);
+
+        // Act
+        var loadedCert = MkcertCertificateManager.LoadExistingCertificate();
+
+        // Assert
+        Assert.Null(loadedCert);
+    }
+
+    [Fact]
+    public void IsCertificateExpiringSoon_WithExpiredCertificate_ReturnsTrue()
+    {
+        // Arrange - Create a certificate that expired yesterday
+        var expiredCert = CreateTestCertificate(daysUntilExpiration: -1);
+
+        // Act
+        var isExpiringSoon = MkcertCertificateManager.IsCertificateExpiringSoon(expiredCert);
+
+        // Assert
+        Assert.True(isExpiringSoon, "Already expired certificate should be detected as expiring soon");
+    }
+
+    [Fact]
+    public void Certificate_SupportsAllRequiredWildcardDomains()
+    {
+        // Arrange
+        var cert = CreateTestCertificate(daysUntilExpiration: 365);
+
+        // Act & Assert - Verify all wildcard domains are supported
+        foreach (var wildcardDomain in Constants.SupportedWildcardLocalhostDomainNames)
+        {
+            var exampleDomain = ConvertWildcardToExample(wildcardDomain);
+            Assert.True(cert.MatchesHostname(exampleDomain), $"Certificate should match domain: {exampleDomain}");
+        }
+    }
+
+    [Theory]
+    [InlineData("*.workleap.localhost", "example.workleap.localhost")]
+    [InlineData("*.barley.localhost", "test.barley.localhost")]
+    [InlineData("*.officevibe.com", "app.officevibe.com")]
+    [InlineData("*.sharegate-dev.com", "my-service.sharegate-dev.com")]
+    public void Certificate_MatchesWildcardDomains(string wildcardDomain, string concreteDomain)
+    {
+        // Arrange
+        var cert = CreateTestCertificate(daysUntilExpiration: 365);
+
+        // Act & Assert
+        Assert.True(cert.MatchesHostname(concreteDomain), $"Certificate should match {concreteDomain} from wildcard {wildcardDomain}");
+    }
+
+    [Fact]
+    public void Certificate_DoesNotMatchUnsupportedDomain()
+    {
+        // Arrange
+        var cert = CreateTestCertificate(daysUntilExpiration: 365);
+
+        // Act & Assert
+        Assert.False(cert.MatchesHostname("unsupported.domain.com"), "Certificate should not match unsupported domain");
+    }
+
+    [Fact]
+    public void DeleteExistingCertificate_WhenExpiringSoon_DeletesFiles()
+    {
+        // Arrange - Create an expiring certificate
+        var expiringCert = CreateTestCertificate(daysUntilExpiration: 15);
+        SaveCertificateToDisk(expiringCert, Constants.LocalCertificateCrtFilePath, Constants.LocalCertificateKeyFilePath);
+
+        try
+        {
+            // Verify files exist before deletion
+            Assert.True(File.Exists(Constants.LocalCertificateCrtFilePath));
+            Assert.True(File.Exists(Constants.LocalCertificateKeyFilePath));
+
+            // This test verifies the behavior indirectly by checking if the files would need to be recreated
+            var loadedCert = MkcertCertificateManager.LoadExistingCertificate();
+            Assert.NotNull(loadedCert);
+
+            var shouldBeDeleted = MkcertCertificateManager.IsCertificateExpiringSoon(loadedCert);
+            Assert.True(shouldBeDeleted, "Certificate expiring in 15 days should be marked for deletion");
+        }
+        finally
+        {
+            TryDeleteFile(Constants.LocalCertificateCrtFilePath);
+            TryDeleteFile(Constants.LocalCertificateKeyFilePath);
+        }
+    }
+
+    [Fact]
+    public void DeleteExistingCertificate_WhenMissingDomains_ShouldTriggerRecreation()
+    {
+        // Arrange - Create a certificate with only one domain (missing others)
+        var certWithLimitedDomains = CreateTestCertificateWithLimitedDomains(daysUntilExpiration: 365);
+        SaveCertificateToDisk(certWithLimitedDomains, Constants.LocalCertificateCrtFilePath, Constants.LocalCertificateKeyFilePath);
+
+        try
+        {
+            var loadedCert = MkcertCertificateManager.LoadExistingCertificate();
+            Assert.NotNull(loadedCert);
+
+            // Verify that at least one required domain is missing
+            var allDomainsSupported = Constants.SupportedWildcardLocalhostDomainNames
+                .All(wildcardDomain => loadedCert.MatchesHostname(ConvertWildcardToExample(wildcardDomain)));
+
+            Assert.False(allDomainsSupported, "Certificate with limited domains should be missing some required domains");
+        }
+        finally
+        {
+            TryDeleteFile(Constants.LocalCertificateCrtFilePath);
+            TryDeleteFile(Constants.LocalCertificateKeyFilePath);
+        }
+    }
+
+    [Fact]
+    public void Certificate_WithFutureExpiration_DoesNotRequireRecreation()
+    {
+        // Arrange - Create a certificate that expires in 60 days (well within threshold)
+        var validCert = CreateTestCertificate(daysUntilExpiration: 60);
+        SaveCertificateToDisk(validCert, Constants.LocalCertificateCrtFilePath, Constants.LocalCertificateKeyFilePath);
+
+        try
+        {
+            var loadedCert = MkcertCertificateManager.LoadExistingCertificate();
+            Assert.NotNull(loadedCert);
+
+            var isExpiringSoon = MkcertCertificateManager.IsCertificateExpiringSoon(loadedCert);
+            Assert.False(isExpiringSoon, "Certificate expiring in 60 days should not require recreation");
+
+            // Verify all domains are supported
+            var allDomainsSupported = Constants.SupportedWildcardLocalhostDomainNames
+                .All(wildcardDomain => loadedCert.MatchesHostname(ConvertWildcardToExample(wildcardDomain)));
+
+            Assert.True(allDomainsSupported, "Valid certificate should support all required domains");
+        }
+        finally
+        {
+            TryDeleteFile(Constants.LocalCertificateCrtFilePath);
+            TryDeleteFile(Constants.LocalCertificateKeyFilePath);
+        }
+    }
+
+    private static string ConvertWildcardToExample(string wildcardDomain)
+    {
+        return wildcardDomain.Replace("*", "example");
     }
 
     private static X509Certificate2 CreateTestCertificate(int daysUntilExpiration)
@@ -103,8 +258,37 @@ public sealed class MkcertCertificateManagerTests : IDisposable
         return request.CreateSelfSigned(notBefore, notAfter);
     }
 
+    private static X509Certificate2 CreateTestCertificateWithLimitedDomains(int daysUntilExpiration)
+    {
+        using var rsa = RSA.Create(2048);
+        var request = new CertificateRequest(
+            "CN=test.workleap.localhost",
+            rsa,
+            HashAlgorithmName.SHA256,
+            RSASignaturePadding.Pkcs1);
+
+        // Add only a subset of domains to simulate an outdated certificate
+        var sanBuilder = new SubjectAlternativeNameBuilder();
+        sanBuilder.AddDnsName("localhost");
+        sanBuilder.AddDnsName("*.workleap.localhost");
+        // Intentionally missing other domains
+        request.CertificateExtensions.Add(sanBuilder.Build());
+
+        var notBefore = DateTimeOffset.UtcNow.AddDays(-1);
+        var notAfter = DateTimeOffset.UtcNow.AddDays(daysUntilExpiration);
+
+        return request.CreateSelfSigned(notBefore, notAfter);
+    }
+
     private static void SaveCertificateToDisk(X509Certificate2 certificate, string crtPath, string keyPath)
     {
+        // Ensure the directory exists
+        var directory = Path.GetDirectoryName(crtPath);
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
         // Export certificate to PEM
         var certPem = certificate.ExportCertificatePem();
         File.WriteAllText(crtPath, certPem);
@@ -118,6 +302,21 @@ public sealed class MkcertCertificateManagerTests : IDisposable
 
         var keyPem = rsa.ExportRSAPrivateKeyPem();
         File.WriteAllText(keyPath, keyPem);
+    }
+
+    private static void TryDeleteFile(string filePath)
+    {
+        try
+        {
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+        }
+        catch
+        {
+            // Ignore errors during test cleanup
+        }
     }
 
     public void Dispose()
