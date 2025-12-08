@@ -1,4 +1,4 @@
-﻿using System.IO.Abstractions;
+using System.IO.Abstractions;
 using Leap.Cli.Model;
 
 namespace Leap.Cli.Pipeline;

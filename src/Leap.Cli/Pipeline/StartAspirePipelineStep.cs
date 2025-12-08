@@ -1,4 +1,4 @@
-﻿using Leap.Cli.Aspire;
+using Leap.Cli.Aspire;
 using Leap.Cli.Model;
 using Leap.Cli.Platform.Telemetry;
 

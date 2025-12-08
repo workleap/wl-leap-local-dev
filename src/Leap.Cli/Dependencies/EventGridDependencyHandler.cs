@@ -1,11 +1,11 @@
-using Leap.Cli.DockerCompose;
-using Leap.Cli.DockerCompose.Yaml;
-using Leap.Cli.Model;
-using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Leap.Cli.Aspire;
+using Leap.Cli.DockerCompose;
+using Leap.Cli.DockerCompose.Yaml;
+using Leap.Cli.Model;
 using Leap.Cli.Platform.Telemetry;
+using Microsoft.Extensions.Logging;
 
 namespace Leap.Cli.Dependencies;
 
