@@ -1,4 +1,4 @@
-﻿using Leap.Cli.DockerCompose.Yaml;
+using Leap.Cli.DockerCompose.Yaml;
 using Leap.Cli.Yaml;
 using YamlDotNet.Serialization;
 

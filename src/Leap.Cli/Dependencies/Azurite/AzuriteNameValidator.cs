@@ -1,4 +1,4 @@
-﻿// Adapted from https://github.com/Azure/azure-storage-net/blob/v11.2.3/Lib/Common/NameValidator.cs
+// Adapted from https://github.com/Azure/azure-storage-net/blob/v11.2.3/Lib/Common/NameValidator.cs
 // Copyright 2013 Microsoft Corporation
 // Licensed under the Apache License, Version 2.0
 //

@@ -1,4 +1,4 @@
-﻿namespace Leap.Cli.DockerCompose.Yaml;
+namespace Leap.Cli.DockerCompose.Yaml;
 
 internal static class DockerComposeConstants
 {

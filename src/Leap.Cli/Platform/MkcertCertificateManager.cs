@@ -88,9 +88,19 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
             }
         }
 
-        if (notSupportedWildcardDomainNames.Count > 0)
+        var isExpiringSoon = IsCertificateExpiringSoon(existingCertificate);
+
+        if (notSupportedWildcardDomainNames.Count > 0 || isExpiringSoon)
         {
-            logger.LogDebug("The existing certificate must be recreated because it doesn't support the following domain names: {NotSupportedWildcardDomainNames}", string.Join(", ", notSupportedWildcardDomainNames));
+            if (notSupportedWildcardDomainNames.Count > 0)
+            {
+                logger.LogDebug("The existing certificate must be recreated because it doesn't support the following domain names: {NotSupportedWildcardDomainNames}", string.Join(", ", notSupportedWildcardDomainNames));
+            }
+
+            if (isExpiringSoon)
+            {
+                logger.LogDebug("The existing certificate must be recreated because it is expiring soon (expires on {ExpirationDate})", existingCertificate.NotAfter);
+            }
 
             try
             {
@@ -99,7 +109,7 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
             }
             catch (IOException ex)
             {
-                throw new LeapException($"An error occurred while deleting the existing local development certificate '{Constants.LocalCertificateCrtFilePath}' and its key '{Constants.LocalCertificateKeyFilePath}' in order to recreate it to support more domains: {ex.Message.TrimEnd('.')}. Please try to delete the files manually.", ex);
+                throw new LeapException($"An error occurred while deleting the existing local development certificate '{Constants.LocalCertificateCrtFilePath}' and its key '{Constants.LocalCertificateKeyFilePath}' in order to recreate it: {ex.Message.TrimEnd('.')}. Please try to delete the files manually.", ex);
             }
         }
     }
@@ -126,6 +136,13 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
     {
         const string wildcard = "*";
         return domain.Replace(wildcard, "example");
+    }
+
+    private static bool IsCertificateExpiringSoon(X509Certificate2 certificate)
+    {
+        // Check if the certificate is expiring within 30 days
+        var expirationThreshold = DateTime.UtcNow.AddDays(30);
+        return certificate.NotAfter.ToUniversalTime() <= expirationThreshold;
     }
 
     private async Task<string?> FindMkcertExecutablePathInPathEnv(CancellationToken cancellationToken)

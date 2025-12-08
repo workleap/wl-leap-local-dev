@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using Leap.Cli.Aspire;
 using Leap.Cli.DockerCompose;
 using Leap.Cli.DockerCompose.Yaml;

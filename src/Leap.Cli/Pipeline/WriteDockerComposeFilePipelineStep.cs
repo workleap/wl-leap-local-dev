@@ -1,4 +1,4 @@
-﻿using Leap.Cli.DockerCompose;
+using Leap.Cli.DockerCompose;
 using Leap.Cli.Model;
 using Microsoft.Extensions.Logging;
 
