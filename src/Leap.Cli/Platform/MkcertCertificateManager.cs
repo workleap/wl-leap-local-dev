@@ -14,6 +14,8 @@ namespace Leap.Cli.Platform;
 // as well as Google: https://web.dev/articles/how-to-use-local-https
 internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fileSystem, IPlatformHelper platformHelper, ILogger<MkcertCertificateManager> logger)
 {
+    private const int ExpirationWarningThresholdDays = 30;
+
     public async Task EnsureCertificateIsInstalledInLeapDirectoryAsync(CancellationToken cancellationToken)
     {
         this.DeleteExistingCertificateWhenUpdateIsRequired();
@@ -114,7 +116,7 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
         }
     }
 
-    internal static X509Certificate2? LoadExistingCertificate()
+    private static X509Certificate2? LoadExistingCertificate()
     {
         try
         {
@@ -138,11 +140,8 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
         return domain.Replace(wildcard, "example");
     }
 
-    private const int ExpirationWarningThresholdDays = 30;
-
-    internal static bool IsCertificateExpiringSoon(X509Certificate2 certificate)
+    private static bool IsCertificateExpiringSoon(X509Certificate2 certificate)
     {
-        // Check if the certificate is expiring within the threshold
         var expirationThreshold = DateTime.UtcNow.AddDays(ExpirationWarningThresholdDays);
         return certificate.NotAfter.ToUniversalTime() <= expirationThreshold;
     }
