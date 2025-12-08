@@ -78,21 +78,11 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
             return;
         }
 
-        List<string> notSupportedWildcardDomainNames = [];
-
-        foreach (var wildcardDomainName in Constants.SupportedWildcardLocalhostDomainNames)
-        {
-            var exampleDomainName = ConvertWildcardDomainToConcreteExample(wildcardDomainName);
-
-            if (!existingCertificate.MatchesHostname(exampleDomainName))
-            {
-                notSupportedWildcardDomainNames.Add(wildcardDomainName);
-            }
-        }
-
+        var notSupportedWildcardDomainNames = GetNotSupportedWildcardDomainNames(existingCertificate);
         var isExpiringSoon = IsCertificateExpiringSoon(existingCertificate);
+        var isNotYetValid = IsCertificateNotYetValid(existingCertificate);
 
-        if (notSupportedWildcardDomainNames.Count > 0 || isExpiringSoon)
+        if (notSupportedWildcardDomainNames.Count > 0 || isExpiringSoon || isNotYetValid)
         {
             if (notSupportedWildcardDomainNames.Count > 0)
             {
@@ -102,6 +92,11 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
             if (isExpiringSoon)
             {
                 logger.LogDebug("The existing certificate must be recreated because it is expiring soon (expires on {ExpirationDate})", existingCertificate.NotAfter);
+            }
+
+            if (isNotYetValid)
+            {
+                logger.LogDebug("The existing certificate must be recreated because it is not yet valid (valid from {NotBefore})", existingCertificate.NotBefore);
             }
 
             try
@@ -114,6 +109,23 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
                 throw new LeapException($"An error occurred while deleting the existing local development certificate '{Constants.LocalCertificateCrtFilePath}' and its key '{Constants.LocalCertificateKeyFilePath}' in order to recreate it: {ex.Message.TrimEnd('.')}. Please try to delete the files manually.", ex);
             }
         }
+    }
+
+    private static List<string> GetNotSupportedWildcardDomainNames(X509Certificate2 certificate)
+    {
+        List<string> notSupportedWildcardDomainNames = [];
+
+        foreach (var wildcardDomainName in Constants.SupportedWildcardLocalhostDomainNames)
+        {
+            var exampleDomainName = ConvertWildcardDomainToConcreteExample(wildcardDomainName);
+
+            if (!certificate.MatchesHostname(exampleDomainName))
+            {
+                notSupportedWildcardDomainNames.Add(wildcardDomainName);
+            }
+        }
+
+        return notSupportedWildcardDomainNames;
     }
 
     private static X509Certificate2? LoadExistingCertificate()
@@ -144,6 +156,11 @@ internal sealed class MkcertCertificateManager(ICliWrap cliWrap, IFileSystem fil
     {
         var expirationThreshold = DateTime.UtcNow.AddDays(ExpirationWarningThresholdDays);
         return certificate.NotAfter.ToUniversalTime() <= expirationThreshold;
+    }
+
+    private static bool IsCertificateNotYetValid(X509Certificate2 certificate)
+    {
+        return certificate.NotBefore.ToUniversalTime() > DateTime.UtcNow;
     }
 
     private async Task<string?> FindMkcertExecutablePathInPathEnv(CancellationToken cancellationToken)
