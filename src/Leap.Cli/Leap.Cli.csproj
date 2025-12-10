@@ -1,5 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Sdk Name="Aspire.AppHost.Sdk" Version="13.0.1" />
+  <Sdk Name="Aspire.AppHost.Sdk" Version="13.0.2" />
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -43,7 +43,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.0.1" />
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.0.2" />
     <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.5.0" />
     <PackageReference Include="Ben.Demystifier" Version="0.4.1" />
     <PackageReference Include="CliWrap" Version="3.10.0" />
