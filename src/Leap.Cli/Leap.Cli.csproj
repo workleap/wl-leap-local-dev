@@ -51,8 +51,8 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.1" />
-    <PackageReference Include="Microsoft.Identity.Client" Version="4.80.0" />
-    <PackageReference Include="Microsoft.Identity.Client.Extensions.Msal" Version="4.80.0" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.81.0" />
+    <PackageReference Include="Microsoft.Identity.Client.Extensions.Msal" Version="4.81.0" />
     <PackageReference Include="NuGet.Protocol" Version="7.0.1" />
     <PackageReference Include="OpenTelemetry" Version="1.14.0" />
     <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.14.0" />
