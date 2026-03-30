@@ -1,5 +1,4 @@
 #pragma warning disable ASPIRECERTIFICATES001 // HttpsCertificateConfigurationCallbackAnnotation is experimental
-using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Eventing;
 using Aspire.Hosting.Lifecycle;
 
