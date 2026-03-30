@@ -197,7 +197,7 @@ internal sealed class AspireManager : IAspireManager
         var dashboardPackagePath = await this._downloadAspireDashboardPackageTask;
 
         // https://github.com/dotnet/aspire/blob/v8.0.0-preview.6.24214.1/src/Aspire.Hosting/Dcp/DcpOptions.cs#L123-L126
-        var dcpBinPath = Path.Combine(orchestrationPackagePath, "tools", "ext", "bin");
+        var dcpExtensionsPath = Path.Combine(orchestrationPackagePath, "tools", "ext");
         var dcpCliPath = Path.Combine(orchestrationPackagePath, "tools", "dcp");
         var dashboardPath = Path.Combine(dashboardPackagePath, "tools", "Aspire.Dashboard");
 
@@ -215,7 +215,7 @@ internal sealed class AspireManager : IAspireManager
             await this.EnsureDashboardIsCodeSignedAsync(dashboardPath, cancellationToken);
         }
 
-        this.Builder.UseCustomAspireWorkload(new AspireWorkloadOptions(dcpBinPath, dcpCliPath, dashboardPath));
+        this.Builder.UseCustomAspireWorkload(new AspireWorkloadOptions(dcpExtensionsPath, dcpCliPath, dashboardPath));
     }
 
     private async Task EnsureDashboardIsCodeSignedAsync(string dashboardPath, CancellationToken cancellationToken)
