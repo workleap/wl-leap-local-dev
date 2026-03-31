@@ -47,6 +47,7 @@ internal static class DistributedApplicationBuilderExtensions
             ["ASPNETCORE_URLS"] = AspireManager.AspireDashboardUrlDefaultValue,
             ["DOTNET_DASHBOARD_OTLP_ENDPOINT_URL"] = AspireManager.AspireDashboardOtlpUrlDefaultValue,
             ["DOTNET_RESOURCE_SERVICE_ENDPOINT_URL"] = AspireManager.AspireResourceServiceEndpointUrl,
+            ["ASPIRE_DASHBOARD_MCP_ENDPOINT_URL"] = AspireManager.AspireDashboardMcpUrlDefaultValue,
 
             // Disable authentication on the Dashboard
             ["AppHost:BrowserToken"] = "",
@@ -72,8 +73,8 @@ internal static class DistributedApplicationBuilderExtensions
         var dcpOptionsType = typeof(DistributedApplication).Assembly.GetType("Aspire.Hosting.Dcp.DcpOptions")
             ?? throw new InvalidOperationException("Type 'Aspire.Hosting.Dcp.DcpOptions' was not found when trying to configure the Aspire distributed application host.");
 
-        var dcpOptionsBinPathSetter = dcpOptionsType.GetProperty("BinPath", BindingFlags.Public | BindingFlags.Instance)?.SetMethod
-            ?? throw new InvalidOperationException("Property 'BinPath' not found on type 'Aspire.Hosting.Dcp.DcpOptions'");
+        var dcpOptionsExtensionsPathSetter = dcpOptionsType.GetProperty("ExtensionsPath", BindingFlags.Public | BindingFlags.Instance)?.SetMethod
+            ?? throw new InvalidOperationException("Property 'ExtensionsPath' not found on type 'Aspire.Hosting.Dcp.DcpOptions'");
 
         var dcpOptionsCliPathSetter = dcpOptionsType.GetProperty("CliPath", BindingFlags.Public | BindingFlags.Instance)?.SetMethod
             ?? throw new InvalidOperationException("Property 'CliPath' not found on type 'Aspire.Hosting.Dcp.DcpOptions'");
@@ -82,7 +83,7 @@ internal static class DistributedApplicationBuilderExtensions
             ?? throw new InvalidOperationException("Property 'DashboardPath' not found on type 'Aspire.Hosting.Dcp.DcpOptions'");
 
         var dcpOptionsInstance = Activator.CreateInstance(dcpOptionsType);
-        dcpOptionsBinPathSetter.Invoke(dcpOptionsInstance, [aspireWorkloadOptions.DcpBinPath]);
+        dcpOptionsExtensionsPathSetter.Invoke(dcpOptionsInstance, [aspireWorkloadOptions.DcpExtensionsPath]);
         dcpOptionsCliPathSetter.Invoke(dcpOptionsInstance, [aspireWorkloadOptions.DcpCliPath]);
         dcpOptionsDashboardPathSetter.Invoke(dcpOptionsInstance, [aspireWorkloadOptions.DashboardPath]);
 
