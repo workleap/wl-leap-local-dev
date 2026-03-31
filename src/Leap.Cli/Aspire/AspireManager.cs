@@ -19,11 +19,13 @@ internal sealed class AspireManager : IAspireManager
     private const int AspireDashboardOtlpPort = 18889;
     private const int AspireDashboardPort = 18888;
     private const int AspireResourceServiceEndpointPort = 18887;
+    private const int AspireDashboardMcpPort = 18891;
 
     // https://github.com/dotnet/aspire/blob/v8.0.0-preview.3.24105.21/src/Aspire.Dashboard/DashboardWebApplication.cs#L18-L21
     public static readonly string AspireDashboardOtlpUrlDefaultValue = $"https://localhost:{AspireDashboardOtlpPort}";
     public static readonly string AspireDashboardUrlDefaultValue = $"https://localhost:{AspireDashboardPort}";
     public static readonly string AspireResourceServiceEndpointUrl = $"https://localhost:{AspireResourceServiceEndpointPort}";
+    public static readonly string AspireDashboardMcpUrlDefaultValue = $"https://localhost:{AspireDashboardMcpPort}";
 
     public const string AspireOtlpDefaultApiKey = "leap";
     public const string DcpDefaultApiKey = "leap";
@@ -161,6 +163,7 @@ internal sealed class AspireManager : IAspireManager
         this.EnsurePortIsAvailable(AspireDashboardOtlpPort);
         this.EnsurePortIsAvailable(AspireDashboardPort);
         this.EnsurePortIsAvailable(AspireResourceServiceEndpointPort);
+        this.EnsurePortIsAvailable(AspireDashboardMcpPort);
     }
 
     private void EnsurePortIsAvailable(int port)

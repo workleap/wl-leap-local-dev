@@ -47,6 +47,7 @@ internal static class DistributedApplicationBuilderExtensions
             ["ASPNETCORE_URLS"] = AspireManager.AspireDashboardUrlDefaultValue,
             ["DOTNET_DASHBOARD_OTLP_ENDPOINT_URL"] = AspireManager.AspireDashboardOtlpUrlDefaultValue,
             ["DOTNET_RESOURCE_SERVICE_ENDPOINT_URL"] = AspireManager.AspireResourceServiceEndpointUrl,
+            ["ASPIRE_DASHBOARD_MCP_ENDPOINT_URL"] = AspireManager.AspireDashboardMcpUrlDefaultValue,
 
             // Disable authentication on the Dashboard
             ["AppHost:BrowserToken"] = "",

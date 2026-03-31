@@ -392,3 +392,4 @@ $RECYCLE.BIN/
 
 # Visual Studio Code
 .vscode/
+.claude/settings.local.json
