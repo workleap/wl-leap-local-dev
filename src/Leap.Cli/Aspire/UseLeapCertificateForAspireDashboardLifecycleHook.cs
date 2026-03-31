@@ -26,6 +26,15 @@ internal sealed class UseLeapCertificateForAspireDashboardLifecycleHook : IDistr
             return Task.CompletedTask;
         }));
 
+        // HttpsCertificateConfigurationCallbackAnnotation does not set actual process environment variables.
+        // We also need EnvironmentCallbackAnnotation to ensure the Kestrel certificate paths are passed
+        // to the dashboard process as environment variables.
+        dashboardResource.Annotations.Add(new EnvironmentCallbackAnnotation(context =>
+        {
+            context.EnvironmentVariables["Kestrel__Certificates__Default__Path"] = Constants.LocalCertificateCrtFilePath;
+            context.EnvironmentVariables["Kestrel__Certificates__Default__KeyPath"] = Constants.LocalCertificateKeyFilePath;
+        }));
+
         return Task.CompletedTask;
     }
 }
