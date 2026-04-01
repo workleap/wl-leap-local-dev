@@ -22,6 +22,11 @@ internal sealed class PostgresDependencyHandler(
     private const string ContainerName = "leap-postgres";
     private const string VolumeName = "leap_postgres_data";
 
+    private const string McpResourceName = "postgres-mcp";
+    private const int ContainerMcpPort = 8000;
+
+    private static readonly string McpDatabaseUri = $"postgresql://postgres:localpassword@host.docker.internal:{HostPostgresPort}/postgres";
+
     private static readonly string HostConnectionString = $"Host=localhost;Port={HostPostgresPort};Database=postgres;Username=postgres;Password=localpassword";
     private static readonly string ContainerConnectionString = $"Host=postgres;Port={ContainerPostgresPort};Database=postgres;Username=postgres;Password=localpassword";
 
@@ -32,11 +37,23 @@ internal sealed class PostgresDependencyHandler(
         environmentVariables.Configure(ConfigureEnvironmentVariables);
         ConfigureAppSettingsJson(appSettingsJson.Configuration);
 
-        aspire.Builder.AddDockerComposeResource(new DockerComposeResource(ServiceName, ContainerName)
+        var postgresResource = aspire.Builder.AddDockerComposeResource(new DockerComposeResource(ServiceName, ContainerName)
         {
             ResourceType = Constants.LeapDependencyAspireResourceType,
             Urls = [HostConnectionString]
         });
+
+        // Use Aspire's native container API so WithMcpServer() registers it with the dashboard MCP proxy.
+        // https://github.com/dotnet/aspire/blob/v13.2.1/src/Aspire.Hosting.PostgreSQL/PostgresBuilderExtensions.cs
+#pragma warning disable ASPIREMCP001 // WithMcpServer is experimental
+        aspire.Builder.AddContainer(McpResourceName, "crystaldba/postgres-mcp", "0.3.0")
+            .WithHttpEndpoint(targetPort: ContainerMcpPort)
+            .WithArgs("--access-mode=unrestricted")
+            .WithArgs("--transport=sse")
+            .WithEnvironment("DATABASE_URI", McpDatabaseUri)
+            .WithMcpServer("/sse")
+            .WaitFor(postgresResource);
+#pragma warning restore ASPIREMCP001
 
         return Task.CompletedTask;
     }
