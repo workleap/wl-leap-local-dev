@@ -207,6 +207,26 @@ internal sealed class LeapConfigManager : ILeapYamlAccessor, IDisposable
         return path;
     }
 
+    public string? GetFirstConfigFilePath()
+    {
+        if (this._leapYamlPaths is { Count: > 0 })
+        {
+            return this._leapYamlPaths.First();
+        }
+
+        if (this._fileSystem.File.Exists(Constants.LeapYamlFileName))
+        {
+            return Path.GetFullPath(Constants.LeapYamlFileName);
+        }
+
+        if (this._fileSystem.File.Exists(Constants.SecondaryLeapYamlFileName))
+        {
+            return Path.GetFullPath(Constants.SecondaryLeapYamlFileName);
+        }
+
+        return null;
+    }
+
     public void Dispose()
     {
         this._lock.Dispose();

@@ -6,6 +6,7 @@ using Leap.Cli.Configuration;
 using Leap.Cli.DockerCompose;
 using Leap.Cli.Pipeline;
 using Leap.Cli.Platform;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -38,6 +39,7 @@ internal sealed class AspireManager : IAspireManager
     private readonly PreferencesSettingsManager _preferencesSettingsManager;
     private readonly IOptions<LeapGlobalOptions> _leapGlobalOptions;
     private readonly ICliWrap _cliWrap;
+    private readonly LeapConfigManager _leapConfigManager;
 
     private Task<string> _downloadAspireOrchestrationPackageTask = Task.FromResult(string.Empty);
     private Task<string> _downloadAspireDashboardPackageTask = Task.FromResult(string.Empty);
@@ -50,7 +52,8 @@ internal sealed class AspireManager : IAspireManager
         IDockerComposeManager dockerComposeManager,
         PreferencesSettingsManager preferencesSettingsManager,
         IOptions<LeapGlobalOptions> leapGlobalOptions,
-        ICliWrap cliWrap)
+        ICliWrap cliWrap,
+        LeapConfigManager leapConfigManager)
     {
         this._logger = logger;
         this._nuGetPackageDownloader = nuGetPackageDownloader;
@@ -60,6 +63,7 @@ internal sealed class AspireManager : IAspireManager
         this._preferencesSettingsManager = preferencesSettingsManager;
         this._leapGlobalOptions = leapGlobalOptions;
         this._cliWrap = cliWrap;
+        this._leapConfigManager = leapConfigManager;
 
         this.Builder = DistributedApplication.CreateBuilder();
 
@@ -186,6 +190,21 @@ internal sealed class AspireManager : IAspireManager
         this.Builder.Services.TryAddSingleton<AspireDashboardReadinessAwaiter>();
         this.Builder.Services.TryAddEnumerable(ServiceDescriptor.Singleton<IDistributedApplicationEventingSubscriber, AspireDashboardReadinessAwaiter>(
             x => x.GetRequiredService<AspireDashboardReadinessAwaiter>()));
+
+        // Override the AppHost path so that "aspire ps" shows the first leap.yaml path
+        // instead of the Leap.Cli.csproj path derived from assembly metadata.
+        // This must happen here (not in the constructor) because the config file paths
+        // are set on LeapConfigManager after AspireManager is constructed by DI.
+        var firstConfigFilePath = this._leapConfigManager.GetFirstConfigFilePath();
+        if (firstConfigFilePath != null)
+        {
+            this.Builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["AppHost:Directory"] = Path.GetDirectoryName(firstConfigFilePath),
+                ["AppHost:Path"] = firstConfigFilePath,
+                ["AppHost:FilePath"] = firstConfigFilePath,
+            });
+        }
 
         this.Builder.IgnoreConsoleTerminationSignals();
         this.Builder.ConfigureConsoleLogging(this._leapGlobalOptions.Value);
