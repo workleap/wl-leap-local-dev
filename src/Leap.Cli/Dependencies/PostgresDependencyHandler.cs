@@ -50,8 +50,7 @@ internal sealed class PostgresDependencyHandler(
 #pragma warning disable ASPIREMCP001 // WithMcpServer is experimental
             aspire.Builder.AddContainer(McpResourceName, "crystaldba/postgres-mcp", "0.3.0")
                 .WithHttpEndpoint(targetPort: ContainerMcpPort)
-                .WithArgs("--access-mode=unrestricted")
-                .WithArgs("--transport=sse")
+                .WithArgs("--access-mode=unrestricted", "--transport=sse")
                 .WithEnvironment("DATABASE_URI", McpDatabaseUri)
                 .WithMcpServer("/sse")
                 .WaitFor(postgresResource);
