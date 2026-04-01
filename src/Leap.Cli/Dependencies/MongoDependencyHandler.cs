@@ -28,8 +28,13 @@ internal sealed partial class MongoDependencyHandler(
     private const string ConfigVolumeName = "leapmongo_config";
     private const string ReplicaSetName = "rs0";
 
+    private const string McpResourceName = "mongo-mcp";
+    private const int ContainerMcpPort = 3000;
+
     private static readonly string NonReplicaSetConnectionString = $"mongodb://127.0.0.1:{MongoPort}";
     private static readonly string ReplicaSetConnectionString = $"{NonReplicaSetConnectionString}/?replicaSet={ReplicaSetName}";
+
+    private static readonly string McpConnectionString = $"mongodb://host.docker.internal:{MongoPort}/?directConnection=true";
 
     private const string ReplicaSetInitScriptFileName = "mongo-init-replica-set.js";
     private static readonly string ReplicaSetInitScriptHostFilePath = Path.Combine(Constants.GeneratedDirectoryPath, ReplicaSetInitScriptFileName);
@@ -45,11 +50,23 @@ internal sealed partial class MongoDependencyHandler(
 
         await WriteReplicaSetInitScriptAsync(cancellationToken);
 
-        aspire.Builder.AddDockerComposeResource(new DockerComposeResource(ServiceName, ContainerName)
+        var mongoResource = aspire.Builder.AddDockerComposeResource(new DockerComposeResource(ServiceName, ContainerName)
         {
             ResourceType = Constants.LeapDependencyAspireResourceType,
             Urls = [dependency.UseReplicaSet ? ReplicaSetConnectionString : NonReplicaSetConnectionString],
         });
+
+        if (dependency.Mcp)
+        {
+#pragma warning disable ASPIREMCP001 // WithMcpServer is experimental
+            aspire.Builder.AddContainer(McpResourceName, "mongodb/mongodb-mcp-server", "1.9.0")
+                .WithHttpEndpoint(targetPort: ContainerMcpPort)
+                .WithArgs("--transport", "http", "--httpHost", "0.0.0.0")
+                .WithEnvironment("MDB_MCP_CONNECTION_STRING", McpConnectionString)
+                .WithMcpServer()
+                .WaitFor(mongoResource);
+#pragma warning restore ASPIREMCP001
+        }
 
         aspire.Builder.Eventing.Subscribe<ResourceReadyEvent>(ServiceName, async (evt, ct) =>
         {

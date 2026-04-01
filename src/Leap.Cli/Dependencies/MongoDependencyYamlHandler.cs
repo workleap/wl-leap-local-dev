@@ -10,6 +10,7 @@ internal sealed class MongoDependencyYamlHandler : IDependencyYamlHandler<MongoD
         {
             Type = MongoDependencyYaml.YamlDiscriminator,
             UseReplicaSet = leftYaml.UseReplicaSet.GetValueOrDefault() || rightYaml.UseReplicaSet.GetValueOrDefault(),
+            Mcp = leftYaml.Mcp ?? rightYaml.Mcp,
         };
     }
 
@@ -17,7 +18,8 @@ internal sealed class MongoDependencyYamlHandler : IDependencyYamlHandler<MongoD
     {
         return new MongoDependency
         {
-            UseReplicaSet = yaml.UseReplicaSet.GetValueOrDefault()
+            UseReplicaSet = yaml.UseReplicaSet.GetValueOrDefault(),
+            Mcp = yaml.Mcp ?? true,
         };
     }
 }
