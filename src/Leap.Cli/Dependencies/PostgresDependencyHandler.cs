@@ -43,17 +43,20 @@ internal sealed class PostgresDependencyHandler(
             Urls = [HostConnectionString]
         });
 
-        // Use Aspire's native container API so WithMcpServer() registers it with the dashboard MCP proxy.
-        // https://github.com/dotnet/aspire/blob/v13.2.1/src/Aspire.Hosting.PostgreSQL/PostgresBuilderExtensions.cs
+        if (dependency.Mcp)
+        {
+            // Use Aspire's native container API so WithMcpServer() registers it with the dashboard MCP proxy.
+            // https://github.com/dotnet/aspire/blob/v13.2.1/src/Aspire.Hosting.PostgreSQL/PostgresBuilderExtensions.cs
 #pragma warning disable ASPIREMCP001 // WithMcpServer is experimental
-        aspire.Builder.AddContainer(McpResourceName, "crystaldba/postgres-mcp", "0.3.0")
-            .WithHttpEndpoint(targetPort: ContainerMcpPort)
-            .WithArgs("--access-mode=unrestricted")
-            .WithArgs("--transport=sse")
-            .WithEnvironment("DATABASE_URI", McpDatabaseUri)
-            .WithMcpServer("/sse")
-            .WaitFor(postgresResource);
+            aspire.Builder.AddContainer(McpResourceName, "crystaldba/postgres-mcp", "0.3.0")
+                .WithHttpEndpoint(targetPort: ContainerMcpPort)
+                .WithArgs("--access-mode=unrestricted")
+                .WithArgs("--transport=sse")
+                .WithEnvironment("DATABASE_URI", McpDatabaseUri)
+                .WithMcpServer("/sse")
+                .WaitFor(postgresResource);
 #pragma warning restore ASPIREMCP001
+        }
 
         return Task.CompletedTask;
     }
