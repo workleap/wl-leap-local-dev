@@ -11,5 +11,5 @@ internal sealed class PostgresDependencyYaml : DependencyYaml
     public string? ImageTag { get; set; }
 
     [YamlMember(Alias = "mcp", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
-    public bool? Mcp { get; set; }
+    public bool? Mcp { get; set; } = true;
 }
