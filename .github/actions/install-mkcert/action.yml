@@ -27,7 +27,13 @@ runs:
   - name: Install mkcert on Windows
     if: runner.os == 'Windows'
     run: |
-      choco install mkcert --verbose --yes
+      $mkcertVersion = (Invoke-RestMethod -Uri "https://api.github.com/repos/FiloSottile/mkcert/releases/latest").tag_name
+      $mkcertUrl = "https://github.com/FiloSottile/mkcert/releases/download/$mkcertVersion/mkcert-$mkcertVersion-windows-amd64.exe"
+      $mkcertPath = "$env:RUNNER_TEMP\mkcert.exe"
+
+      Invoke-WebRequest -Uri $mkcertUrl -OutFile $mkcertPath -UseBasicParsing
+      Copy-Item $mkcertPath "C:\Windows\mkcert.exe"
+
       mkcert dummy_arg_to_trigger_certificate_authority_creation
       certutil -addstore "Root" (Join-Path (mkcert -CAROOT) "rootCA.pem")
     shell: pwsh
