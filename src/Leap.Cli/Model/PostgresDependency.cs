@@ -6,5 +6,5 @@ internal sealed class PostgresDependency() : Dependency(PostgresDependencyYaml.Y
 {
     public string? ImageTag { get; init; }
 
-    public bool Mcp { get; init; } = true;
+    public bool Mcp { get; init; }
 }

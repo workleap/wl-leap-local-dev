@@ -18,7 +18,7 @@ internal sealed class PostgresDependencyYamlHandler : IDependencyYamlHandler<Pos
         return new PostgresDependency
         {
             ImageTag = yaml.ImageTag,
-            Mcp = yaml.Mcp ?? true,
+            Mcp = yaml.Mcp ?? false,
         };
     }
 }
