@@ -73,6 +73,25 @@ public sealed class AspireMcpToolsTests(ITestOutputHelper testOutputHelper)
         await this.AssertMcpToolsAvailable(leapYamlPath, cts.Token);
     }
 
+    [Fact]
+    public async Task RedisMcp_ShouldExposeToolsViaAspireMcp()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+        await using var context = this.CreateContext(cancellationToken: cts.Token);
+
+        await using var tempFolder = TemporaryDirectory.Create();
+        var leapYamlPath = tempFolder.CreateTextFile("leap.yaml", """
+            dependencies:
+            - type: redis
+              mcp: true
+            """);
+
+        context.AddConfigurationFiles(leapYamlPath);
+        await context.Start();
+
+        await this.AssertMcpToolsAvailable(leapYamlPath, cts.Token);
+    }
+
     private async Task AssertMcpToolsAvailable(FullPath leapYamlPath, CancellationToken cancellationToken)
     {
         // Run "aspire mcp tools --format json" and capture the output.

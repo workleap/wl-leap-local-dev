@@ -6,11 +6,18 @@ internal sealed class RedisDependencyYamlHandler : IDependencyYamlHandler<RedisD
 {
     public RedisDependencyYaml Merge(RedisDependencyYaml leftYaml, RedisDependencyYaml rightYaml)
     {
-        return leftYaml;
+        return new RedisDependencyYaml
+        {
+            Type = RedisDependencyYaml.YamlDiscriminator,
+            Mcp = leftYaml.Mcp ?? rightYaml.Mcp,
+        };
     }
 
     public Dependency ToDependencyModel(RedisDependencyYaml yaml)
     {
-        return new RedisDependency();
+        return new RedisDependency
+        {
+            Mcp = yaml.Mcp ?? true,
+        };
     }
 }
