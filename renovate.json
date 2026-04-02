@@ -18,7 +18,8 @@
       ],
       "matchStringsStrategy": "any",
       "matchStrings": [
-        "DockerComposeImageName\\(\"(?<depName>[^:]+):(?<currentValue>[^\"]+)\"\\)"
+        "DockerComposeImageName\\(\"(?<depName>[^:]+):(?<currentValue>[^\"]+)\"\\)",
+        "AddContainer\\([^,]+,\\s*\"(?<depName>[^\"]+)\",\\s*(?:tag:\\s*)?\"(?<currentValue>[^\"]+)\"\\)"
       ],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"
