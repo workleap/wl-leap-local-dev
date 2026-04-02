@@ -9,6 +9,7 @@ using Workleap.Leap.Testing;
 
 namespace Leap.Cli.Tests;
 
+[Collection("IntegrationTests")]
 public sealed class AspireMcpToolsTests(ITestOutputHelper testOutputHelper)
 {
     private LeapTestContext CreateContext(CancellationToken cancellationToken = default)
@@ -41,36 +42,81 @@ public sealed class AspireMcpToolsTests(ITestOutputHelper testOutputHelper)
         await using var context = this.CreateContext(cancellationToken: cts.Token);
 
         await using var tempFolder = TemporaryDirectory.Create();
-        context.AddConfigurationFiles(tempFolder.CreateTextFile("leap.yaml", """
+        var leapYamlPath = tempFolder.CreateTextFile("leap.yaml", """
             dependencies:
             - type: postgres
               mcp: true
-            """));
+            """);
 
+        context.AddConfigurationFiles(leapYamlPath);
         await context.Start();
 
-        // Run "aspire mcp tools --format json" and capture the output
-        var stdOut = new StringBuilder();
-        var stdErr = new StringBuilder();
-        var result = await CliWrap.Cli.Wrap("aspire")
-            .WithArguments(["mcp", "tools", "--format", "json"])
-            .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOut))
-            .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErr))
-            .WithValidation(CommandResultValidation.None)
-            .ExecuteAsync(cts.Token);
+        await this.AssertMcpToolsAvailable(leapYamlPath, cts.Token);
+    }
 
-        testOutputHelper.WriteLine($"aspire mcp tools exit code: {result.ExitCode}");
-        testOutputHelper.WriteLine($"aspire mcp tools stdout: {stdOut}");
-        testOutputHelper.WriteLine($"aspire mcp tools stderr: {stdErr}");
+    [Fact]
+    public async Task MongoMcp_ShouldExposeToolsViaAspireMcp()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+        await using var context = this.CreateContext(cancellationToken: cts.Token);
 
-        Assert.Equal(0, result.ExitCode);
+        await using var tempFolder = TemporaryDirectory.Create();
+        var leapYamlPath = tempFolder.CreateTextFile("leap.yaml", """
+            dependencies:
+            - type: mongo
+              mcp: true
+            """);
 
-        var json = stdOut.ToString().Trim();
-        Assert.False(string.IsNullOrEmpty(json), "aspire mcp tools returned empty output");
+        context.AddConfigurationFiles(leapYamlPath);
+        await context.Start();
 
-        // Parse the JSON output and verify MCP tools are registered
-        var tools = JsonSerializer.Deserialize<JsonElement>(json);
-        Assert.Equal(JsonValueKind.Array, tools.ValueKind);
-        Assert.True(tools.GetArrayLength() > 0, "aspire mcp tools returned no tools");
+        await this.AssertMcpToolsAvailable(leapYamlPath, cts.Token);
+    }
+
+    private async Task AssertMcpToolsAvailable(FullPath leapYamlPath, CancellationToken cancellationToken)
+    {
+        // Run "aspire mcp tools --format json" and capture the output.
+        // Use --apphost to target the specific app host since the working directory
+        // differs from the temp folder where the leap.yaml is located.
+        // The MCP container may take a moment to register with the Aspire MCP proxy,
+        // so retry until tools are found.
+        const int maxAttempts = 10;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            var stdOut = new StringBuilder();
+            var stdErr = new StringBuilder();
+            var result = await CliWrap.Cli.Wrap("aspire")
+                .WithArguments(["mcp", "tools", "--format", "json", "--apphost", leapYamlPath])
+                .WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOut))
+                .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErr))
+                .WithValidation(CommandResultValidation.None)
+                .ExecuteAsync(cancellationToken);
+
+            testOutputHelper.WriteLine($"[Attempt {attempt}] aspire mcp tools exit code: {result.ExitCode}");
+            testOutputHelper.WriteLine($"[Attempt {attempt}] aspire mcp tools stdout: {stdOut}");
+            testOutputHelper.WriteLine($"[Attempt {attempt}] aspire mcp tools stderr: {stdErr}");
+
+            // The aspire CLI may write JSON to stdout or stderr depending on the version
+            var json = stdOut.ToString().Trim();
+            if (string.IsNullOrEmpty(json))
+            {
+                json = stdErr.ToString().Trim();
+            }
+
+            if (result.ExitCode == 0 && json.StartsWith('['))
+            {
+                var tools = JsonSerializer.Deserialize<JsonElement>(json);
+                Assert.Equal(JsonValueKind.Array, tools.ValueKind);
+                Assert.True(tools.GetArrayLength() > 0, "aspire mcp tools returned no tools");
+                return;
+            }
+
+            if (attempt < maxAttempts)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+            }
+        }
+
+        Assert.Fail($"aspire mcp tools did not return MCP tools after {maxAttempts} attempts");
     }
 }

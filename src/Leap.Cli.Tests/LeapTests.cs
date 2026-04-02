@@ -6,6 +6,7 @@ using Workleap.Leap.Testing;
 
 namespace Leap.Cli.Tests;
 
+[Collection("IntegrationTests")]
 public sealed class LeapTests(ITestOutputHelper testOutputHelper)
 {
     private LeapTestContext CreateContext(string? remoteEnvironmentName = null, CancellationToken cancellationToken = default)
