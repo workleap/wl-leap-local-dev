@@ -9,4 +9,7 @@ internal sealed class MongoDependencyYaml : DependencyYaml
 
     [YamlMember(Alias = "replset", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
     public bool? UseReplicaSet { get; set; }
+
+    [YamlMember(Alias = "mcp", DefaultValuesHandling = DefaultValuesHandling.OmitNull)]
+    public bool? Mcp { get; set; } = true;
 }

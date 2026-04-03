@@ -9,6 +9,7 @@ using Workleap.Leap.Testing;
 
 namespace Leap.Cli.Tests;
 
+[Collection("IntegrationTests")]
 public sealed class AspirePsAppHostPathTests(ITestOutputHelper testOutputHelper)
 {
     private LeapTestContext CreateContext(string? remoteEnvironmentName = null, CancellationToken cancellationToken = default)

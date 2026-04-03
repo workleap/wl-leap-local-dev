@@ -161,3 +161,17 @@ dependencies:
     tables: ["mytable"]
     queues: ["myqueue"]
 ````
+
+### MCP servers
+
+Redis, MongoDB, and PostgreSQL dependencies can optionally expose an [MCP](https://modelcontextprotocol.io/) server, allowing AI tools to interact with the database directly. This is enabled by default and can be disabled by setting `mcp: false`.
+
+````yaml
+dependencies:
+  - type: redis
+    mcp: true       # default: true
+  - type: mongo
+    mcp: true       # default: true
+  - type: postgres
+    mcp: true       # default: true
+````

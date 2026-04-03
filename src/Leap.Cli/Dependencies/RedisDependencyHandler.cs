@@ -20,6 +20,9 @@ internal sealed class RedisDependencyHandler(
     private const string ContainerName = "leap-redis";
     private const string VolumeName = "leap_redis_data";
 
+    private const string McpResourceName = "redis-mcp";
+    private const int ContainerMcpPort = 8000;
+
     private static readonly string HostConnectionString = $"127.0.0.1:{RedisPort}";
     private static readonly string ContainerConnectionString = $"host.docker.internal:{RedisPort}";
 
@@ -30,11 +33,30 @@ internal sealed class RedisDependencyHandler(
         environmentVariables.Configure(ConfigureEnvironmentVariables);
         ConfigureAppSettingsJson(appSettingsJson.Configuration);
 
-        aspire.Builder.AddDockerComposeResource(new DockerComposeResource(ServiceName, ContainerName)
+        var redisResource = aspire.Builder.AddDockerComposeResource(new DockerComposeResource(ServiceName, ContainerName)
         {
             ResourceType = Constants.LeapDependencyAspireResourceType,
             Urls = [$"tcp://{HostConnectionString}"],
         });
+
+        if (dependency.Mcp)
+        {
+            // The mcp/redis image defaults to stdio transport. Override the entrypoint
+            // to start the FastMCP server in SSE mode so Aspire's MCP proxy can connect.
+            // We must set host to 0.0.0.0 directly since the FASTMCP_HOST env var is not
+            // picked up after the FastMCP instance is created.
+#pragma warning disable ASPIREMCP001 // WithMcpServer is experimental
+            aspire.Builder.AddContainer(McpResourceName, "mcp/redis", "latest")
+                .WithHttpEndpoint(targetPort: ContainerMcpPort)
+                .WithEntrypoint("uv")
+                .WithArgs("run", "python", "-c",
+                    "from src.common.server import mcp; mcp.settings.host = '0.0.0.0'; mcp.run(transport='sse')")
+                .WithEnvironment("REDIS_HOST", "host.docker.internal")
+                .WithEnvironment("REDIS_PORT", RedisPort.ToString())
+                .WithMcpServer("/sse")
+                .WaitFor(redisResource);
+#pragma warning restore ASPIREMCP001
+        }
 
         return Task.CompletedTask;
     }
