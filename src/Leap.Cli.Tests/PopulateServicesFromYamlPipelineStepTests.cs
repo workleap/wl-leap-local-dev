@@ -26,6 +26,7 @@ public class PopulateServicesFromYamlPipelineStepTests
     [InlineData("a.workleap.com")]
     [InlineData("a.officevibe-dev.com")]
     [InlineData("a.workleap-dev.com")]
+    [InlineData("a.workleap-stg.com")]
     [InlineData("a.workleap-local.com")]
     public void Valid_Localhost_Subdomain_Matches_Wildcard_Localhost_Domains_Regex(string host)
     {

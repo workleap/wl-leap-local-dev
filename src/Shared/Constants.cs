@@ -51,6 +51,8 @@ internal static class Constants
         "*.workleap.com",
         "*.officevibe-dev.com",
         "*.workleap-dev.com",
+        // Staging, so local frontends can do hybrid local/cloud cookie-based authentication
+        "*.workleap-stg.com",
         "*.workleap-local.com",
 
         // ShareGate recently adopted a centralized cookie like Officevibe and Workleap, so we need to allow these domains as well
