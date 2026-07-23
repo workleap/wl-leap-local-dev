@@ -1,13 +1,6 @@
-# TEMPORARY TEST HARNESS — validates workleap/wl-github-actions PR #1164
-# (the new renovate-pr-autofix reusable workflow) against a real failing
-# Renovate PR (#119) before that PR is merged to wl-github-actions' main.
-#
-# Not meant to be merged: close this PR once the test run has been reviewed.
-# Targets PR #119 explicitly (pr-number below), regardless of which PR this
-# test workflow itself is attached to.
-#
-# References the wl-github-actions branch directly (not @main/@latest) since
-# the reusable workflow doesn't exist on main yet.
+# DIAGNOSTIC ONLY — temporarily points at an existing @main reusable workflow
+# to isolate whether wl-leap-local-dev can call ANY wl-github-actions reusable
+# workflow, vs. this being specific to referencing an unmerged branch ref.
 
 name: "[TEST] Renovate PR Auto-Fix dry-run"
 
@@ -24,7 +17,7 @@ permissions:
 
 jobs:
   autofix:
-    uses: workleap/wl-github-actions/.github/workflows/renovate-pr-autofix.yml@add-renovate-pr-autofix-reusable-workflow
+    uses: workleap/wl-github-actions/.github/workflows/dotnet-build.yml@main
     secrets: inherit
     with:
-      pr-number: "119"
+      build-projects: "nonexistent.sln"
