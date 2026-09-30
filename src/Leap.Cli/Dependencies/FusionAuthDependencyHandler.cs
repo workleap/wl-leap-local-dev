@@ -184,7 +184,7 @@ internal class FusionAuthDependencyHandler(
                 {
                     return new ExecuteCommandResult
                     {
-                        ErrorMessage = "An error occurred while trying to reset FusionAuth: " + ex.Message,
+                        Message = "An error occurred while trying to reset FusionAuth: " + ex.Message,
                         Success = false
                     };
                 }

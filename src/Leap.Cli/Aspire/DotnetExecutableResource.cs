@@ -142,7 +142,7 @@ internal static class DotnetExecutableResourceExtensions
                     {
                         return new ExecuteCommandResult
                         {
-                            ErrorMessage = "Another restart operation is already in progress for this resource.",
+                            Message = "Another restart operation is already in progress for this resource.",
                             Success = false
                         };
                     }
@@ -161,7 +161,7 @@ internal static class DotnetExecutableResourceExtensions
                     {
                         return new ExecuteCommandResult
                         {
-                            ErrorMessage = "An error occurred while trying to restart the resource with debugging enabled: " + ex.Message,
+                            Message = "An error occurred while trying to restart the resource with debugging enabled: " + ex.Message,
                             Success = false
                         };
                     }

@@ -239,7 +239,7 @@ internal sealed class DockerComposeResourceLifecycleHook(
                 {
                     return new ExecuteCommandResult
                     {
-                        ErrorMessage = "An error occurred while trying to stop the container: " + ex.Message,
+                        Message = "An error occurred while trying to stop the container: " + ex.Message,
                         Success = false
                     };
                 }
@@ -273,7 +273,7 @@ internal sealed class DockerComposeResourceLifecycleHook(
                 {
                     return new ExecuteCommandResult
                     {
-                        ErrorMessage = "An error occurred while trying to start the container: " + ex.Message,
+                        Message = "An error occurred while trying to start the container: " + ex.Message,
                         Success = false
                     };
                 }
