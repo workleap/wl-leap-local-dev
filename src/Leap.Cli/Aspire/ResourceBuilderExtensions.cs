@@ -64,13 +64,13 @@ internal static class ResourceBuilderExtensions
                 TelemetryMeters.TrackPreferencesCommand();
                 try
                 {
-                    var preferencesSettingsManager = context.ServiceProvider.GetRequiredService<PreferencesSettingsManager>();
+                    var preferencesSettingsManager = context.Services.GetRequiredService<PreferencesSettingsManager>();
                     await preferencesSettingsManager.SetPreferredRunnerForServiceAsync(service.Name, runnerName, context.CancellationToken);
                     service.PreferredRunner = runnerName;
                 }
                 catch (Exception ex)
                 {
-                    return new ExecuteCommandResult { ErrorMessage = "An error occurred while setting a preferred runner for resource: " + ex.Message, Success = false };
+                    return new ExecuteCommandResult { Message = "An error occurred while setting a preferred runner for resource: " + ex.Message, Success = false };
                 }
                 finally
                 {
