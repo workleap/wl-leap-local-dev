@@ -237,10 +237,15 @@ internal sealed class StartAzureCliDockerProxyPipelineStep(
             var expiresOn = root.TryGetProperty("expiresIn", out var expiresIn)
                 ? DateTimeOffset.UtcNow + TimeSpan.FromSeconds(expiresIn.GetInt64())
                 : DateTimeOffset.ParseExact(root.GetProperty("expiresOn").GetString()!, "yyyy-MM-dd HH:mm:ss.ffffff", CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeLocal);
+            var tokenType = root.TryGetProperty("tokenType", out var tokenTypeElement) ? tokenTypeElement.GetString() : null;
 
             return new AccessTokenDto
             {
                 AccessToken = accessToken,
+
+                // Azure.Core 1.60+ builds the Authorization header from the token type, so an absent token_type sends a header without the "Bearer" scheme:
+                // https://github.com/Azure/azure-sdk-for-net/blob/Azure.Core_1.60.0/sdk/core/Azure.Core/src/Pipeline/BearerTokenAuthenticationPolicy.cs#L515
+                TokenType = string.IsNullOrEmpty(tokenType) ? "Bearer" : tokenType,
 
                 // Seems like some Azure CLI SDKs for other languages such as go only support seconds instead of ISO 8601
                 // Based on a fork of our Workleap Azure CLI credentials proxy:
@@ -284,5 +289,8 @@ internal sealed class StartAzureCliDockerProxyPipelineStep(
 
         [JsonPropertyName("expires_on")]
         public string ExpiresOn { get; init; } = string.Empty;
+
+        [JsonPropertyName("token_type")]
+        public string TokenType { get; init; } = string.Empty;
     }
 }
