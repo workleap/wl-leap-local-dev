@@ -59,7 +59,7 @@ internal sealed partial class MongoDependencyHandler(
         if (dependency.Mcp)
         {
 #pragma warning disable ASPIREMCP001 // WithMcpServer is experimental
-            aspire.Builder.AddContainer(McpResourceName, "mongodb/mongodb-mcp-server", "1.9.0")
+            aspire.Builder.AddContainer(McpResourceName, "mongodb/mongodb-mcp-server", "1.14.0")
                 .WithHttpEndpoint(targetPort: ContainerMcpPort)
                 .WithArgs("--transport", "http", "--httpHost", "0.0.0.0")
                 .WithEnvironment("MDB_MCP_CONNECTION_STRING", McpConnectionString)
