@@ -110,7 +110,7 @@ internal class FusionAuthDependencyHandler(
 
         var fusionAuthProxy = new DockerComposeServiceYaml()
         {
-            Image = new DockerComposeImageName("nginx:1.29-alpine"),
+            Image = new DockerComposeImageName("nginx:1.31-alpine"),
             ContainerName = ProxyContainerName,
             DependsOn = [DbServiceName],
             Restart = "unless-stopped",
