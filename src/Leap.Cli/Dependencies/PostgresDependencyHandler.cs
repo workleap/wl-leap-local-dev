@@ -68,7 +68,7 @@ internal sealed class PostgresDependencyHandler(
 
         var service = new DockerComposeServiceYaml
         {
-            Image = imageTag != null ? new DockerComposeImageName($"postgres:{imageTag}") : new DockerComposeImageName("postgres:18.3-alpine"),
+            Image = imageTag != null ? new DockerComposeImageName($"postgres:{imageTag}") : new DockerComposeImageName("postgres:18.6-alpine"),
             ContainerName = ContainerName,
             Restart = DockerComposeConstants.Restart.UnlessStopped,
             Environment = new KeyValueCollectionYaml
